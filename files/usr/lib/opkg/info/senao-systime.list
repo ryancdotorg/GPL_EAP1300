@@ -1,0 +1,7 @@
+/etc/uci-defaults/systime
+/usr/share/zoneinfo/timezone_list
+/etc/init.d/systime
+/usr/shc/timezonecheck
+/sbin/httpsynctime.sh
+/etc/config/systime
+/sbin/checkInternet.sh

@@ -1,0 +1,26 @@
+#!/bin/sh /etc/rc.common
+
+. /etc/functions.sh
+
+IPERF3_DAEMON=/usr/bin/iperf3
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+START=99
+
+start() {
+    config_load iperf3
+    config_get disabled iperf3 disabled
+    if [ "$disabled" = "0" ]; then
+        config_get server_port iperf3 server_port
+        config_get support_ipv6 iperf3 support_ipv6
+        if [ "$support_ipv6" = "1" ]; then
+            service_start $IPERF3_DAEMON -s -6 -p $server_port
+        fi
+        $IPERF3_DAEMON -s&
+    fi
+}
+
+stop() {
+    service_stop $IPERF3_DAEMON
+}

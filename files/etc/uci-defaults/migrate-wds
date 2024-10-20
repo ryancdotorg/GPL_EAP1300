@@ -1,0 +1,30 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+# support wdsb/wdsap/wdssta mode first time.
+
+# Check
+if [ -z "$(uci get wireless.wifi0_wds)" ]; then
+	wds_configs=$(eval "uci show /rom/etc/config/wireless | grep wifi[0-1]_wds | grep -v ' '")
+
+	for i in $wds_configs; do
+		eval uci set ${i}
+	done
+
+	uci set wireless.wifi0_wds_1.wps_device_name="Engenius 802.11AC AP"
+	uci set wireless.wifi0_wds_1.wps_manufacturer="Senao Technologies, Inc."
+	uci set wireless.wifi0_wds_1.wps_friendly_name="Wi-Fi AP"
+	uci set wireless.wifi0_wds_1.wps_model_name="Engenius Wi-Fi AP"
+	uci set wireless.wifi0_wds_1.wps_model_description="802.11ac Dual-Band Wi-Fi AP"
+	uci set wireless.wifi1_wds_1.wps_device_name="Engenius 802.11AC AP"
+	uci set wireless.wifi1_wds_1.wps_manufacturer="Senao Technologies, Inc."
+	uci set wireless.wifi1_wds_1.wps_friendly_name="Wi-Fi AP"
+	uci set wireless.wifi1_wds_1.wps_model_name="Engenius Wi-Fi AP"
+	uci set wireless.wifi1_wds_1.wps_model_description="802.11ac Dual-Band Wi-Fi AP"
+	uci set wireless.wifi0_wds_sta.ssid="AP SSID"
+	uci set wireless.wifi1_wds_sta.ssid="AP SSID_5G"
+
+	uci commit
+fi
+
+exit 0

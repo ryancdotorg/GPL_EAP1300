@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions.sh
+
+. /etc/mgmt.d/mgmt_path.sh
+
+START=99
+
+start() {
+    echo "start"
+    [ -f "$MGMT_POSTINIT_DONE" ] || touch $MGMT_POSTINIT_DONE
+    $MGMT_NOTIFY_SCRIPT check
+    [ -f "$MGMT_FIRST_BOOT_FILE" ] || touch $MGMT_FIRST_BOOT_FILE
+}
+
+stop() {
+    echo "stop"
+}
+

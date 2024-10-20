@@ -1,0 +1,142 @@
+#!/bin/sh /etc/rc.common
+. /etc/functions.sh
+
+START=99
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+cronfile="/etc/crontabs_nolog"
+[ ! -d $cronfile ] && cronfile="/etc/crontabs"
+FINGERPRINT_DAEMON=/usr/bin/fingerprint
+FINGERPRINT_UPDATE=/usr/bin/fingerprint_dump.sh
+FINGERPRINT_INFO_PATH=/tmp/fingerprint*
+FINGERPRINT_GATEWAY_PATH=/tmp/fingerprint_gw.txt
+FINGERPRINT_BACK_GATEWAY_PATH=/tmp/_fingerprint_gw.txt
+cronlist="$(crontab -c "$cronfile" -l | grep -v "$FINGERPRINT_UPDATE")"
+
+get_cpu_num() {
+	local cpunum=`cat /proc/cpuinfo |grep ^processor |wc -l`
+    echo ${cpunum:-1}
+}
+
+get_cpu_mask() {
+    local cpunum=$(get_cpu_num)
+	local cpumask=0
+	local count=0
+	while [ $cpunum -gt 1 ]
+	do
+		cpunum=$(($cpunum-1))
+		cpumask=$(($cpumask+(1 << $cpunum)))
+		count=$(($count+1))
+		#mask signifcant 2 bits 
+		[ $count == 2 ] && break;
+	done
+	printf %x $cpumask
+}
+
+check_status() {
+	local status=1
+	capwap_enable=$(uci get apcontroller.capwap.enable) && {
+		if [ $(get_cpu_num) -eq 1 -a "$capwap_enable" = "0" ]
+		then
+			status=0
+		fi
+	}
+
+    echo ${status}
+}
+
+set_schedule() {
+    CRONSCHED="*/1 * * * *"
+    echo -e "$CRONSCHED $FINGERPRINT_UPDATE\n$cronlist" | grep -v "^[ \t]*$" | crontab -c "$cronfile" -
+}
+
+clear_schedule() {
+    echo -e "$cronlist" | crontab -c "$cronfile" - >&- 2>&-
+}
+
+set_throughput_rule() {
+	if [ $(get_cpu_num) -gt 1 -a -f /proc/sys/net/core/rps_sock_flow_entries ]
+	then
+		local cpumask=$(get_cpu_mask)
+		local rps_flowentries=`cat /proc/sys/net/core/rps_sock_flow_entries`
+		if [ "$rps_flowentries" = "0" ]
+		then
+			rps_flowentries=65536
+			echo $rps_flowentries > /proc/sys/net/core/rps_sock_flow_entries
+		fi
+
+		if [ $(get_cpu_num) -eq 2 ]
+		then 
+        		VAPList_24G=`ls /sys/class/net/ | grep "^ath0"`
+        		for vif in $VAPList_24G
+        		do
+            			local rps_queue=`find /sys/class/net/$vif/queues/ -name "rx-*"`
+            			local rps_queuenum=`echo "$rpsqueue"|wc -l`
+            			local rps_flowcnt=`echo $(($rps_flowentries/${rps_queuenum:-1}))`
+            			for rxqueue in `find /sys/class/net/$vif/queues/ -name "rx-*"`
+            			do
+                			echo 1 > $rxqueue/rps_cpus
+                			echo $rps_flowcnt > $rxqueue/rps_flow_cnt
+            			done
+        		done
+                        VAPList_5G=`ls /sys/class/net/ | grep "^ath1"`
+                        for vif in $VAPList_5G
+                        do
+                                local rps_queue=`find /sys/class/net/$vif/queues/ -name "rx-*"`
+                                local rps_queuenum=`echo "$rpsqueue"|wc -l`
+                                local rps_flowcnt=`echo $(($rps_flowentries/${rps_queuenum:-1}))`
+                                for rxqueue in `find /sys/class/net/$vif/queues/ -name "rx-*"`
+                                do
+                                        echo 2 > $rxqueue/rps_cpus
+                                        echo $rps_flowcnt > $rxqueue/rps_flow_cnt
+                                done
+                        done
+		else
+        		VAPList=`ls /sys/class/net/ | grep "^ath"`
+        		for vif in $VAPList
+        		do
+            			local rps_queue=`find /sys/class/net/$vif/queues/ -name "rx-*"`
+            			local rps_queuenum=`echo "$rpsqueue"|wc -l`
+            			local rps_flowcnt=`echo $(($rps_flowentries/${rps_queuenum:-1}))`
+            			for rxqueue in `find /sys/class/net/$vif/queues/ -name "rx-*"`
+            			do
+                			echo $cpumask > $rxqueue/rps_cpus
+                			echo $rps_flowcnt > $rxqueue/rps_flow_cnt
+            			done
+        		done
+		fi
+#		# if /proc/qrfs not exist, enable kernel rps/rfs here.
+#		if [ ! -d "/proc/qrfs" ]
+#		then
+#			for rxqueue in `find /sys/class/net/$WANIF/queues/ -name "rx-*"`
+#			do
+#				echo $cpumask > $rxqueue/rps_cpus
+#				echo $rps_flowcnt > $rxqueue/rps_flow_cnt
+#			done
+#		fi
+	fi
+
+}
+
+start() {
+	if [ $(check_status) -eq 1 ]
+	then
+		set_schedule
+		set_throughput_rule
+		service_start $FINGERPRINT_DAEMON
+	fi
+}
+
+stop() {
+    clear_schedule
+    service_stop $FINGERPRINT_DAEMON
+    cp $FINGERPRINT_GATEWAY_PATH $FINGERPRINT_BACK_GATEWAY_PATH
+    rm -rf $FINGERPRINT_INFO_PATH
+    mv $FINGERPRINT_BACK_GATEWAY_PATH $FINGERPRINT_GATEWAY_PATH
+}
+
+reload() {
+    stop
+    start
+}
+

@@ -1,0 +1,180 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2008 Steven Barth <steven@midlink.org>
+Copyright 2008 Jo-Philipp Wich <xm@leipzig.freifunk.net>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+$Id: applyreboot.htm 8847 2012-07-01 20:05:05Z dgolle $
+
+-%>
+<%local uci = require "luci.model.uci".cursor()%>
+<%
+	reboot=luci.util.trim(luci.util.exec('cat /tmp/noticeReboot'))
+ 	if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" and ( reboot == "1" or uci:get("system","firmware","first_login") == "1" )then %>
+<%+header%>
+<%
+	uci:set("system","firmware","first_login","0")
+	uci:save("system")
+	uci:commit("system")
+	wizard="1"
+	netName=""
+	ssid=""
+	encryption=""
+	key=""
+	key_id=""
+
+	if uci:get("wireless","wifi0","opmode") == "sta_ap" then
+		netName = "wifi0_sta_ap_2"
+	elseif uci:get("wireless","wifi1","opmode") == "sta_ap" then
+		netName = "wifi1_sta_ap_2"
+	end
+
+	ssid = uci:get("wireless",netName,"ssid")
+	encryption = uci:get("wireless",netName,"encryption")
+
+	if encryption == "wep-open" or encryption == "wep-shared" then
+		key_id = uci:get("wireless",netName,"key_id")
+		str_key="key"..key_id
+		key = uci:get("wireless",netName,str_key)
+		key = string.gsub(key,"s:","")
+	elseif encryption == "none" then
+	else
+		key = uci:get("wireless",netName,"key")
+	end
+
+%>
+<script>
+	document.getElementById('menu_right_style').style.display = "none";
+</script>
+<% end %>
+<style>
+	.desc{
+		text-align: center;
+		margin-top: 50px;
+	}
+</style>
+<html>
+	<head>
+		<title><%=luci.sys.hostname()%></title>
+		<link rel="stylesheet" type="text/css" media="screen" href="<%=media%>/cascade.css" />
+		<script type="text/javascript" src="<%=resource%>/xhr.js"></script>
+		<script type="text/javascript" src="/luci-static/resources/cbi.js"></script>
+		<script type="text/javascript">//<![CDATA[
+		var myinterval, target = 'http://<%=addr or luci.http.getenv("SERVER_NAME")%>/';
+		var t = "<% if countdown then %><%=countdown%><% else %>60<% end %>";
+		myinterval = setInterval("a()", 1000);
+		function a()
+		{
+			if(t <= 0)
+			{
+				<%if wizard == "1" then %>
+					document.getElementById('maincontainer').style.display = "none";
+					document.getElementById('showAP').style.display = "";
+				<%else%>
+					location.href = target;
+				<% end %>
+				window.clearInterval(myinterval);
+			}
+			document.getElementById("countdownString").innerHTML = String.format("<%:Please wait for %s %d %s secs. System is rebooting.%>", "<span style='color:darkred;'>", t, "</span>");
+			t -= 1;
+		}
+<%
+	if uci:get('functionlist','functionlist','SUPPORT_IPCAM') == '1' then -----#### SUPPORT_IPCAM START ###
+%>		
+		//EWS1025 firmware upgrade needs to confirm Ap board and camera are both done.
+		//And the trick is to sending request every delay time until receiving the response of httpd server successfully or timeout.
+			var img_ready=0,img2_ready=0;
+			var interval = window.setInterval(function() {
+				
+				var img = new Image();
+				var img2 = new Image();
+
+				// console.log("00000000000 img_ready"+img_ready+"img2_ready"+img2_ready)
+				img.onload = function() {
+					// console.log("11111111111 img_ready"+img_ready+"img2_ready"+img2_ready)
+					if(img2_ready==1){
+						window.clearInterval(interval);
+						location.href = 'http://<%=addr or luci.http.getenv("SERVER_NAME")%>/';
+					}else{
+						img_ready=1;
+					}
+				};
+				img2.onload = function() {
+					// console.log("2222222222 img_ready"+img_ready+"img2_ready"+img2_ready)
+					if(img_ready==1){
+						img2_ready=1;	
+					}
+				};
+
+				img.src = 'http://<%=addr or luci.http.getenv("SERVER_NAME")%><%=resource%>/icons/loading.gif?' + Math.random();
+				img2.src = 'http://<%=addr or luci.http.getenv("SERVER_NAME")%>:8080/pictures/fancy2_logo_banner.gif?'+ Math.random();
+			}, <% if delay then %><%=delay%><% else %>5000<% end %>);
+<%
+else -----#### SUPPORT_IPCAM ELSE ###
+%>
+			var interval = window.setInterval(function() {
+				var t = parseInt(document.getElementById('t').value);
+				if(t >= (parseInt(10000/<% if delay then %><%=delay%><% else %>1000<% end %>))) {
+				var img = new Image();
+
+				img.onload = function() {
+					window.clearInterval(interval);
+					
+					//document.getElementById('redirectToLogin').innerHTML='<a href="'+target+'"><%:Click here, the device is ready.%></a>';
+					location.href = 'http://<%=addr or luci.http.getenv("SERVER_NAME")%>/';
+				};
+				}
+				else
+				{
+					t = t+1;
+					document.getElementById('t').value = t;
+				}
+
+				img.src = 'http://<%=addr or luci.http.getenv("SERVER_NAME")%><%=resource%>/icons/loading.gif?' + Math.random();
+			}, <% if delay then %><%=delay%><% else %>1000<% end %>);
+<%
+end -----#### SUPPORT_IPCAM END ###
+%>
+		//]]></script>
+	</head>
+	<body style="padding:20px 25px;">
+		<div id="maincontainer">
+			<div id="maincontent">
+				<input id="t" type="hidden" value="0" />
+				<h2><a id="content" name="content"><%:System%> - <% if title then %><%=title%><% else %><%:Rebooting...%><% end %></a></h2>
+				<fieldset class="cbi-section">
+					<p id="countdownString"></p>
+					<p>
+						<% if msg then %><%=msg%><% else %><%:Changes applied.%><% end %>
+					</p>
+					<p>
+						<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" />
+						<%:Waiting for changes to be applied...%>
+					</p>
+					<p id="redirectToLogin"></p>
+				</fieldset>
+			</div>
+		</div>
+		<div id="showAP" style="display:none">
+			<div style="text-align:center">
+				<h2><%:Congratulations!%></h2>
+			</dev>
+			<div style="text-align:left">
+				<h4 ><%:You have successfully extended your Access Point/Wireless Router signal with range extender.%></h4>
+				<h4 ><%:Please read the following note carefully.%></h4>
+				</br>
+				<ul>
+					<li><p style="color:black"><%:Your range extender has cloned your Access/Point %><font color="blue">"<%=ssid%>"</font><%:; therefore, you will now find two wireless devices with the same name (SSID) %><font color="blue">"<%=ssid%>"</font>.</p>
+					<li><p style="color:black"><%:You can now roam and your wireless interface card will pick up the most suitable Access Point/Wireless Router signal as you move.%></p>
+					<li><p style="color:black">Please reconnect to wireless network <font color="blue">"<%=ssid%>"</font><% if key ~= "" then%>with the password (security key) <font color="blue">"<%=key%>"</font><%end%>.</p>
+					<li><p><font color="red"><%:To access the Internet, please close the web browser to complete the setup.%></font></p>
+				<ul>
+			</dev>
+		</div>
+	</body>
+</html>

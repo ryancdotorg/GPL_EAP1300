@@ -1,0 +1,347 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2008 Steven Barth <steven@midlink.org>
+Copyright 2008 Jo-Philipp Wich <xm@leipzig.freifunk.net>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+$Id: flashops.htm 7798 2011-10-26 23:43:04Z jow $
+
+-%>
+
+<%+header%>
+<%
+local firmwareVersion = luci.util.trim(luci.util.exec("cat /etc/version | grep Firmware | awk '{print $4}'"))
+local uci = luci.model.uci.cursor()
+local checkFW = uci:get("system","firmware","version_check")
+local newFWInfo = luci.util.trim(luci.util.exec('cat /tmp/new_fw_info'))
+if newFWInfo ~= nil then
+	newFWInfo  = string.gsub(newFWInfo,"\'","\\\'")
+end
+%>
+<script>
+	var firmwareVersion = '<%=firmwareVersion or "?"%>';
+	var action = '<%=luci.http.formvalue("action") or ""%>';
+	var obj_newFWInfo="", str_newFWInfo="";
+
+	if(('<%=newFWInfo%>' != "")&&('<%=newFWInfo%>' != "0"))
+	{
+		str_newFWInfo = '<%=newFWInfo%>';
+		str_newFWInfo = str_newFWInfo.replace(/\r/g,' ');
+		str_newFWInfo = str_newFWInfo.replace(/\n/g,'<br>');
+		obj_newFWInfo = JSON.parse(str_newFWInfo);
+	}
+
+	function showReleaseNote()
+	{
+		var w = window.open();
+		var str = obj_newFWInfo.change_log;
+
+		str =  str.replace(/::_n::/g,"<br>");
+		str =  str.replace(/::_t::/g,"&nbsp;&nbsp;&nbsp;&nbsp;");
+		w.document.write(str||"");
+		w.document.close();
+	}
+
+	$(function()
+	{
+		$(".cbi-section")[((action == "reset") ? "1" : "2")].style.display = "block";
+		$("input[name='reset']").on("click", function()
+		{
+			return confirm("<%=translate('The action will erase existing settings and reset all settings to factory default')%>");
+		});
+		$("input[name='user_restore']").on("click", function()
+		{
+			return confirm("<%=translate('The action will erase existing settings and reset all settings to user default.')%>");
+		});
+		$("input[name='reboot']").on("click", function()
+		{
+			return confirm("<%=translate('This will reboot the device and may take few seconds.')%>");
+		});
+		$("input[name='user_backup']").on("click", function()
+		{
+			return confirm("<%=translate('Warning: This feature will overwrite the factory default setting with your current AP settings. Pressing the physical reset button will restore the configuration of the current AP settings, not factory default settings. To restore to factory settings, press Factory Setting, Reset to Default in the UI.')%>");
+		});
+<%
+	if uci:get('network','sys','EnMesh') ~= '1' then
+%>
+		if(functionlist.HAS_EG_AUTO_FW_CHECK==1)
+		{
+			$("input[name='upgradeAction']").on("click", function ()
+			{
+				return confirm("<%=translate('Please do not turn off the device while the upgrade is in process. Do you want to continue the upgrade now?')%>");
+			});
+			document.getElementsByName("autoFWEnable")[("<%=checkFW%>" == "1") ? 0 : 1].checked = true;
+			document.getElementById('checkBtn').style.display = (("<%=checkFW%>" == "1") ? "" : "none");
+			if (obj_newFWInfo != "")
+			{
+				getByName('fw_id').value = obj_newFWInfo.id;
+				$("#new_ver").text(obj_newFWInfo.version || "unknown");
+				$("#release_date").text(obj_newFWInfo.release_date || "unknown");
+				document.getElementById('checkBtn').style.display = "none";
+				document.getElementById('autoFWInfo').style.display = (("<%=checkFW%>" == "1") ? "" : "none");
+			}
+		}
+<%
+	end
+%>
+	});
+</script>
+<div id="Reset_to_Default_info" class="popbox">
+    <p><%:Reset to factory default setting.%></p>
+</div>
+<div id="Back_Up_Setting_as_Default_info" class="popbox">
+    <p><%:Backup the device settings to backup config file.%></p>
+</div>
+<div id="Restore_to_User_Default_info" class="popbox">
+    <p><%:After user setting is backup as default, the system will allow restore to this user setting instead of factory default. %></p>
+</div>
+<fieldset class="cbi-section">
+	<fieldset class="cbi-section" style="display: none">
+		<form method="post" action="<%=REQUEST_URI%>">
+		<table>
+			<tr>
+				<td class="title" colspan="2"><%:Reboot the device%></td>
+			</tr>
+			<tr class="title-option">
+				<td colspan="2">
+					<span class="caution"><%:Caution%>:</span> <%:Pressing this button will cause the device to reboot.%>
+				</td>
+			</tr>
+			<tr class="title-option">
+				<td colspan="2">
+					<input type="submit" onclick="ajax_setCsrf();" class="cbi-button" id="reboot" name="reboot" myid="system_reset_reboot" value="<%:Reboot the device%>">
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2" style="line-height: 45px;">&nbsp;</td>
+			</tr>
+			<tr>
+				<td colspan="2" class="title"><%:Restore the device to default settings%></td>
+			</tr>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_HIDE_RESTORE_TO_USER_IN_RESET') == "1" then --
+%>				
+			<tr class="title-option">
+				<td colspan="2">
+					<span class="caution"><%:Caution%>:</span> <%:All settings will be cleared and reset to  factory default.%>
+				</td>
+			</tr>
+			<tr class="title-option">
+				<td>
+					<input type="submit" onclick="ajax_setCsrf();" class="cbi-button" id="reset_default" name="reset" value="<%:Restore to Factory Default%>">
+				</td>
+			
+			</tr>	
+<%
+else
+%>
+			<tr class="title-option">
+				<td colspan="2">
+					<span class="caution"><%:Caution%>:</span> <%:All settings will be cleared and reset to either factory default or user default.%>
+				</td>
+			</tr>
+			<tr class="title-option">
+				<td>
+					<input type="submit" onclick="ajax_setCsrf();" class="cbi-button" id="reset_default" name="reset" value="<%:Restore to Factory Default%>">
+				</td>
+			
+				<td>
+					<input type="submit" onclick="ajax_setCsrf();" class="cbi-button" id="restoreuserdefaultButton" name="user_restore" value="<%:Restore to User Default%>">
+				</td>
+			</tr>				
+<%
+end
+%>
+			
+		</table>
+		</form>
+	</fieldset>
+
+	<fieldset class="cbi-section" style="display: none">
+		<form method="post" action="<%=REQUEST_URI%>" enctype="multipart/form-data">
+		<table>
+			<tr>
+				<td class="title"><%:Firmware Upgrade%></td>
+			</tr>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_ATKK_FW_VERSION') == '1')  then -----#### SUPPORT_ATKK_FW_VERSION START ###
+%>
+	<tr class="title-option"><td><%:Current Firmware Version%>:
+
+		<script>
+		function pad(num, size) {
+		    var s = num+"";
+		    while (s.length < size) s = "0" + s;
+		    return s;
+		}
+
+		document.write((firmwareVersion == "?")?"?":"V"+firmwareVersion.substring(0, firmwareVersion.lastIndexOf('.'))+" B"+pad(firmwareVersion.substring(firmwareVersion.lastIndexOf('.')+1),2));</script>
+
+	</td></tr>
+<%
+else -----####  SUPPORT_ATKK_FW_VERSION ELSE #### 
+%>
+<%
+	if (uci:get('functionlist','functionlist','SUPPORT_FULL_FW_VERSION') == '1')  then -----#### SUPPORT_ATKK_FW_VERSION START ###
+%>
+			<tr class="title-option">
+				<td><%:Current Firmware Version%>:<script>document.write(firmwareVersion);</script></td>
+			</tr>
+<%
+	else -----####  SUPPORT_FULL_FW_VERSION ELSE #### 
+%>
+			<tr class="title-option">
+				<td><%:Current Firmware Version%>:<script>document.write((firmwareVersion == "?")?"?":firmwareVersion.substring(0, firmwareVersion.lastIndexOf('.')));</script></td>
+			</tr>
+<%
+	end-----####  SUPPORT_FULL_FW_VERSION END #### 
+%>
+			<tr class="title-option">
+				<td><%:Device Version%>:<script>
+				function get_hardware_version(){
+					var model_name = '<%=uci:get('sysProductInfo','model','modelName')%>'.slice(-2);
+					if (model_name.slice(0, 1)=="v" && isNaN(model_name.slice(-1))==false){
+						return model_name.slice(-1)+'.0';
+					}
+					else{
+						return "1.0";
+					}
+				}
+				document.write(get_hardware_version());
+				</script></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;" colspan="2">- <span class="caution"><%:Note%>:</span>&nbsp;<%:Kindly verify the Device version when upgrading firmware to a new one. If you do not use the corresponding version, the upgrading process will be failed.%>
+				</td>
+			</tr>
+<%
+end-----####  SUPPORT_ATKK_FW_VERSION END #### 
+%>			<tr class="title-option">
+				<td><%:Select the new firmware from your hard disk%>.</td>
+			</tr>
+			<!--tr class="title-option">
+				<td><div myid="title_system_fw_keep_settings"><%:Keep settings%>:</div>&nbsp;&nbsp;<input type="checkbox" name="keep" id="keep" myid="system_fw_keep_settings" checked="checked" /></td>
+			</tr-->
+			<tr class="title-option">
+				<td><input type="file" name="image" id="image" myid="system_fw_file" style="background:#F0F0F0;"/>&nbsp;&nbsp;<input type="submit" onclick="ajax_setCsrf();" myid="system_fw_upload" class="cbi-button" value="<%:Upload%>" /></td>
+			</tr>
+			<% if image_invalid then %>
+			<tr class="title-option">
+				<td><span style="color:#FF0000;"><%:Firmware upgrade is failed for unexpected reasons. Please make sure your firmware is valid.%></span></td>
+			</tr>
+			<% end %>
+		</table>
+		</form>
+		<br/>
+<%
+	if uci:get('network','sys','EnMesh') ~= '1' and uci:get('sysProductInfo','model','modelName')~='EMD11' then
+%>
+<%
+	if uci:get('functionlist','functionlist','HAS_EG_AUTO_FW_CHECK') == "1" then
+%>
+		<form method="post" action="<%=REQUEST_URI%>" enctype="multipart/form-data">
+			<table>
+				<tr>
+					<td colspan="3" class="title"><%:Auto Firmware Upgrade%></td>
+				</tr>
+				<tr class="title-option">
+					<td style="width:30%;"><label for="autoFWEnable_enable"><%:Status%></label></td>
+					<td style="width:50%;">
+						<input type="radio" name="autoFWEnable" value="1" id="autoFWEnable_enable">
+						<label for="autoFWEnable_enable"><%:Enable%></label>
+						<input type="radio" name="autoFWEnable" value="0" id="autoFWEnable_disable">
+						<label for="autoFWEnable_disable"><%:Disable%></label>
+					</td>
+					<td style="width:20%;"><input class="cbi-button" name="saveFW_enable" type="submit" onclick="ajax_setCsrf();" value="<%:Apply%>"></td>
+				</tr>
+				<tr id="checkBtn" style="display: none">
+					<td colspan="3">
+						<input class="cbi-button" name="checkFW" type="submit" onclick="ajax_setCsrf();" value="<%:Check%>">
+					</td>
+				</tr>
+				<tbody id="autoFWInfo" style="display: none">
+				<tr class="title-option">
+					<td><%:New Firmware version %></td>
+					<td id="new_ver" td colspan="2"></td>
+				</tr>
+				<tr class="title-option">
+					<td><%:Release Date %></td>
+					<td id="release_date" td colspan="2"></td>
+				</tr>
+				<tr>
+					<td colspan="3">
+					<input class="cbi-button" name="checkFW" type="submit" onclick="ajax_setCsrf();" value="<%:Check%>"> &nbsp;&nbsp;
+					<input class="cbi-button" name="showNote" onclick="return showReleaseNote()" type="button" value="<%:Release Note%>">&nbsp;&nbsp;
+					<input type="hidden" name="fw_id">
+					<input class="cbi-button" name="upgradeAction" type="submit" onclick="ajax_setCsrf();" value="<%:Upgrade%>">
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</form>
+<%
+	end
+%>
+
+<%
+	if uci:get('functionlist','functionlist','SUPPORT_IPCAM') ~= "1" then
+%>
+		<form method="post" action="<%=REQUEST_URI%>" enctype="multipart/form-data">
+		<table>
+			<tr>
+				<td class="title" colspan="2"><%:Backup%>/<%:Restore Settings%></td>
+			</tr>
+			<tr class="title-option">
+				<td colspan="2"><%:Factory Setting%></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;">- <%:Backup Setting%><img class="popper" data-popbox="Back_Up_Setting_as_Default_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+				<td><input class="cbi-button" type="submit" onclick="ajax_setCsrf();" name="backup" value="<%:Export%>" /></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;">- <%:Restore New Setting%></td>
+				<td><input type="file" name="archive" id="archive" style="background:#F0F0F0;"/>&nbsp;&nbsp;<input type="submit" onclick="ajax_setCsrf();" class="cbi-button" name="restore" value="<%:Import%>" /></td>
+			</tr>
+			<% if backup_invalid then %>
+			<tr class="title-option">
+				<td colspan="2" style="padding-left: 30px;"><span style="color:#FF0000;"><%:Invalid backup configuration.%></span></td>
+			</tr>
+			<% end %>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;">- <%:Reset to Default%><img class="popper" data-popbox="Reset_to_Default_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+				<td><input class="cbi-button" type="submit" onclick="ajax_setCsrf();"  name="reset" value="<%:Reset%>" /></td>
+			</tr>
+			<tr class="title-option">
+				<td colspan="2"><%:User Setting%></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;">- <%:Back Up Setting as Default%></td>
+				<td><input class="cbi-button" id="user_backup" name="user_backup" value="<%:Backup%>" onclick="ajax_setCsrf();" type="submit"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;">- <%:Restore to User Default%><img class="popper" data-popbox="Restore_to_User_Default_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+				<td><input class="cbi-button" id="user_restore" name="user_restore" value="<%:Restore%>" onclick="ajax_setCsrf();" type="submit"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 35%; padding-left: 30px;" colspan="2">- <span class="caution"><%:Warning%>:</span>&nbsp;<%:This feature will overwrite the factory default setting with your current AP settings. Pressing the physical reset button will restore the configuration of the current AP settings, not factory default settings. To restore to factory settings, press Factory Setting, Reset to Default in the UI.%></td>
+			</tr>
+		</table>
+		<br/>
+		<table>
+		</table>
+		</form>
+<%
+	end
+%>
+<%
+	end
+%>
+	</fieldset>
+</fieldset>
+
+<%+footer%>

@@ -1,0 +1,11 @@
+*mangle
+:portal_pre_mangle - [0:0]
+:portal_post_mangle - [0:0]
+:portal_fw_mangle - [0:0]
+-F portal_pre_mangle
+-F portal_post_mangle
+-F portal_fw_mangle
+-I PREROUTING -j portal_pre_mangle
+-I POSTROUTING -j portal_post_mangle
+-I FORWARD -j portal_fw_mangle
+COMMIT

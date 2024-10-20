@@ -1,0 +1,9 @@
+Package: openlldp
+Version: 0.4alpha
+Depends: libc
+Source: SENAO/package/openlldp
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 17482
+Description:  Link Layer Discovery Protocol daemon

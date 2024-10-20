@@ -1,0 +1,8 @@
+########################################################
+# sourced by F96led/led.sh
+# used by all vendor
+########################################################
+
+BTN_GPIO_PATH="/sys/class/gpio"
+BTN_GPIO_EXPORT="/sys/class/gpio/export"
+

@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# (C) 2008 openwrt.org
+
+TP=96
+
+start() {
+	[ -e /sys/class/leds/ ] && {
+		for led_name in $(ls /sys/class/leds/) ; do
+			case $led_name in
+			"wlan_2g_led")
+				echo timer > /sys/class/leds/$led_name/trigger
+				;;
+			*)
+				echo 0 > /sys/class/leds/$led_name/brightness
+				;;
+			esac
+		done
+    }
+}

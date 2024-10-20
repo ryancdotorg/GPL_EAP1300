@@ -1,0 +1,30 @@
+#!/bin/sh
+# Copyright (C) 2006-2011 OpenWrt.org
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+start () {
+	local enable_schedule=$(uci get wifi_schedule.wireless.ScheduleEnable)
+	local enable_autoReboot=$(uci get wifi_schedule.reboot.status)
+	loglevel=$(uci_get "system.@system[0].cronloglevel")
+
+	#[ "$enable_schedule" -eq 0 -a "$enable_autoReboot" -eq 0 ] && exit 1
+	#[ -z "$(ls /etc/crontabs/)" ] && exit 1
+
+	mkdir -p /var/spool/cron
+	ln -s /etc/crontabs /var/spool/cron/ 2>/dev/null
+	/usr/sbin/crond -c /etc/crontabs -l ${loglevel:-5}
+        mkdir -p /var/spool/cron_nolog
+        ln -s /etc/crontabs_nolog /var/spool/cron_nolog/ 2>/dev/null
+        /usr/sbin/crond -c /etc/crontabs_nolog -l ${loglevel:-9}
+}
+
+stop() {
+	killall -9 crond
+}
+
+case "$1" in
+	start) start;;
+	stop) stop;;
+esac

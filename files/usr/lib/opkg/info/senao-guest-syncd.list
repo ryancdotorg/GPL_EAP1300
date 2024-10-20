@@ -1,0 +1,5 @@
+/usr/sbin/guest_syncli
+/etc/uci-defaults/guestsyncd
+/etc/init.d/guestsyncd
+/etc/config/guestsyncd
+/usr/sbin/guest_syncd

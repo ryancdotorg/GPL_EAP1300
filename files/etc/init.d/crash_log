@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+
+START=42
+
+boot() {
+	if [ -f /usr/sbin/snlogger ]; then
+		#add crash log
+		if [ -n "$(ls -A /usr/share/kdump/config*)" ]; then
+			snlogger "event.warn 1.0" "ap_sys_warning_crash,reason='system crash'"
+		fi
+		#for SENAO-crash-dump
+		if [ -n "$(ls -A /usr/share/crashdump/dmesg*)" ]; then
+			snlogger "event.warn 1.0" "ap_sys_warning_crash,reason='system crash'"
+		fi
+	fi
+}

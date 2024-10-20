@@ -1,0 +1,16 @@
+Index: matrixssl/src/os/linux/linux.c
+===================================================================
+--- matrixssl.orig/src/os/linux/linux.c
++++ matrixssl/src/os/linux/linux.c
+@@ -125,7 +125,11 @@ int32 sslOpenOsdep()
+ */
+ #ifdef USE_MULTITHREADING
+ #ifndef OSX
++#ifndef PTHREAD_MUTEX_RECURSIVE_NP
++	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
++#else
+ 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
++#endif
+ #endif /* !OSX */
+ 	pthread_mutexattr_init(&attr);
+ #endif /* USE_MULTITHREADING */

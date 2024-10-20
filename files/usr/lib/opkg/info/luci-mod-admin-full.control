@@ -1,0 +1,9 @@
+Package: luci-mod-admin-full
+Version: 0.11-1
+Depends: libc, luci-mod-admin-core, luci-lib-ipkg
+Source: SENAO/package/senao-luci/luci-0.11svn9960_ECB_FANCY/contrib/package/luci
+Section: luci_ECB_FNACY
+Maintainer: LuCI Development Team <luci@lists.subsignal.org>
+Architecture: ipq40xx
+Installed-Size: 564215
+Description:  LuCI Administration - full-featured for full control

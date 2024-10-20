@@ -1,0 +1,134 @@
+#!/bin/sh /etc/rc.common
+START=98
+STOP=10
+USE_PROCD=1
+
+. /lib/functions.sh
+
+isApMode() {
+	for section in $(ifconfig -a  | grep wifi | awk -F " " {'print $1'})
+	do
+        # if wireless opmode not ap, don't start wtp(return 1).
+		[ "$(uci get wireless.$section.opmode)" != "ap" -a "$(uci get wireless.$section.opmode)" != "mon" ] && return 1
+	done
+
+    return 0
+}
+
+append_eth_vid()
+{
+	for eif in $1
+	do
+		if [ -n "$2" ]
+		then
+			eth_vlanifs="${eth_vlanifs} ${eif}.${2}"
+		fi
+	done
+	echo ${eth_vlanifs:-$1}
+}
+
+startlldpd()
+{
+	#copy from openlldpd.init init script in openlldp package
+	local func_enable_bonding=$(uci -q get network.lacp.lacp_enable)
+	if [ $func_enable_bonding -eq 1 ]; then
+		local lan_ifnames="bond0"
+	else
+		local lan_ifnames=$(uci -q get /rom/etc/config/network.lan.ifname)
+	fi
+
+	local mgmtvlan_en=$(uci -q get network.sys.WLANVLANEnable)
+	if [ ${mgmtvlan_en:-0} -eq 1 ]; then
+		local mgmtvlan_id=$(uci -q get network.sys.ManagementVLANID)
+		lan_ifnames=$(append_eth_vid "$lan_ifnames" $mgmtvlan_id)
+	fi
+
+	for ifname in $lan_ifnames
+	do
+		/usr/bin/lldpd -i $ifname &
+	done
+}
+
+startwtp() {
+	if [ -e /usr/bin/wtp ]; then
+		echo "start apcontroller" > /dev/console
+		procd_open_instance
+		procd_set_param command /usr/bin/wtp --dir /etc/capwap --cert_dir /etc/capwap --daemon 0 --dlog 0
+		procd_set_param respawn 3600 10 0
+		procd_close_instance
+	fi
+	# WAR : advoid wtp mem too high
+	if [ -e /usr/sbin/wtp_mem_check.sh ]; then
+		wtp_mem_check.sh &
+	fi
+}
+
+isStartWtp()
+{
+	local isStartWtp=0
+	if [ "$(uci -q get functionlist.functionlist.SUPPORT_ENJET)" == "1" ]; then
+	    echo "Support multiple operation" > /dev/console
+	    isStartWtp=1
+	else
+	    if [ "$(uci -q get functionlist.functionlist.SUPPORT_AP_MODE_ONLY)" == "1" ]; then
+		    echo "Support AP Only" > /dev/console
+		    isStartWtp=1
+	    else
+		    echo "Support multiple operation: AP Only" > /dev/console
+		    isApMode && isStartWtp=1
+	    fi
+	fi
+	echo $isStartWtp
+}
+
+start_service()
+{
+	# WAR : advoid wtp mem too high
+	killall wtp_mem_check.sh
+
+	if [ "$(isStartWtp)" = "1" ]; then
+		startwtp
+	fi
+
+	if [ -z "$(pidof lldpd)" ]; then
+		echo "start lldpd" > /dev/console
+		isApMode && startlldpd
+	fi
+}
+
+stop_service() {
+	#restart lldpd to change interface
+	if [ -n "$(pidof lldpd)" ]; then
+		killall -9 lldpd;
+		sleep 2
+	fi
+	# WAR : advoid wtp mem too high
+	killall wtp_mem_check.sh
+}
+
+reload_service()
+{
+	#restart lldpd to change interface
+	if [ -n "$(pidof lldpd)" ]; then
+		killall -9 lldpd;
+		sleep 2
+	fi
+
+	wtp_status=$(ubus call service list '{"name":"apcontroller"}' | jq -r .apcontroller.instances.instance1.running)
+	if [ "$wtp_status" = "true" ] && [ "$(isStartWtp)" = "0" ]; then
+		stop
+		killall wtp
+		return 0
+	else
+		if [ "$(isStartWtp)" = "1" ]; then
+			start
+		fi
+	fi
+	return 0
+}
+
+service_triggers()
+{
+# trigger fail now
+	procd_add_reload_trigger apcontroller
+}

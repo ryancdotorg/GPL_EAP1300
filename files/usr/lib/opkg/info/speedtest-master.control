@@ -1,0 +1,9 @@
+Package: speedtest-master
+Version: 1.0-1-gf1d66f0
+Depends: libc, libpthread, libcurl
+Source: SENAO/package/speedtest-master
+Section: opt
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 9063
+Description:  Speed test in C code.

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+# support senao-mgmt first time.
+
+# Check
+if [ -z "$(uci get wireless.wifi0_mgmt)" ]; then
+	# wifi0_mgmt
+	mgmt_configs=$(eval "uci show /rom/etc/config/wireless.wifi0_mgmt")
+	for i in $mgmt_configs; do
+		eval uci set ${i}
+	done
+
+	uci commit
+fi
+
+exit 0

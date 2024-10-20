@@ -1,0 +1,7 @@
+Package: luci-proto-ppp
+Version: 0.11-1
+Depends: libc
+Status: install user installed
+Architecture: ipq40xx
+Installed-Time: 1685090637
+

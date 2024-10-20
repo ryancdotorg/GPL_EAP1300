@@ -1,0 +1,101 @@
+Index: ifplugd-0.28/src/ifplugd.c
+===================================================================
+--- ifplugd-0.28.orig/src/ifplugd.c
++++ ifplugd-0.28/src/ifplugd.c
+@@ -373,6 +373,7 @@ int is_iface_available(int s, char *p) {
+ void work(void) {
+     interface_status_t status;
+     int fd = -1;
++    int lan_state;
+     fd_set fds;
+     int sigfd;
+     time_t t = 0;
+@@ -438,6 +439,9 @@ void work(void) {
+ 
+     if ((status = detect_beat(fd, interface)) == IFSTATUS_ERR)
+         goto finish;
++
++    if ((lan_state = interface_detect_beat_lan_state(fd, interface)) == -1)
++        goto finish;
+     
+     daemon_log(LOG_INFO, "Initialization complete, link beat %sdetected%s.", status == IFSTATUS_UP ? "" : "not ", use_ifmonitor ? (disabled ? ", interface disabled" : ", interface enabled") : "");
+     beep(status == IFSTATUS_UP ? 0 : 1);
+@@ -463,6 +467,7 @@ void work(void) {
+         interface_status_t s;
+         fd_set qfds = fds;
+         int d;
++        int s3;
+         struct timeval tv;
+ 
+         tv.tv_sec = polltime;
+@@ -480,6 +485,7 @@ void work(void) {
+         
+         d = disabled;
+         s = status;
++        s3 = lan_state;
+         
+         if (use_ifmonitor) {
+ 
+@@ -509,9 +515,17 @@ void work(void) {
+ 
+                 status = IFSTATUS_DOWN;
+             }
++            if ((lan_state = interface_detect_beat_lan_state(fd, interface)) == -1) {
++                if (!use_ifmonitor)
++                    goto finish;
++                status = IFSTATUS_DOWN;
++            }
++            if ( s3 > lan_state ) {
++                status = IFSTATUS_DOWN;
++            }
+         }
+ 
+-        if (status != s) {
++        if (lan_state != s3) {
+             daemon_log(LOG_INFO, "Link beat %s.", status == IFSTATUS_DOWN ? "lost" : "detected");
+             beep(status == IFSTATUS_UP ? 0 : 1);
+             
+@@ -573,7 +587,7 @@ void work(void) {
+             }
+         }
+ 
+-        if (t && t < time(NULL)) {
++        if ((t && t < time(NULL)) || (s3 != lan_state)) {
+             t = 0;
+ 
+             if (action(status) < 0)
+Index: ifplugd-0.28/src/interface.c
+===================================================================
+--- ifplugd-0.28.orig/src/interface.c
++++ ifplugd-0.28/src/interface.c
+@@ -115,6 +115,19 @@ interface_status_t interface_detect_beat
+     return (((unsigned short*) &ifr.ifr_data)[3] & 0x0004) ? IFSTATUS_UP : IFSTATUS_DOWN;
+ }
+ 
++int interface_detect_beat_lan_state(int fd, char *iface) {
++    FILE *fp;
++    int val=0;
++
++    if( (fp = fopen( "/proc/LAN_STATE", "r" )) != NULL )
++    {
++        fscanf(fp, "%d", &val);
++        fclose(fp);
++    }
++
++    return val;
++}
++
+ interface_status_t interface_detect_beat_priv(int fd, char *iface) {
+     struct ifreq ifr;
+     
+Index: ifplugd-0.28/src/interface.h
+===================================================================
+--- ifplugd-0.28.orig/src/interface.h
++++ ifplugd-0.28/src/interface.h
+@@ -33,5 +33,6 @@ interface_status_t interface_detect_beat
+ interface_status_t interface_detect_beat_ethtool(int fd, char *iface);
+ interface_status_t interface_detect_beat_wlan(int fd, char *iface);
+ interface_status_t interface_detect_beat_iff(int fd, char *iface);
++int interface_detect_beat_lan_state(int fd, char *iface);
+ 
+ #endif

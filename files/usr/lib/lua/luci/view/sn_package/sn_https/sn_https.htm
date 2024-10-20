@@ -1,0 +1,40 @@
+<%+header%>
+<h2><a name="content" id="content"><%:HTTPS Settings%></a></h2>
+<fieldset class="cbi-section">
+<form action="<%=REQUEST_URI%>">
+	<table>
+		<tr>
+			<td width="33%"><%:HTTPS Status%></td>
+			<td><input type="radio" value="1" name="https_enable"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="0" name="https_enable" onchange="https_reload();"/>&nbsp;<%:Disable%></td>
+		</tr>
+		<tr>
+			<td width="33%"><%:HTTPS Forward%></td>
+			<td><input type="radio" value="1" name="https_forward" onchange="https_reload();"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="0" name="https_forward"/>&nbsp;<%:Disable%></td>
+		</tr>
+		<tr>
+			<td colspan="2">
+				<div class="cbi-page-actions">
+					<input type="submit" value="<%:Save%>" myid="button_apply" class="cbi-button cbi-button-save">
+					<input type="reset" value="<%:Reset%>" myid="button_reset" class="cbi-button cbi-button-reset">
+				</div>
+			</td>
+		</tr>
+	</table>
+</form>
+</fieldset>
+<%
+	local d = luci.model.uci.cursor():get_all("lighttpd","https")
+%>
+<script>
+	var https={enable:"<%=d['enable']%>",forward:"<%=d['forward']%>"};
+	
+	document.getElementsByName('https_enable')[(https.enable == "1" ? 0:1)].checked=true;
+	document.getElementsByName('https_forward')[(https.forward == "1" ? 0:1)].checked=true;
+	function https_reload(){
+		if(document.getElementsByName('https_enable')[1].checked == true)
+		{
+			document.getElementsByName('https_forward')[1].checked = true;
+		}
+	}
+</script>
+<%+footer%>

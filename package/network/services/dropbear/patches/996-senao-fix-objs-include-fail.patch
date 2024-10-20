@@ -1,0 +1,26 @@
+Index: dropbear-2019.78/Makefile.in
+===================================================================
+--- dropbear-2019.78.orig/Makefile.in
++++ dropbear-2019.78/Makefile.in
+@@ -195,7 +195,7 @@ dbclient: $(HEADERS) $(LIBTOM_DEPS) Make
+ 	+$(CC) $(LDFLAGS) -o $@$(EXEEXT) $($@objs) $(LIBTOM_LIBS) $(LIBS)
+ 
+ dropbearkey dropbearconvert: $(HEADERS) $(LIBTOM_DEPS) Makefile
+-	+$(CC) $(LDFLAGS) -o $@$(EXEEXT) $($@objs) $(LIBTOM_LIBS) $(LIBS)
++	+$(CC) $(LDFLAGS) -o $@$(EXEEXT) $($@objs) $(LIBTOMCRYPT_OBJS) $(LIBTOMMATH_OBJS) $(LIBTOM_LIBS) $(LIBS)
+ 
+ # scp doesn't use the libs so is special.
+ scp: $(SCPOBJS)  $(HEADERS) Makefile
+@@ -209,8 +209,11 @@ ifeq ($(MULTI),1)
+ 	CFLAGS+=$(addprefix -DDBMULTI_, $(PROGRAMS)) -DDROPBEAR_MULTI
+ endif
+ 
++LIBTOMCRYPT_OBJS=$(shell find ./libtomcrypt -name "*.o")
++LIBTOMMATH_OBJS=$(shell find ./libtommath -name "*.o")
++
+ dropbearmulti$(EXEEXT): $(HEADERS) $(MULTIOBJS) $(LIBTOM_DEPS) Makefile
+-	+$(CC) $(LDFLAGS) -o $@ $(MULTIOBJS) $(LIBTOM_LIBS) $(LIBS) @CRYPTLIB@
++	+$(CC) $(LDFLAGS) -o $@ $(MULTIOBJS) $(LIBTOMCRYPT_OBJS) $(LIBTOMMATH_OBJS) $(LIBTOM_LIBS) $(LIBS) @CRYPTLIB@
+ 
+ multibinary: dropbearmulti$(EXEEXT)
+ 

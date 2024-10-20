@@ -1,0 +1,45 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+
+available_size=
+get_nand_available_size(){
+	ubiattach /dev/ubi_ctrl -m 0 > /tmp/ubiattach_info
+	available_size=$(awk '{print $17}' /tmp/ubiattach_info | awk -F"." '{print $1}')
+}
+
+do_mount_nand_ubifs() {
+	local number_of_volumes=0
+	local i=0
+	grep -sw msm_nand /proc/mtd || return 1
+	get_nand_available_size  
+	        
+	for vol in UBI_VOLUMES
+	do
+		let number_of_volumes=${number_of_volumes}+1
+	done
+        
+	average_size=`expr ${available_size} / ${number_of_volumes}`
+	
+	for vol in UBI_VOLUMES
+	do
+		if [ $(ls dev/ | grep ubi0_${i}) ];then
+			echo "already create UBI0 volume ID ${i}"
+		else
+			ubimkvol /dev/ubi0 -N ${vol} -s ${average_size}MiB
+		fi
+		mkdir -p /tmp/${vol}
+		mount -t ubifs /dev/ubi0_${i} /tmp/${vol}
+  		let i=${i}+1
+	done
+}
+
+start() {
+	do_mount_nand_ubifs
+}
+
+case "$1" in
+	start) start;;
+esac

@@ -1,0 +1,10 @@
+Package: libieee1905
+Version: g30bdbbe8c-1
+Depends: libc, libhyficommon
+Source: qca/feeds/ieee1905-security/qca-ieee1905-security-config/libieee1905
+Section: QCA
+Maintainer: Qualcomm Atheros, Inc.
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 6596
+Description:  This Package contains the IEEE1905.1 library

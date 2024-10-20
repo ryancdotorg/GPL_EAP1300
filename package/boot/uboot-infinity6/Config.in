@@ -1,0 +1,232 @@
+define Package/uboot-sstar-infinity6/config
+if PACKAGE_uboot-sstar-infinity6
+choice
+    prompt "Flash Type"
+    config PACKAGE_$(PKG_NAME)-SENAO_SPINAND
+        bool "SPI NAND"
+
+    config PACKAGE_$(PKG_NAME)-SENAO_SPINOR
+        bool "SPI NOR"
+
+endchoice
+
+menu "Senao definitions"
+config PACKAGE_$(PKG_NAME)-SENAO_RECOVERY_MODE
+    bool "Use recovery mode"
+    default y
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_RECOVERY_MODE_DISABLE_WAN
+    bool "disable wan"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6-SENAO_RECOVERY_MODE
+
+config PACKAGE_$(PKG_NAME)-SENAO_IMAGE_CAPWAP_HEADER
+    bool "Image header support capwap"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6-SENAO_RECOVERY_MODE
+
+config PACKAGE_$(PKG_NAME)-SENAO_HAS_OPERATION_SELECTION
+    bool "Use Operation Selection Menu"
+    default y
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_HAS_RMGMT
+    bool "RMGMT Support"
+    default "n"
+	depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_HAS_RMGMT_DBG
+    bool "RMGMT Debug Support"
+    default "n"
+	depends on PACKAGE_uboot-sstar-infinity6-SENAO_HAS_RMGMT
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_RMGMT_LED1
+    string "RMGMT LED 1"
+    default "POWER1_LED"
+    depends on PACKAGE_uboot-sstar-infinity6-SENAO_HAS_RMGMT
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_RMGMT_LED2
+    string "RMGMT LED 2"
+    default "WLAN_2G_LED"
+    depends on PACKAGE_uboot-sstar-infinity6-SENAO_HAS_RMGMT
+
+config PACKAGE_$(PKG_NAME)-SENAO_GPIO_TEST
+    bool "gpio test"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_GPIO_BUTTON_TESTING
+    bool "Button gpio test"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_GPIO_LED_TESTING
+    bool "LED gpio test"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_LED_INIT
+    bool "LED init"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_I2C_REGULATORS_TESTING
+    bool "i2c Regulators moduel test"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-SENAO_PSE_DETECT_MODE
+    bool "pse detect mode feature"
+    default n
+    depends on PACKAGE_uboot-sstar-infinity6
+
+endmenu
+
+menu "Senao configurations"
+comment ""
+comment "leave it blank for undefined variable"
+comment ""
+config PACKAGE_$(PKG_NAME)-UBOOT_CONFIG_TARGET
+    string "U-Boot config target"
+    default "infinity6"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_MODEL_NAME
+    string "Senao model name"
+    default "SAV528"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_UBOOT_VERSION
+    string "U-Boot Version"
+    default "1.0.0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_CONFIG_IPADDR
+    string "device ip"
+    default "192.168.1.1"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_CONFIG_SERVERIP
+    string "server ip"
+    default "192.168.1.10"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_CONFIG_ETHADDR
+    string "ethernet address"
+    default "00:aa:bb:cc:dd:10"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_SN
+    string "Serial number"
+    default "000000001"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_HW_VER
+    string "Hardware version"
+    default "0.0.1"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_PRO_ID
+    string "CONFIG_PRO_ID"
+    default "000"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_COUNTRY
+    string "Country code"
+    default "000"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_DOMAIN
+    string "CONFIG_DOMAIN"
+    default "0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_OP_MODE
+    string "opmode"
+    default "0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_WANADDR
+    string "Wan macaddr"
+    default "00:aa:bb:cc:dd:11"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_WLANADDR
+    string "Wan macaddr"
+    default "00:aa:bb:cc:dd:12"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_HW_ID
+    string "Hardware ID"
+    default "00000000"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_DEBUG
+    string "Debug"
+    default "0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_FWADDR
+    string "Firmware macaddr"
+    default "00:aa:bb:cc:dd:14"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_ATHADDR
+    string "ATH macaddr"
+    default "00:aa:bb:cc:dd:13"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_APP_PART
+    string "Apps partition"
+    default "0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_OLED_ON
+    string "OLED_ON"
+    default "0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_DDWRT_SW
+    string "CONFIG_DDWRT_SW"
+    default "0"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_SN_EXTRA
+    string "CONFIG_SN_EXTRA"
+    default "00000000000000000000"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_LANGUAGE_CODE
+    string "LANGUAGE_CODE"
+    default "00"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_SERVICE_TAG
+    string "CONFIG_SERVICE_TAG"
+    default "000000000000000"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_BUNDLE_AP_MAC
+    string "CONFIG_BUNDLE_AP_MAC"
+    default "00:aa:bb:cc:dd:15"
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_PRODUCT_FILENAME
+    string "firmware product name"
+    default ""
+    depends on PACKAGE_uboot-sstar-infinity6
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_MTDPARTS
+    string "mtdparts for spinand"
+    default "mtdparts=nand0:0x20000@0x60000(IPL0),0x20000(IPL1),0x20000(IPL2),0x20000(IPL_CUST0),0x20000(IPL_CUST1),0x20000(IPL_CUST2),0x60000(UBOOT0),0x60000(UBOOT1),0x20000(ENV),-(rootfs)"
+    depends on PACKAGE_$(PKG_NAME)-SENAO_SPINAND
+
+config PACKAGE_$(PKG_NAME)-MAKEOPTS_SENAO_BOOTCOMMAND
+    string "bootcmd for spinand"
+    default "ubi part rootfs; ubi read 0x22000000 kernel; bootm 0x22000000"
+    depends on PACKAGE_$(PKG_NAME)-SENAO_SPINAND
+endmenu
+
+endif
+endef

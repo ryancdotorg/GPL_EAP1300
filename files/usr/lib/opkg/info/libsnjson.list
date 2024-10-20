@@ -1,0 +1,3 @@
+/sbin/doDownloadFW.sh
+/sbin/getLatestFWInfo.sh
+/lib/libsnjson.so

@@ -1,0 +1,25 @@
+--- a/initd/init.h
++++ b/initd/init.h
+@@ -18,6 +18,10 @@
+ 
+ #include "../log.h"
+ 
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
++
+ void preinit(void);
+ void early(void);
+ int mkdev(const char *progname, int progmode);
+--- a/plug/hotplug.c
++++ b/plug/hotplug.c
+@@ -15,6 +15,9 @@
+ #include <sys/stat.h>
+ #include <sys/socket.h>
+ #include <sys/types.h>
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
+ 
+ #include <linux/types.h>
+ #include <linux/netlink.h>

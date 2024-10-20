@@ -1,0 +1,5 @@
+/lib/wifi/lowi.sh
+/usr/sbin/lowi-test
+/etc/lowi/lowi.conf
+/usr/sbin/lowi-server
+/usr/lib/lowi/liblowi_client.so

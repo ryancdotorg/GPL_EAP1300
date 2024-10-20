@@ -1,0 +1,9 @@
+Package: senao-app-client
+Version: 1.0-1-g5089045
+Depends: libc, libopenssl
+Source: SENAO/package/senao-app-client
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 5857
+Description:  Senao APP client

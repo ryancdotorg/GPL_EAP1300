@@ -1,0 +1,25 @@
+--- a/include/common.h
++++ b/include/common.h
+@@ -30,6 +30,10 @@
+ #include <inttypes.h>
+ #include "version.h"
+ 
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
++
+ #ifndef PROGRAM_NAME
+ # error "You must define PROGRAM_NAME before including this header"
+ #endif
+--- a/mkfs.ubifs/mkfs.ubifs.h
++++ b/mkfs.ubifs/mkfs.ubifs.h
+@@ -32,6 +32,9 @@
+ #include <endian.h>
+ #include <byteswap.h>
+ #include <linux/types.h>
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
+ #include <linux/fs.h>
+ 
+ #include <getopt.h>

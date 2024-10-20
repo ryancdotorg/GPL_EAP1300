@@ -1,0 +1,9 @@
+Package: kmod-syseye-nlc
+Version: 4.4.60+1.2-6-g64dfa5c
+Depends: kernel (=4.4.60-1-00d4d08f108a4ac04f94cf3f2682d73e), libc, syseye
+Source: SENAO/package/senao-syseye
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 3352
+Description:  syseye netlink client

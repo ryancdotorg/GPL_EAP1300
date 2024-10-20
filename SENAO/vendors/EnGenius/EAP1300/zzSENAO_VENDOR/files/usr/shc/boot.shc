@@ -1,0 +1,117 @@
+#!/bin/sh
+# Copyright (C) 2006-2011 OpenWrt.org
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+system_config() {
+	local cfg="$1"
+
+	local hostname conloglevel timezone
+
+	config_get hostname "$cfg" hostname 'OpenWrt'
+	echo "$hostname" > /proc/sys/kernel/hostname
+
+	config_get conloglevel "$cfg" conloglevel
+	config_get buffersize "$cfg" buffersize
+	[ -z "$conloglevel" -a -z "$buffersize" ] || dmesg ${conloglevel:+-n $conloglevel} ${buffersize:+-s $buffersize}
+
+	config_get timezone "$cfg" timezone 'UTC'
+    local dayLightEnable=$(uci get ntpclient.daylightsaving.DayLightEnable)
+
+	if [ "$dayLightEnable" = "1" ]; then
+        local s_m=$(uci get ntpclient.daylightsaving.startMonth)
+	    local s_w=$(uci get ntpclient.daylightsaving.startWeek)
+	    local s_d=$(uci get ntpclient.daylightsaving.startDay)
+	    local s_h=$(uci get ntpclient.daylightsaving.startHour)
+	    local e_m=$(uci get ntpclient.daylightsaving.endMonth)
+	    local e_w=$(uci get ntpclient.daylightsaving.endWeek)
+	    local e_d=$(uci get ntpclient.daylightsaving.endDay)
+	    local e_h=$(uci get ntpclient.daylightsaving.endHour)
+        local TZ_format=$timezone"DLS,M"$s_m"."$s_w"."$s_d"/"$s_h":00:00,M"$e_m"."$e_w"."$e_d"/"$e_h":00:00"
+		echo "$TZ_format" > /tmp/TZ
+	else
+		echo "$timezone" > /tmp/TZ
+	fi
+
+	config_get zonename "$cfg" zonename
+	[ -n "$zonename" ] && [ -f "/usr/share/zoneinfo/$zonename" ] && ln -s "/usr/share/zoneinfo/$zonename" /tmp/localtime
+
+	# apply timezone to kernel
+	date -k
+
+}
+
+apply_uci_config() {
+	sh -c '. /lib/functions.sh; include /lib/config; uci_apply_defaults'
+}
+
+start() {
+	[ -f /proc/mounts ] || /sbin/mount_root
+	[ -f /proc/jffs2_bbc ] && echo "S" > /proc/jffs2_bbc
+	[ -f /proc/net/vlan/config ] && vconfig set_name_type DEV_PLUS_VID_NO_PAD
+
+	mkdir -p /var/run
+	mkdir -p /var/log
+	mkdir -p /var/lock
+	mkdir -p /var/state
+	mkdir -p /tmp/.uci
+	chmod 0700 /tmp/.uci
+	touch /var/log/wtmp
+	touch /var/log/lastlog
+	touch /tmp/resolv.conf.auto
+	ln -sf /tmp/resolv.conf.auto /tmp/resolv.conf
+	grep -q debugfs /proc/filesystems && mount -t debugfs debugfs /sys/kernel/debug
+	[ "$FAILSAFE" = "true" ] && touch /tmp/.failsafe
+
+	if [ -f /sbin/kmodloader ]; then
+		/sbin/kmodloader
+	else
+		load_modules /etc/modules.d/*
+	fi
+
+	# allow wifi modules time to settle
+	sleep 1
+
+#	/sbin/wifi detect > /tmp/wireless.tmp
+#	[ -s /tmp/wireless.tmp ] && {
+#		cat /tmp/wireless.tmp >> /etc/config/wireless
+#	}
+#	rm -f /tmp/wireless.tmp
+
+	apply_uci_config
+	config_load system
+	config_foreach system_config system
+
+	killall -q hotplug2
+	[ -x /sbin/hotplug2 ] && /sbin/hotplug2 --override --persistent \
+			--set-rules-file /etc/hotplug2.rules \
+			--set-coldplug-cmd /sbin/udevtrigger \
+			--max-children 1 >/dev/null 2>&1 &
+
+	# create /dev/root if it doesn't exist
+	[ -e /dev/root -o -h /dev/root ] || {
+		rootdev=$(awk 'BEGIN { RS=" "; FS="="; } $1 == "root" { print $2 }' < /proc/cmdline)
+		[ -n "$rootdev" ] && ln -s "$rootdev" /dev/root
+	}
+mkdir -p /tmp/etc/crontabs 
+ rm -rf /etc/crontabs 
+ ln -sf /tmp/etc/crontabs /etc/crontabs 
+
+	[ -d /tmp/etc/crontabs ] || mkdir -p /tmp/etc/crontabs
+	[ -d /etc/crontabs ] && rm -rf /etc/crontabs
+	[ -d /tmp/etc/crontabs -o ! -d /etc/crontabs ] && ln -sf /tmp/etc/crontabs /etc/crontabs
+	[ -d /tmp/etc/crontabs_nolog ] || mkdir -p /tmp/etc/crontabs_nolog
+	[ -d /tmp/etc/crontabs_nolog -o ! -d /etc/crontabs_nolog ] && ln -sf /tmp/etc/crontabs_nolog /etc/crontabs_nolog
+
+}
+
+stop() {
+	service_stop /sbin/klogd
+	service_stop /sbin/syslogd
+}
+
+case "$1" in
+	start) start;;
+	stop) stop;;
+esac

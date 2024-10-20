@@ -1,0 +1,41 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -30,7 +30,8 @@ enum {
+   UNKNOWN = 0,
+   B = 1,
+   BG = 2,
+-  GN = 3
++  GN = 3,
++  AC = 4
+ };
+ 
+ /*
+@@ -536,6 +537,8 @@ print_scanning_token(struct stream_descr
+         printf("11b/g\t");
+       else if (state->type == GN)
+         printf("11g/n\t");
++      else if (state->type == AC)
++        printf("11ac\t");
+       printf("\n%s\t", iw_saether_ntop(&event->u.ap_addr, buffer));
+       state->ap_num++;
+        state->sec = OPEN;
+@@ -675,6 +678,8 @@ print_scanning_token(struct stream_descr
+ 	custom[event->u.data.length] = '\0';
+ 	if ((custom[0] == 'h') && (custom[1] == 't'))
+           state->type = GN;
++    if ((custom[0] == 'v') && (custom[1] == 'h'))
++          state->type = AC;
+ 	//printf("                    Extra:%s\n", custom);
+       }
+       break;
+@@ -990,6 +995,8 @@ print_scanning_info(int		skfd,
+           printf("11b/g\t");
+         else if (state.type == GN)
+           printf("11g/n\t");
++        else if (state.type == AC)
++          printf("11ac\t");
+       printf("\n");
+     }
+   else

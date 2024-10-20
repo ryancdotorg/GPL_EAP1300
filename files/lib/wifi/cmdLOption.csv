@@ -1,0 +1,11 @@
+channel
+txpower
+bintval
+wds
+mcastenhance
+bandsteer_en
+bandsteerrssi
+bandsteerpersent
+isolate
+fasthandover_rssi
+bcmcdrop

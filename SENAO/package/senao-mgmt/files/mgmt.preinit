@@ -1,0 +1,58 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions.sh
+
+. /etc/mgmt.d/mgmt_path.sh
+
+START=11
+
+MGMT_IFACE_EXIST=$(ifconfig | grep $MGMT_IFACE)
+WIFIJET_ENABLE=$(uci get functionlist.functionlist.SUPPORT_WIFIJET)
+
+boot() {
+    mkdir -p /var/run/mgmt
+    start
+}
+
+start() {
+    echo "start"
+    ## check mgmt ssid is default MAC value
+    ssid_rom="`uci -c /rom/etc/config/ get wireless.$MGMT_SECTION.ssid`"
+    echo $ssid_rom | grep "NETGEAR" && is_netgear=1 || is_netgear=0
+    modelName="`uci get sysProductInfo.model.modelName`"
+    if [ "$WIFIJET_ENABLE" == "1" -o "$is_netgear" == "1" ];then
+        mac="$(cat /tmp/lan_mac.txt |tr [a-z] [A-Z]|sed 's/://g'|cut -c 7-)"
+    else
+        if [ "$MGMT_SECTION" == "wifi0_mgmt" ];then
+            mac="$(cat /tmp/wifi0_mac.txt |tr [a-z] [A-Z]|sed 's/://g'|cut -c 7-)"
+        else
+            mac="$(cat /tmp/wifi1_mac.txt |tr [a-z] [A-Z]|sed 's/://g'|cut -c 7-)"
+        fi
+    fi
+    uci get wireless.$MGMT_SECTION.ssid | grep $mac || {
+        if [ "$WIFIJET_ENABLE" == "1" ]; then
+            new_pattern=$(setconfig -g 46)
+            [ -n "$new_pattern" ]&& ssid_rom="${ssid_rom}${new_pattern}"
+        fi
+        ssid_mac=$(eval "echo $ssid_rom | sed -e 's/-mac-/$mac/g'")
+        if [ "$is_netgear" == "1" ]; then
+            echo $modelName | grep "WAX" && ssid_mac=$(eval "echo $ssid_mac | sed -e 's/NETGEAR/${modelName}/g'")
+        fi
+        uci set wireless.$MGMT_SECTION.ssid="$ssid_mac"
+        uci commit
+    }
+}
+
+stop() {
+    echo "stop"
+}
+
+reload() {
+    echo "reload"
+    ## we add mgmt to br-lan in multi opmode except AP mode
+    ## this may cause netifd reload fail when create or destroy bridge
+    ## so we have to delete mgmt before network reload
+    # create vap by qcawifi.sh itself, no need to do brctl delif.
+    # brctl delif $MGMT_BRIDGE $MGMT_IFACE
+}
+

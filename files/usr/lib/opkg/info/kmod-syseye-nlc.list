@@ -1,0 +1,2 @@
+/etc/modules.d/10-syseye-nlc
+/lib/modules/4.4.60/senlc_module.ko

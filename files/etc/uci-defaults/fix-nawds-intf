@@ -1,0 +1,16 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+# fix WDS AP / BR NAWDS interface doesn't up, when ssid = null.
+
+# Check
+if [ -z "$(uci get wireless.wifi0_wds_0.ssid)" ]; then
+	# wifi0_mgmt
+	uci set wireless.wifi0_wds.ssid=nawds_bridge
+	uci set wireless.wifi1_wds.ssid=nawds_bridge
+	uci set wireless.wifi0_wds_0.ssid=nawds_bridge
+	uci set wireless.wifi1_wds_0.ssid=nawds_bridge
+	uci commit wireless
+fi
+
+exit 0

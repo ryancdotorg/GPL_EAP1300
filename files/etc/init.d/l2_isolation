@@ -1,0 +1,735 @@
+#!/bin/sh /etc/rc.common
+. /lib/functions.sh
+
+START=90
+EXTRA_COMMANDS='l2_isolation_rule_mac'
+config_load wireless
+l2_isolation_maclist_path="/var/log/l2_isolation/"
+internet_availabe=0
+
+load_ebtable() {
+	local kernel_version=$(ls /lib/modules/)
+	[ -d /sys/module/ebtables ] || insmod /lib/modules/${kernel_version}/ebtables.ko
+	[ -d /sys/module/ebtable_broute ] || insmod /lib/modules/${kernel_version}/ebtable_broute.ko
+	[ -d /sys/module/ebtable_filter ] || insmod /lib/modules/${kernel_version}/ebtable_filter.ko
+	[ -d /sys/module/ebtable_nat ] || insmod /lib/modules/${kernel_version}/ebtable_nat.ko
+	[ -d /sys/module/ebt_ip ] || insmod /lib/modules/${kernel_version}/ebt_ip.ko
+	[ -d /sys/module/ebt_snat ] || insmod /lib/modules/${kernel_version}/ebt_snat.ko
+	[ -d /sys/module/ebt_mark ] || insmod /lib/modules/${kernel_version}/ebt_mark.ko
+	[ -d /sys/module/ebt_mark_m ] || insmod /lib/modules/${kernel_version}/ebt_mark_m.ko
+	[ -d /sys/module/ebt_vlan ] || insmod /lib/modules/${kernel_version}/ebt_vlan.ko
+}
+
+unload_ebtable() {
+	[ -d /sys/module/ebt_snat ] && rmmod ebt_snat
+	[ -d /sys/module/ebt_ip ] && rmmod ebt_ip
+	[ -d /sys/module/ebt_mark ] && rmmod ebt_mark
+	[ -d /sys/module/ebt_mark_m ] && rmmod ebt_mark_m
+	[ -d /sys/module/ebt_vlan ] && rmmod ebt_vlan
+	[ -d /sys/module/ebtable_nat ] && rmmod ebtable_nat
+	[ -d /sys/module/ebtable_filter ] && rmmod ebtable_filter
+	[ -d /sys/module/ebtable_broute ] && rmmod ebtable_broute
+	[ -d /sys/module/ebtables ] && rmmod ebtables
+}
+boot()
+{
+    mkdir -p $l2_isolation_maclist_path
+    start
+}
+
+disable_isolation_ebtable()
+{
+    local ifname="$1"
+    local vif="$2" # wifi0_ssid_1
+    local combined_ssid=${vif#*_}  # ssid_1
+    local ssid_idx=${combined_ssid#*_} # 1
+
+    ebtables -D FORWARD -i $ifname -j isolation_${ifname}_chain 2>/dev/null
+    ebtables -F isolation_${ifname}_chain 2>/dev/null
+    ebtables -X isolation_${ifname}_chain 2>/dev/null
+
+    ebtables -D isolation_${ifname}_chain -i $ifname -j isolation_mac_${ifname}_chain 2>/dev/null
+    ebtables -F isolation_mac_${ifname}_chain 2>/dev/null
+    ebtables -X isolation_mac_${ifname}_chain 2>/dev/null
+
+    ebtables -D OUTPUT --mark 0x${ssid_idx}00/0x8f00 -j l2_isolation_${ifname}_eth_chain 2>/dev/null
+    ebtables -F l2_isolation_${ifname}_eth_chain 2>/dev/null
+    ebtables -X l2_isolation_${ifname}_eth_chain 2>/dev/null
+
+}
+
+
+enable_isolation_mpsk()
+{
+    local vif="$1" # wifi0_ssid_1
+    local ifname="$2"
+    local network="$3"
+    local combined_ssid=${vif#*_}  # ssid_1
+    local gateway_mac_file="/tmp/fingerprint_gw.txt"
+
+    echo "-I isolation_mac_${ifname}_chain --pkttype-type broadcast -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-I isolation_mac_${ifname}_chain --pkttype-type multicast -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    if [ -f "$gateway_mac_file" ]
+    then
+	while read line; do
+	    echo "-I isolation_mac_${ifname}_chain -d $line -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+	    internet_availabe="1"
+	done < $gateway_mac_file
+    fi
+    #echo "-A isolation_mac_${ifname}_chain -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+
+}
+enable_isolation_ebtable()
+{
+    local vif="$1" # wifi0_ssid_1
+    local ifname="$2"
+    local network="$3"
+    local only="$4"
+    local combined_ssid=${vif#*_}  # ssid_1
+    local ssid_idx=${combined_ssid#*_} # 1
+
+    echo ":l2_isolation_${ifname}_eth_chain RETURN" >>"${l2_isolation_maclist_path}ebtables_save"
+
+    if [ "$ifname" == "bat0" ] ;then
+	ssid_idx="9" #mesh mark
+        echo "-I OUTPUT --mark 0x${ssid_idx}00/0x8f00 -j l2_isolation_${ifname}_eth_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    elif [ "$ifname" == "eth0" ] ;then
+	echo "-I OUTPUT --mark 0X8300/0X8f00 -j l2_isolation_${ifname}_eth_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    else
+        echo "-I OUTPUT --mark 0x${ssid_idx}00/0x8f00 -j l2_isolation_${ifname}_eth_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    fi
+
+    echo "-I FORWARD -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo ":isolation_${ifname}_chain ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo ":isolation_mac_${ifname}_chain ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+
+    ebtables -N isolation_${ifname}_chain 2>/dev/null
+    ebtables -F isolation_${ifname}_chain 2>/dev/null
+    if [ "$only" == "0" ]
+    then
+        l2_isolation_rule_white_list "$vif" "$ifname"
+        ## for client isolation in same athx ##
+        ## iwpriv athx ap_bridge 0 (0:enable, 1:disable) ##
+        ## force enable client isolation when l2 isolation enabled.
+	if [ "$ifname" != "bat0" -a "$ifname" != "eth0" ] ;then
+	    iwpriv "$ifname" ap_bridge 0
+	fi
+        l2_isolation_rule_ip "$ifname" "$network"
+        # coova-chilli NAT mode need use this rule to block different radio
+        config_foreach ssid_client_isolation wifi-device "$vif" "$ifname"
+    else
+        config_foreach ssid_client_isolation wifi-device "$vif" "$ifname"
+    fi
+    if [ "$only" == "1" ] ;then
+	echo "-A FORWARD -i ${ifname} -j isolation_${ifname}_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    elif [ "$ifname" == "eth0" ] ;then
+	echo "-A FORWARD --mark 0x8${ssid_idx}00/0x8f00 -j isolation_${ifname}_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    else
+	echo "-A FORWARD --mark 0x${ssid_idx}00/0x8f00 -j isolation_${ifname}_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    fi
+    echo "-D FORWARD -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+
+}
+
+clean_rule()
+{
+    local vifs=$(eval "/usr/sbin/foreach wireless wifi-iface device $1")
+    for vif in $vifs; do
+	    config_get ifname "$vif" ifname
+	    disable_isolation_ebtable "$ifname" "$vif"
+    done
+}
+ipcalc() {
+	opt=$1
+	shift
+	ipcalc.sh $* | awk  -F"=" '/^'$opt'=/{print $2}'
+}
+
+
+get_bridge_name() {
+    if [ "${1%%-*}" = "br" ];then
+        ifname=$(ls /sys/class/net/$1/brif/)
+        echo $ifname
+    else
+        bridge_path=$(ls /sys/class/net/br-*/brif/$1/state 2>/dev/null)
+        if [ "$bridge_path" != "" ];then
+            bridge_path=${bridge_path#/sys/class/net/}
+            echo ${bridge_path%%/*}
+        else
+            echo
+        fi
+    fi
+}
+
+ifget() {
+    opt=$1
+    ifname=$2
+
+    # Do not get the information if the interface does not exist.
+    if [ -z "`ifconfig $ifname 2>/dev/null`" ]; then
+        return
+    fi
+
+    case "$opt" in
+        ip)
+            ifconfig $ifname | awk '/inet addr/{print substr($2,6)}' 2>/dev/null
+            ;;
+        mask)
+            ifconfig $ifname | awk '/Mask:/{print substr($4,6)}' 2>/dev/null
+            ;;
+        mac|macnc)
+            local mac=$(ifconfig $ifname | awk '/HWaddr/{print $5}' 2>/dev/null)
+            if [ $opt = "macnc" ]; then
+                echo $mac |tr -d ":"
+            else
+                echo $mac
+            fi
+            ;;
+    esac
+}
+
+wifi_en_iface=`foreach wireless wifi-iface disabled 0`
+get_wireless_option() {
+	local ssid_name=$1
+	local option_name=$2
+	local equalvalue=$3
+	local section_name
+
+	for section_name in `echo "$wifi_en_iface"|grep $ssid_name`
+	do
+		ret=`uci get wireless.$section_name.$option_name`
+		if [ "$ret" = "$equalvalue" ]
+		then
+			ret=$equalvalue
+		fi
+		# Just got the fist one.
+		break
+	done
+	echo $ret
+}
+
+## In ssid based environment 2.4GHz, 5GHz, 5G-2Hz are in same ssid configuration,
+## client isolation = cients in same ssid can't send packet to each other.
+## use SUPPORT_COMBINED_SSID_SETTING define to check, if any better define in the future, this define can be substitued.
+func_ssid_client_isolation=$(uci get functionlist.functionlist.SUPPORT_COMBINED_SSID_SETTING)
+func_mpsk_novlan=$(uci get functionlist.functionlist.MPSK_NOT_SUPPORT_VLAN) 2>/dev/null
+
+ssid_client_isolation() {
+    local radio_name="$1"
+    local section_name="$2"
+    local in_ifname="$3"
+    local out_ifname
+    #find athx in the same ssid group
+    #sed -e /wifi0_ssid_1/wifi1/ -> wifi1_ssid_1
+    section_name=$(echo $section_name | sed -e "s/wifi[0-9]/$radio_name/")
+    config_get out_ifname "$section_name" ifname "not_exist"
+    if [ "$out_ifname" != "not_exist" -a "$out_ifname" != "$in_ifname" ]; then
+        ssid_client_isolation_rule $in_ifname $out_ifname
+    fi
+}
+
+ssid_client_isolation_rule() {
+    local in_ifname="$1"
+    local out_ifname="$2"
+
+    echo "-I isolation_${ifname}_chain -o $out_ifname -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+}
+get_uniq_sort_string() {
+    local input="$@"
+    echo $(echo -e "${input// /\\n}" | sort -u)
+}
+
+mesh_exception_ip()
+{
+    local athx=$(ls /sys/class/net/ |grep ath 2>/dev/null)
+    for ath in $athx; do
+	s_name=$(eval "/usr/sbin/foreach wireless wifi-iface ifname $ath")
+	combined_ssid=${s_name#*_}  # ssid_1
+	config_get security "$s_name" security
+	config_get auth_server "$s_name" auth_server
+	config_get secondary_auth_server "$s_name" secondary_auth_server
+	config_get acct_enabled "$s_name" acct_enabled
+	config_get acct_server "$s_name" acct_server
+	config_get secondary_acct_server "$s_name" secondary_acct_server
+	config_get network "$s_name" network
+	config_get guest_network "$s_name" guest_network
+
+	if  [ "$security" = "wpa2+ccmp" -o "$security" = "wpa3" ]; then
+	    if  [ "$auth_server" != "" ]; then
+		ip_list=$(get_uniq_sort_string $ip_list "$auth_server")
+	    fi
+	    if  [ "$secondary_auth_server" != "" ]; then
+		ip_list=$(get_uniq_sort_string $ip_list "$secondary_auth_server")
+	    fi
+	fi
+	if  [ "$acct_enabled" = "1" ]; then
+	    if  [ "acct_server" != "" ]; then
+		ip_list=$(get_uniq_sort_string $ip_list "$acct_server")
+	    fi
+	    if  [ "$secondary_acct_server" != "" ]; then
+		ip_list=$(get_uniq_sort_string $ip_list "$secondary_acct_server")
+	    fi
+	fi
+	custom_dns_server_1=$(uci -q get dhcp."$network".dhcp_option |awk -F ',' '{printf $2}')
+	custom_dns_server_2=$(uci -q get dhcp."$network".dhcp_option |awk -F ',' '{printf $3}')
+
+	if  [ "$custom_dns_server_1" != "" ]; then
+	    ip_list=$(get_uniq_sort_string $ip_list "$custom_dns_server_1")
+	fi
+	if  [ "$custom_dns_server_2" != "" ]; then
+	    ip_list=$(get_uniq_sort_string $ip_list "$custom_dns_server_2")
+	fi
+	if  [ "$guest_network" = "NAT" ]; then
+	    radiusServer=$(uci -q get portal."$combined_ssid".radiusServer)
+	    radiusServer2=$(uci -q get portal."$combined_ssid".radiusServer2)
+	    accountingServer=$(uci -q get portal."$combined_ssid".accountingServer)
+	    accountingServer2=$(uci -q get portal."$combined_ssid".accountingServer2)
+	    dnsServer1=$(uci -q get portal."$combined_ssid".dnsServer1)
+	    dnsServer2=$(uci -q get portal."$combined_ssid".dnsServer2)
+	    ip_list=$(get_uniq_sort_string $ip_list "$radiusServer")
+	    ip_list=$(get_uniq_sort_string $ip_list "$radiusServer2")
+	    ip_list=$(get_uniq_sort_string $ip_list "$accountingServer")
+	    ip_list=$(get_uniq_sort_string $ip_list "$accountingServer2")
+	    ip_list=$(get_uniq_sort_string $ip_list "$dnsServer1")
+	    ip_list=$(get_uniq_sort_string $ip_list "$dnsServer2")
+	fi
+    done
+
+    for exception_ip in $ip_list; do
+	echo "-I isolation_mac_bat0_chain -p ipv4 --ip-dst ${exception_ip} -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    done
+}
+
+## 1. send dhcp query and get offer ip, and then we can get gateway ip ##
+## 2. get the gateway mac and then only allow packtes which are dhcp or dns query or to gateway pass##
+l2_isolation_rule_mac() {
+#    echo "====[$1]===[$2]===[$3]==" > /dev/console
+    local ifname="$1"
+    local new_dhcp_gateway_mac="$2"
+    local old_dhcp_gateway_mac="$3"
+    local section_name=$(eval "/usr/sbin/foreach wireless wifi-iface ifname $1")
+
+    if [ "$ifname" == "eth0" ] ;then
+	client_ip_assignment=$(uci get ethprofile.port_3.client_ip_assignment 2>/dev/null)
+	if  [ "$client_ip_assignment" == "0" ]; then
+	    network="lan"
+	fi
+    else
+	config_get network "$section_name" network
+    fi
+
+    if [ "$ifname" == "bat0" ] ;then
+	network="lan"
+    fi
+
+    if [ "$new_dhcp_gateway_mac" == "$old_dhcp_gateway_mac" ]; then
+        return
+    fi
+    if [ "$network" == "lan" ]; then
+        echo "-D isolation_${ifname}_chain -p ipv4 --ip-dst ${brlanIP}/${brlanPrefix} -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    else
+            ### drop all packet for vlan bridge in no dhcp server environment ###
+	echo "-D isolation_${ifname}_chain -p ipv4 -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    fi
+    #echo "-I isolation_${ifname}_chain -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    #echo ":isolation_mac_${ifname}_chain ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+
+
+    ## only allow packet to gateway##
+    if [ "$new_dhcp_gateway_mac" != "" ]; then
+	echo "-I isolation_mac_${ifname}_chain -p ipv4 -d ${new_dhcp_gateway_mac} -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+	internet_availabe="1";
+    fi
+
+    mesh_gw="$(cat /tmp/currentrole 2>/dev/null)"
+
+    if [ "$ifname" != "bat0" -a "$internet_availabe" == "1" ] ;then
+        echo "-A isolation_mac_${ifname}_chain -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    elif [ "$mesh_gw" != "server" ] ;then
+	mesh_exception_ip
+ echo "-I isolation_mac_${ifname}_chain -p ipv4 -s ${new_dhcp_gateway_mac} -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+        echo "-A isolation_mac_${ifname}_chain -p ipv4 --ip-dst ${brlanIP}/${brlanPrefix} -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    fi
+
+    echo "-A isolation_${ifname}_chain -j isolation_mac_${ifname}_chain" >>"${l2_isolation_maclist_path}ebtables_save"
+    #echo "-D isolation_${ifname}_chain -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+
+    ebtables-restore < "${l2_isolation_maclist_path}ebtables_save"
+}
+
+l2_isolation_rule_white_list() {
+    local section_name=$1
+    local ifname=$2
+    local combined_ssid=${section_name#*_}  # ssid_1
+    local ssid_idx=${combined_ssid#*_} # 1
+    local mac_list_file
+
+    mesh_gw="$(cat /tmp/currentrole 2>/dev/null)"
+
+    if  [ "$ifname" == "eth0" ]; then
+	mac_list_file="/etc/ezmcloud/config/l2_exception-$section_name.maclist"
+	white_list_section_name="$section_name"
+	white_list_mac_enable=$(uci get l2_isolation.${white_list_section_name}.enable 2>/dev/null)
+	#client_ip_assignment=`uci get ethprofile.port_$ssid_idx.client_ip_assignment`
+	config_get client_ip_assignment "$section_name" client_ip_assignment
+    else
+	mac_list_file="/etc/ezmcloud/config/l2_exception-$combined_ssid.maclist"
+	white_list_section_name=$(echo $section_name | sed -e "s/wifi[0-9]/wifi/")
+	white_list_mac_enable=$(uci get l2_isolation.${white_list_section_name}.enable 2>/dev/null)
+	config_get ssid_ifname "$section_name" ifname #no need?
+	config_get guest_network "$section_name" guest_network
+	local bridge_name=$(get_bridge_name $ssid_ifname) #no need?
+    fi
+
+    if  [ "$guest_network" = "NAT" -o "$guest_network" = "NAT_only" ]; then
+        config_get nat_network "$section_name" network
+        natIf=br-$nat_network
+    elif [ "$ifname" == "eth0" -a "$client_ip_assignment" == "1" ] ;then
+	natIf="br-nat3p"
+    else
+        natIf=not_nat
+    fi
+    if [ -d /sys/class/net/$natIf ]
+    then
+	if  [ "$ifname" == "eth0" ]; then
+	    config_get wireless_isolation "$section_name" vlan_enable
+	    config_get wireless_vlan_id "$section_name" vlan_id
+	else
+	    wireless_isolation=$(get_wireless_option _ssid_$ssid_idx isolation 1)
+	    wireless_vlan_id=$(get_wireless_option _ssid_$ssid_idx vlan_id 0)
+	fi
+	lan_ifnames=$(uci -q get /rom/etc/config/network.lan.ifname)
+	if [ "$(uci -q get functionlist.functionlist.SUPPORT_SSID_PROFILE)" == "1" ]; then
+	    # ethprofile_configs=$(eval "/usr/sbin/foreach ethprofile")
+	    #for ethprofile_config in $ethprofile_configs; do
+		ethprofile_ifnames="$(uci -q get ethprofile.port_3.ifname)"
+		lan_ifnames=$(eval "echo $lan_ifnames | sed 's/$ethprofile_ifnames//g' | xargs")
+	    #done
+	fi
+
+        if [ "${wireless_isolation:-0}" = "1" -a "${wireless_vlan_id:-0}" != "0" ]
+        then
+
+            bat_name=bat0.$wireless_vlan_id
+            eth_name=$lan_ifnames.$wireless_vlan_id
+            eth_brname=$(get_bridge_name $eth_name) # vlan id
+            nat_wan_brname=${eth_brname:-br-lan}
+        elif [ "$mgmtEnable" == "1" ]
+        then
+	    bat_name=bat0.$mgmt_vlan_id
+            eth_name=$lan_ifnames.$mgmt_vlan_id # mgmt vlan id
+            nat_wan_brname=br-lan
+        else
+            nat_wan_brname=br-lan
+            eth_name=$lan_ifnames # no vlan
+	    bat_name=bat0
+        fi
+
+        nat_wan_ip=$(ifget ip $nat_wan_brname)
+        nat_wan_mask=$(ifget mask $nat_wan_brname)
+        nat_wan_prefix=$(ipcalc PREFIX $nat_wan_ip $nat_wan_mask)
+        nat_wan_network=$(ipcalc NETWORK $nat_wan_ip $nat_wan_mask)
+
+    	if [ -n "$nat_wan_ip" ];then
+    	    echo "-I l2_isolation_${ifname}_eth_chain -p ipv4 --ip-dst ${nat_wan_network}/${nat_wan_prefix} -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    	else # nat but not vlan
+    	    echo "-I l2_isolation_${ifname}_eth_chain -p ipv4 --ip-dst ${brlanIP}/${brlanPrefix} -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+    	fi
+        if [ "$white_list_mac_enable" != "0" ] ; then
+            if [ -f "$mac_list_file" ]
+                then
+                while read line; do
+                    if [ "$mesh_gw" == "client" ] ;then
+                        echo "-I l2_isolation_${ifname}_eth_chain -o $bat_name -d $line -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+                    fi
+                    echo "-I l2_isolation_${ifname}_eth_chain -o $eth_name -d $line -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+                done < $mac_list_file
+            else
+                white_list_mac_list=$(uci get l2_isolation.${white_list_section_name}.mac_list 2>/dev/null)
+                for white_list_mac in $white_list_mac_list; do
+                    echo "-I l2_isolation_${ifname}_eth_chain -o $eth_name -d ${white_list_mac} -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+                done
+	    fi
+	fi
+    fi
+
+    if [ "$natIf" == "not_nat" -a "$white_list_mac_enable" != "0" ] ; then
+	if [ "$ifname" != "bat0" ] ;then
+	    athx=$(ls /sys/class/net/ |grep ath 2>/dev/null)
+	    for ath in $athx; do
+		if [ "$ifname" != "$ath" ] ; then
+		    echo "-A isolation_${ifname}_chain -o $ath -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+		fi
+	    done
+	    if [ -f "$mac_list_file" ]
+	    then
+		while read line; do
+		    echo "-A isolation_${ifname}_chain -d $line -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+		done < $mac_list_file
+	    else
+		white_list_mac_list=$(uci get l2_isolation.${white_list_section_name}.mac_list 2>/dev/null)
+		for white_list_mac in $white_list_mac_list; do
+		    echo "-A isolation_${ifname}_chain -d ${white_list_mac} -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+		done
+	    fi
+	else
+	    if [ "$mesh_gw" == "client" ] ;then # client not add rule
+		athx=$(ls /sys/class/net/ |grep ath 2>/dev/null)
+		for ath in $athx; do
+		    s_name=$(eval "/usr/sbin/foreach wireless wifi-iface ifname $ath")
+		    config_get l2_isolatior "$s_name" l2_isolatior
+		    if [ "$ifname" != "$ath" -a "$l2_isolatior" == "0" ] ; then
+			echo "-A isolation_${ifname}_chain -o $ath -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+		    fi
+		done
+	    fi
+	fi
+    fi
+}
+
+l2_isolation_rule_ip() {
+    local ifname="$1"
+    local network="$2"
+    ## for DNS query packet ##
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto udp --ip-destination-port 53 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto udp --ip-source-port 53 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto tcp --ip-destination-port 53 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto tcp --ip-source-port 53 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    ## for dhcp packtet ##
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto udp --ip-destination-port 67 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto udp --ip-source-port 67 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto udp --ip-destination-port 68 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    echo "-A isolation_${ifname}_chain -p ipv4 --ip-proto udp --ip-source-port 68 -j ACCEPT" >>"${l2_isolation_maclist_path}ebtables_save"
+    ########## Set up ebtables rules when L2 isolation is enabled on static ip
+    if [ "$brlanIP" != "0.0.0.0" ]; then
+        if [ "$network" = "lan" ]; then
+            ### drop packet from br-lan subnet for br-lan bridge ###
+	    echo "-A isolation_${ifname}_chain -p ipv4 --ip-dst ${brlanIP}/${brlanPrefix} -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+        else
+            ### drop all packet for vlan bridge in no dhcp server environment ###
+	    echo "-A isolation_${ifname}_chain -p ipv4 -j DROP" >>"${l2_isolation_maclist_path}ebtables_save"
+        fi
+    fi
+}
+
+l2_isolation_flag=0
+ssid_client_isolation_flag=0
+brlanIP=$(ifconfig br-lan | grep Bcast | awk -F " " '{print $2}' | awk -F ":" '{print $2}')
+brlanMask=$(ifconfig br-lan | grep Bcast | awk -F " " '{print $4}' | awk -F ":" '{print $2}')
+brlanPrefix=$(ipcalc.sh $brlanIP $brlanMask | grep PREFIX | awk -F "PREFIX=" '{print $2}' | awk -F " " '{print $1}')
+support_ssid_profile=$(uci -q get functionlist.functionlist.SUPPORT_SSID_PROFILE || echo 0)
+mgmtEnable=$(uci get network.sys.WLANVLANEnable 2>/dev/null)
+mgmt_vlan_id=$(uci get network.sys.ManagementVLANID 2>/dev/null)
+
+initial() {
+	local device="$1"
+	#config_get vifs "$device" vifs
+
+	config_get opmode "$device" opmode
+	case "$opmode" in
+	ap|wds_ap)
+
+		local vifs=$(eval "/usr/sbin/foreach wireless wifi-iface device $1")
+		for vif in $vifs; do
+			config_get ifname "$vif" ifname
+			config_get l2_isolatior "$vif" l2_isolatior
+			config_get isolate "$vif" isolate #client isolation
+			config_get disabled "$vif" disabled
+			config_get mode_display "$vif" mode_display
+			config_get mode_display_2 "$vif" mode_display_2
+			config_get network "$vif" network
+			config_get multi_group_key "$vif" multi_group_key
+			config_get guest_network "$vif" guest_network
+
+			if [ "$mode_display" != "mesh" ] ; then
+				[ "$opmode" != "$mode_display" ] && [ "$opmode" != "$mode_display_2" ] &&  continue
+				case "$func_ssid_client_isolation:$isolate:$l2_isolatior:$disabled" in
+				*:1:0)#enable l2 isolation
+				l2_isolation_flag="1"
+				load_ebtable
+				if [ -e /etc/init.d/syskey ]; then
+					/etc/init.d/syskey setValue "ebtables" "l2_isolation" "1"
+				fi
+				enable_isolation_ebtable "$vif" "$ifname" "$network" "0"
+				if [ "$multi_group_key" == "1" -a "$func_mpsk_novlan" != "1" -a "$guest_network" != "NAT" -a "$guest_network" != "NAT_only" ] ; then #mpsk only bridge mode
+				    enable_isolation_mpsk "$vif" "$ifname" "$network"
+				fi
+				## for clock send period dhcp discovery ##
+				echo  "br-$network" "$ifname" >> /tmp/l2_isolation.conf
+				;;
+				1:1:0:0)#enable client isolation only
+				ssid_client_isolation_flag="1"
+				load_ebtable
+				if [ -e /etc/init.d/syskey ]; then
+					/etc/init.d/syskey setValue "ebtables" "l2_isolation" "1"
+				fi
+				enable_isolation_ebtable "$vif" "$ifname" "$network" "1"
+				;;
+				esac
+			else
+				if [ "$l2_isolation_flag" == "1" ] && [ "$disabled" == "0" ] ; then
+					enable_isolation_ebtable "$vif" "bat0" "lan" "0"
+					echo  "br-lan" "bat0" >> /tmp/l2_isolation.conf
+				fi
+			fi
+		done
+		;;
+	*)
+	;;
+	esac
+}
+
+# 0: mvlan disabled, no vlan
+# 1: mvlan disabled, vlan enabled
+# 2: mvlan enabled, and no vlan
+# 3: mvlan enabled, vlan enabled, and the same
+# 4: mvlan enabled, vlan enabled, and different
+
+get_vlan_mode() {
+    local vlantag=${1:-0}
+    local vlan_enable=${2:-0}
+
+    if [ "$mgmtEnable" = "1" ]
+    then
+        if [ "${mgmt_vlan_id:-0}" = "$vlantag" -a "${vlan_enable}" == "1" ]
+        then
+            echo 3
+        else
+            if [ $vlantag -ne 0 ] && [ "${vlan_enable}" == "1" ]
+            then
+                echo 4
+            else
+                echo 2
+            fi
+        fi
+    elif [ $vlantag -ne 0 ] && [ "${vlan_enable}" == "1" ]
+    then
+        echo 1
+    else
+        echo 0
+    fi
+}
+
+get_vlan_wan_bridge() {
+    local vlantag=$1
+    local vlan_enable=$2
+
+    local vlanmode=$(get_vlan_mode $vlantag $vlan_enable)
+    local bridge_name=""
+
+    case "$vlanmode" in
+        0)
+            bridge_name="br-lan"
+            ;;
+        1)
+            #vlan
+            bridge_name="br-vlan$vlantag"
+            ;;
+        2)
+            bridge_name="br-99"
+            ;;
+        3)
+            #vlan
+            bridge_name="br-lan"
+            ;;
+        4)
+            #vlan
+            bridge_name="br-vlan$vlantag"
+            ;;
+    esac
+    echo $bridge_name
+    if [ ! -d "/sys/class/net/$bridge_name/" ]
+    then
+        echo "FIXME: $bridge_name not exised!"
+    fi
+}
+getEthProfile() {
+
+    local ifname
+    local enable
+    config_get ifname $1 ifname
+    config_get enable $1 enable
+    config_get vlan_enable $1 vlan_enable
+    config_get vlan_id $1 vlan_id
+
+    config_get client_ip_assignment $1 client_ip_assignment
+
+    portIdx=${1#*_}
+    l2_isolatior=`uci get l2_isolation.port_$portIdx.l2_isolatior`
+
+    if [ "$l2_isolatior" == "1" ] && [ "$enable" == "1" ] ; then
+        l2_isolation_flag="1"
+	load_ebtable
+	if [ -e /etc/init.d/syskey ]; then
+		/etc/init.d/syskey setValue "ebtables" "l2_isolation" "1"
+	fi
+	enable_isolation_ebtable "port_$portIdx" "$ifname" "lan" "0"
+
+	if [ "$client_ip_assignment" == "1" ] ; then
+	    echo  "br-nat3p" "$ifname" >> /tmp/l2_isolation.conf
+	else
+
+	    bridge_name=$(get_vlan_wan_bridge $vlan_id $vlan_enable)
+	    echo  "$bridge_name" "$ifname" >> /tmp/l2_isolation.conf
+
+	fi
+    fi
+
+}
+
+start (){
+    if [ -e "${l2_isolation_maclist_path}ebtables_save" ]; then
+        rm "${l2_isolation_maclist_path}ebtables_save"
+    fi
+
+    echo "*filter" >>"${l2_isolation_maclist_path}ebtables_save"
+    if [ "$support_ssid_profile" = "1" ]
+    then
+	config_load ethprofile
+	config_foreach getEthProfile profile
+	config_load wireless
+    fi
+    config_foreach initial wifi-device
+
+    dhtest_timer &
+
+    ebtables-restore < "${l2_isolation_maclist_path}ebtables_save"
+
+    if [ "$l2_isolation_flag" = "0" ];then
+        if [ -e /etc/init.d/syskey ]; then
+            /etc/init.d/syskey setValue "ebtables" "l2_isolation" "0"
+            /etc/init.d/syskey setValue "bridge_nf_filter_vlan_tagged" "l2_isolation" "0"
+            /etc/init.d/syskey setValue "bridge_nf_call_iptable" "l2_isolation" "0"
+        else
+            unload_ebtable
+            echo 0 > /proc/sys/net/bridge/bridge-nf-filter-vlan-tagged
+	    echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+        fi
+    else
+        echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+        echo 1 > /proc/sys/net/bridge/bridge-nf-filter-vlan-tagged
+        if [ -e /etc/init.d/syskey ]; then
+            /etc/init.d/syskey setValue "bridge_nf_filter_vlan_tagged" "l2_isolation" "1"
+            /etc/init.d/syskey setValue "bridge_nf_call_iptable" "l2_isolation" "1"
+        fi
+    fi
+}
+
+stop() {
+    config_foreach clean_rule wifi-device
+
+    if [ -e /etc/init.d/syskey ]; then
+        /etc/init.d/syskey setValue "ebtables" "l2_isolation" "0"
+        /etc/init.d/syskey setValue "bridge_nf_filter_vlan_tagged" "l2_isolation" "0"
+        /etc/init.d/syskey setValue "bridge_nf_call_iptable" "l2_isolation" "0"
+    else
+        unload_ebtable
+        echo 0 > /proc/sys/net/bridge/bridge-nf-filter-vlan-tagged
+	echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+    fi
+
+    kill -SIGTERM `pidof dhtest_timer`
+
+    rm /tmp/l2_isolation.conf
+}
+

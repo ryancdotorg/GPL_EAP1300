@@ -1,0 +1,13 @@
+{
+	"wireless": {
+		"ssid_map": [],
+		"clients": [
+            {
+                "js_idx_mac_addr":1,
+                "ifname": ""
+            }
+        ]
+	},
+	"Action": []
+}
+

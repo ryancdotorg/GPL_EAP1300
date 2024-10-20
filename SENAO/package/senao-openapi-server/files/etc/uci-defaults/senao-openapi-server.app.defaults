@@ -1,0 +1,128 @@
+#!/bin/sh
+
+[ -z "$(uci show firewall | grep "for openapi-server")" ] && {
+
+    port="$(uci get senao-openapi-server.server.port)"
+
+uci -q batch <<-EOF >/dev/null
+    add firewall rule
+    set firewall.@rule[-1].name=Allow-SSDP
+    set firewall.@rule[-1].name="Allow port $port for openapi-server"
+    set firewall.@rule[-1].src=wan
+    set firewall.@rule[-1].proto=tcp
+    set firewall.@rule[-1].dest_port=$port
+    set firewall.@rule[-1].target=ACCEPT
+    set firewall.@rule[-1].family=ipv4
+
+    commit firewall
+EOF
+}
+
+if [ "$(uci get network.app)" != "interface" ]; then
+uci -q batch <<-EOF >/dev/null
+set network.app="interface"
+set network.app.type="bridge"
+set network.app.proto="static"
+set network.app.ipaddr="192.168.101.1"
+set network.app.netmask="255.255.255.0"
+set network.app.defaultroute="0"
+set network.app.peerdns="0"
+set network.app.stp="0"
+commit
+EOF
+fi
+
+mac_str="$(setconfig -g 6 |tr [a-z] [A-Z]|sed 's/://g')"
+mac_str6="$(echo $mac_str|cut -c 7-12)"
+mac_str8="$(echo $mac_str|cut -c 5-12)"
+hiddenAppKey="$(echo $mac_str8$mac_str8$mac_str8$mac_str8 | tr -d '\n' | md5sum | awk {'print $1'} | tr -d '\n')"
+set wireless."$app_config".ssid="ENMGMT$mac_str6"
+set wireless."$app_config".key="$hiddenAppKey"
+
+if [ "$(uci get wireless.wifi0_app)" != "wifi-iface" ]; then
+uci -q batch <<-EOF >/dev/null
+set wireless.wifi0_app="wifi-iface"
+set wireless.wifi0_app.device="wifi0"
+set wireless.wifi0_app.network="app"
+set wireless.wifi0_app.mode="ap"
+set wireless.wifi0_app.ssid="ENMGMT$mac_str6"
+set wireless.wifi0_app.key="$hiddenAppKey"
+set wireless.wifi0_app.encryption="psk2+ccmp"
+set wireless.wifi0_app.bintval="100"
+set wireless.wifi0_app.protmode="0"
+set wireless.wifi0_app.dtim_period="2"
+set wireless.wifi0_app.frag="2346"
+set wireless.wifi0_app.preamble="0"
+set wireless.wifi0_app.nawds="0"
+set wireless.wifi0_app.wds="0"
+set wireless.wifi0_app.disabled="0"
+set wireless.wifi0_app.mode_display="ap"
+set wireless.wifi0_app.mode_display_2="wds_ap"
+set wireless.wifi0_app.ifname="app0"
+set wireless.wifi0_app.hidden="1"
+set wireless.wifi0_app.isolate="1"
+set wireless.wifi0_app.isolation="0"
+set wireless.wifi0_app.tc_enabled="0"
+set wireless.wifi0_app.mcastenhance="2"
+set wireless.wifi0_app.status="0"
+set wireless.wifi0_app.dynamicbeacon="1"
+commit
+EOF
+fi
+
+if [ "$(uci get wireless.wifi1_app)" != "wifi-iface" ]; then
+uci -q batch <<-EOF >/dev/null
+set wireless.wifi1_app="wifi-iface"
+set wireless.wifi1_app.device="wifi1"
+set wireless.wifi1_app.network="app"
+set wireless.wifi1_app.mode="ap"
+set wireless.wifi1_app.ssid="ENMGMT$mac_str6"
+set wireless.wifi1_app.key="$hiddenAppKey"
+set wireless.wifi1_app.encryption="psk2+ccmp"
+set wireless.wifi1_app.bintval="100"
+set wireless.wifi1_app.protmode="0"
+set wireless.wifi1_app.dtim_period="2"
+set wireless.wifi1_app.frag="2346"
+set wireless.wifi1_app.preamble="0"
+set wireless.wifi1_app.nawds="0"
+set wireless.wifi1_app.wds="0"
+set wireless.wifi1_app.disabled="0"
+set wireless.wifi1_app.mode_display="ap"
+set wireless.wifi1_app.mode_display_2="wds_ap"
+set wireless.wifi1_app.ifname="app1"
+set wireless.wifi1_app.hidden="1"
+set wireless.wifi1_app.isolate="1"
+set wireless.wifi1_app.isolation="0"
+set wireless.wifi1_app.tc_enabled="0"
+set wireless.wifi1_app.mcastenhance="2"
+set wireless.wifi1_app.status="0"
+set wireless.wifi1_app.dynamicbeacon="1"
+commit
+EOF
+fi
+
+uci -q batch <<-EOF >/dev/null
+del dhcp.app
+set dhcp.app="dhcp"
+set dhcp.app.interface="app"
+set dhcp.app.limit="100"
+set dhcp.app.leasetime="24h"
+set dhcp.app.start="192.168.101.100"
+set dhcp.app.dhcp_option="44,0.0.0.0"
+set dhcp.app.ignore="0"
+set dhcp.app.force="1"
+
+delete ucitrack.@app-lan-ip-reload[-1]
+del_list ucitrack.@lan-ip-obtain[0].affects=app-lan-ip-reload
+add ucitrack app-lan-ip-reload
+set ucitrack.@app-lan-ip-reload[0].exec='/etc/init.d/senao-openapi-server check_ip_conflict'
+add_list ucitrack.@lan-ip-obtain[0].affects=app-lan-ip-reload
+
+del_list ucitrack.@network[0].affects=app-lan-ip-reload
+add_list ucitrack.@network[0].affects=app-lan-ip-reload
+
+commit
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

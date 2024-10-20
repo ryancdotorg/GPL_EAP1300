@@ -1,0 +1,8 @@
+Package: qca-ssdk-shell
+Version: g30bdbbe8c-1
+Depends: libc
+Source: qca/feeds/ssdk/qca-ssdk-shell
+Section: QCA
+Architecture: ipq40xx
+Installed-Size: 156546
+Description:  Shell application for QCA SSDK

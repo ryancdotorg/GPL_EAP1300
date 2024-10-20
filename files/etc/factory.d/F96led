@@ -1,0 +1,63 @@
+#!/bin/sh /etc/rc.common
+# (C) 2008 openwrt.org
+
+FACTORY=96
+
+
+########################################################
+# Definition
+########################################################
+LED_DEF="/etc/factory.d/led.def"
+
+if [ -e $LED_DEF ]; then
+    . $LED_DEF
+else
+    echo "$LED_DEF is not exist!";
+    exit 1;
+fi
+
+LED_CFG="/etc/factory.d/led.cfg"
+
+if [ -e $LED_CFG ]; then
+    . $LED_CFG
+else
+    echo "$LED_CFG is not exist!";
+    exit 1;
+fi
+
+########################################################
+# start
+########################################################
+start() {
+	[ -e $LED_SYSTEM_PATH ] && {
+       	for i in `ls $LED_SYSTEM_PATH`; do
+            ## confirm i is led
+       		for j in $NOT_LED_LIST; do
+    			not_led_flag=0;
+    			if [ $i == $j ]; then
+    				not_led_flag=1;
+    				break;
+    			fi
+    		done
+
+            ## find blink led
+       		for j in $BLINK_LED_LIST; do
+    			blink_flag=0;
+    			if [ $i == $j ]; then
+    				blink_flag=1;
+    				break;
+    			fi
+    		done
+
+            ## blink led in BLINK_LED_LIST, turn off the rest leds
+            if [ $not_led_flag == 0 ]; then
+                if [ $blink_flag == "1" ]; then
+                    echo timer > $LED_SYSTEM_PATH$i/$TRIGGER;
+                    echo 1 > $LED_SYSTEM_PATH$i/$BRIGHTNESS;
+                else
+                    echo 0 > $LED_SYSTEM_PATH$i/$BRIGHTNESS;
+                fi
+            fi
+        done
+	}
+}

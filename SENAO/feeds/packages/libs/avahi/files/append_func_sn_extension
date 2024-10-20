@@ -1,0 +1,166 @@
+genconfig() {
+    modelname=$(uci get sysProductInfo.model.modelName)
+
+    allow_interface=br-lan
+    if [ -e /etc/init.d/lsp ]
+    then
+        allow_interface=${allow_interface},br-lsp
+    fi
+
+    cat << EOF > /tmp/etc/avahi/avahi-daemon.conf
+[server]
+host-name=$modelname
+#domain-name=local
+use-ipv4=yes
+use-ipv6=yes
+check-response-ttl=no
+use-iff-running=no
+allow-interfaces=$allow_interface
+
+[publish]
+publish-addresses=yes
+publish-hinfo=yes
+publish-workstation=no
+publish-domain=yes
+#publish-dns-servers=192.168.1.1
+#publish-resolv-conf-dns-servers=yes
+
+[reflector]
+enable-reflector=no
+reflect-ipv=no
+
+[rlimits]
+#rlimit-as=
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=30
+rlimit-stack=4194304
+rlimit-nproc=3
+EOF
+}
+
+genBonjourService() {
+    systemname=$(uci get system.@system[0].SystemName)
+    systemname=${systemname//</&lt;}
+    modelName=$(uci get sysProductInfo.model.modelName)
+    support_enjet=$(uci get functionlist.functionlist.SUPPORT_ENJET 2> /dev/null)
+    support_enjet="${support_enjet:-0}"
+    mgmt_clients_mac=$(wlanconfig $(iwconfig | grep mgmt | awk '{print $1}') list sta | tail -n +2 | awk '{ORS=""} {printf "%s," $1}' | sed 's/^,//')
+    enjet_support_radio=$(uci get functionlist.vendorlist.ENJET_SUPPORT_RADIO 2> /dev/null)
+    fw_ver=$(cat /etc/version | grep Firmware | awk 'BEGIN{FS= " "} {print $4}')
+    mac_addr=$(ifconfig br-lan |grep HWaddr |awk  {'printf $5'})
+    wlan_mac=$(ifconfig | grep -E "ath|mgmt|enjet" | awk -F"HWaddr " '{print $2}' | sed 's/ //g'  | awk 'BEGIN{ORS=""}{printf "%s," $0}' | sed 's/^,//')
+    ipv6_addr=$(get_ipv6_ll)
+    from_dhcp=$(cat /tmp/dhcp_addr | grep dhcp | wc -l)
+    configured_time=$(cat /tmp/boot_time)
+    enjet_radio=""
+    support_radio=0
+    support_opmode=""
+    company_name=$(uci get sysProductInfo.model.venderName)
+    controlled=$(uci -q get apcontroller.capwap.enable)
+
+# support radio bitmap [x,x,x,x,5g-2,5g-1,5g,24g]
+
+    [ "$(uci get functionlist.functionlist.SUPPORT_WLAN24G 2> /dev/null)" = "1" ] && {
+        support_radio=$((support_radio+1))
+    }
+
+    [ "$(uci get functionlist.functionlist.SUPPORT_WLAN5G_2 2> /dev/null)" = "1" ] && {
+        # 5G-1 & 5G-2
+        support_radio=$((support_radio+12))
+    } || {
+        [ "$(uci get functionlist.functionlist.SUPPORT_WLAN5G 2> /dev/null)" = "1" ] && {
+            # 5G
+            support_radio=$((support_radio+2))
+        }
+    }
+
+    case $enjet_support_radio in
+        1)
+            enjet_radio="wifi0"
+        ;;
+        2|4) # 5G or 5G-1
+            enjet_radio="wifi1"
+        ;;
+        8) # 5G-2
+            enjet_radio="wifi2"
+        ;;
+    esac
+
+    enjet_enable=$(uci get wireless.${enjet_radio}.qboost_enable 2> /dev/null)
+    enjet_enable="${enjet_enable:-0}"
+
+    reg_domain_num=$(setconfig -g 4)
+    reg_domain=""
+    case $reg_domain_num in
+        0)
+            reg_domain="FCC"
+        ;;
+        1)
+            reg_domain="ETSI"
+        ;;
+        *)
+            reg_domain="INT"
+        ;;
+    esac
+
+    opmodes=""
+    for i in 0 1 2;
+    do
+        [ "$(uci get wireless.wifi${i}.disabled 2> /dev/null)" = "0" ] && {
+            opmodes=$opmodes${opmodes:+,}"wifi"$i":"$(uci get wireless.wifi$i.opmode 2> /dev/null)
+        }
+    done
+
+    support_opmode="ap"
+    [ "$(uci get functionlist.functionlist.SUPPORT_AP_MODE_ONLY 2> /dev/null)" = "1" ] || {
+        [ "$(uci get functionlist.functionlist.SUPPORT_CLIENTBRIDGE_MODULE 2> /dev/null)" = "1" ] && {
+	    support_opmode=$support_opmode",sta"
+        }
+        [ "$(uci get functionlist.functionlist.NOT_SUPPORT_WDS_AP_MODE 2> /dev/null)" = "1" ] || {
+	    support_opmode=$support_opmode",wds_ap"
+        }
+        [ "$(uci get functionlist.functionlist.NOT_SUPPORT_WDS_BRIDGE_MODE 2> /dev/null)" = "1" ] || {
+	    support_opmode=$support_opmode",wds_bridge"
+        }
+        [ "$(uci get functionlist.functionlist.NOT_SUPPORT_WDS_STATION_MODE 2> /dev/null)" = "1" ] || {
+	    support_opmode=$support_opmode",wds_sta"
+        }
+        [ "$(uci get functionlist.functionlist.SUPPORT_REPEATER_MODULE 2> /dev/null)" = "1" ] && {
+	    support_opmode=$support_opmode",sta_ap"
+        }
+    }
+
+    outdoor=$(uci get sysProductInfo.model.outdoor 2> /dev/null)
+    outdoor="${outdoor:-0}"
+
+    cat << EOF > /tmp/etc/avahi/services/bonjour.service
+<service-group>
+<name>$modelName</name>
+<service>
+<type>_http._tcp</type>
+<port>80</port>
+<txt-record>modelName=${modelName:-NULL}</txt-record>
+<txt-record>deviceName=${systemname:-NULL}</txt-record>
+<txt-record>reg_domain=${reg_domain:-NULL}</txt-record>
+<txt-record>mac=${mac_addr:-NULL}</txt-record>
+<txt-record>wlan_mac=${wlan_mac:-NULL}</txt-record>
+<txt-record>mgmt_clients_mac=${mgmt_clients_mac:-NULL}</txt-record>
+<txt-record>ipv6=${ipv6_addr:-NULL}</txt-record>
+<txt-record>version=${fw_ver:-NULL}</txt-record>
+<txt-record>dhcp=${from_dhcp:-NULL}</txt-record>
+<txt-record>configured_time=${configured_time:-NULL}</txt-record>
+<txt-record>opmodes=${opmodes:-NULL}</txt-record>
+<txt-record>support_opmode=${support_opmode:-NULL}</txt-record>
+<txt-record>support_radio=${support_radio:-NULL}</txt-record>
+<txt-record>support_enjet=${support_enjet:-NULL}</txt-record>
+<txt-record>enjet_support_radio=${enjet_support_radio:-NULL}</txt-record>
+<txt-record>enjet_enable=${enjet_enable:-NULL}</txt-record>
+<txt-record>outdoor=${outdoor:-NULL}</txt-record>
+<txt-record>company_name=${company_name:-NULL}</txt-record>
+<txt-record>controlled=${controlled:-NULL}</txt-record>
+</service>
+</service-group>
+EOF
+}

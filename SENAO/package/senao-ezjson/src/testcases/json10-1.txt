@@ -1,0 +1,10 @@
+{
+	"wireless": {
+		"clients": [
+			{
+				"mac_addr": 2
+			}
+		]
+	}
+}
+

@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# Copyright (C) 2010 OpenWrt.org
+#
+
+uci set network.lan.hostname=$(uci -q get system.@system[0].SystemName)
+uci set dhcp.@dnsmasq[0].domain=$(uci -q get system.@system[0].SystemName)
+uci commit network
+uci commit dhcp
+
+exit 0

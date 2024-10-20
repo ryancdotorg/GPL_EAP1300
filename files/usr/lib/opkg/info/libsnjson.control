@@ -1,0 +1,9 @@
+Package: libsnjson
+Version: 1.5-1-gf8f661b
+Depends: libc, liblua, libuci, libpcre, libjson-c, fcgi, libsqlite3, senao-linkmon, libubus, ubox, libapi, senao-sysutil
+Source: SENAO/package/libsnjson
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 228602
+Description:  API Library (include lua plugin).

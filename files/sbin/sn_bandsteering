@@ -1,0 +1,300 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+config_load wireless
+
+## sub-function ##
+sn_bandsteering_check() {
+    # We only need to check a couple SSID at least,   #
+    # even if we support multiple SSID band-steering. #
+
+    # SSID-1 band-steering check #
+    local idx=$3 # index
+    wifi=$1
+    t_bandsteer=$2
+
+    # check vap enable #
+    pri_disabled=$(uci get wireless.wifi0_ssid_"$idx".disabled)
+    sec_disabled=$(uci get wireless."$wifi"_ssid_"$idx".disabled)
+
+    [ "$pri_disabled" = "1" -o "$sec_disabled" = "1" ] && {
+        #echo "radio disable, bandsteer 0" > /dev/console
+        t_bandsteer=0
+        return
+    }
+
+    # check opmode #
+    pri_opmode=$(uci get wireless.wifi0.opmode)
+    sec_opmode=$(uci get wireless."$wifi".opmode)
+
+    [ "$pri_opmode" != "ap" -a "$sec_opmode" != "ap" ] && {
+        #echo "opmode is not ap, bandsteer 0" > /dev/console
+        t_bandsteer=0
+        return
+    }
+
+    # check SSID #
+    pri_ssid=$(uci get wireless.wifi0_ssid_"$idx".ssid)
+    sec_ssid=$(uci get wireless."$wifi"_ssid_"$idx".ssid)
+
+    [ "$pri_ssid" != "$sec_ssid" ] && {
+        #echo "SSID mismatch, bandsteer 0" > /dev/console
+        t_bandsteer=0
+        return
+    }
+
+    # check encryption #
+    pri_enc=$(uci get wireless.wifi0_ssid_"$idx".encryption)
+    sec_enc=$(uci get wireless."$wifi"_ssid_"$idx".encryption)
+
+    [ "$pri_enc" != "$sec_enc" ] && {
+        #echo "encryption mismatch, bandsteer 0" > /dev/console
+        t_bandsteer=0
+        return
+    }
+
+    # check wep key #
+    [ "${wifi0_ssid_enc:0:3}" = "wep" ] && {
+        pri_key_id=$(uci get wireless.wifi0_ssid_"$idx".key_id)
+        sec_key_id=$(uci get wireless."$wifi"_ssid_"$idx".key_id)
+    
+        [ "$pri_key_id" == "$sec_key_id" ] && {
+            #echo "wep key id mismatch, bandsteer 0" > /dev/console
+            t_bandsteer=0
+            return
+        }
+    
+        pri_key=$(uci get wireless.wifi0_ssid_"$idx".key"$wifi0_ssid_key_id")
+        sec_key=$(uci get wireless."$wifi"_ssid_"$idx".key"$wifi1_ssid_key_id")
+    
+        [ "$pri_key" != "$sec_key" ] && {
+            #echo "wep key mismatch, bandsteer 0" > /dev/console
+            t_bandsteer=0
+            return
+        }
+    }
+
+    # check wpa-psk key #
+    [ "${wifi0_ssid_enc:0:3}" = "psk" ] && {
+        pri_key=$(uci get wireless.wifi0_ssid_"$id1".key)
+        sec_key=$(uci get wireless."$wifi"_ssid_"$id2".key)
+    
+        [ "$pri_key" != "$sec_key" ] && {
+            #echo "psk key mismatch, bandsteer 0" > /dev/console
+            t_bandsteer=0
+            return
+        }
+    }
+}
+
+sn_loadbalance_check() {
+    # We only need to check a couple SSID at least,   #
+    # even if we support multiple SSID band-steering. #
+
+    # SSID-1 load-balance check #
+    local id1=$1 # vap index
+    local id2=$1 # vap index
+    loadbalance=1
+
+    # check vap enable #
+    wifi2_ssid_disabled=$(uci get wireless.wifi2_ssid_"$id2".disabled)
+    wifi1_ssid_disabled=$(uci get wireless.wifi1_ssid_"$id1".disabled)
+    if [ "$wifi2_ssid_disabled" = "1" -o "$wifi1_ssid_disabled" = "1" ]; then
+        #echo "radio disable, loadbalance 0" > /dev/console
+        loadbalance=0
+        return
+    fi
+
+    # check SSID #
+    wifi2_ssid=$(uci get wireless.wifi2_ssid_"$id2".ssid)
+    wifi1_ssid=$(uci get wireless.wifi1_ssid_"$id1".ssid)
+    if [ "$wifi2_ssid" != "$wifi1_ssid" ]; then
+        #echo "SSID mismatch, loadbalance 0" > /dev/console
+        loadbalance=0
+        return
+    fi
+
+    # check encryption #
+    wifi2_ssid_enc=$(uci get wireless.wifi2_ssid_"$id2".encryption)
+    wifi1_ssid_enc=$(uci get wireless.wifi1_ssid_"$id1".encryption)
+    if [ "$wifi2_ssid_enc" != "$wifi1_ssid_enc" ]; then
+        #echo "encryption mismatch, loadbalance 0" > /dev/console
+        loadbalance=0
+        return
+    fi
+
+    # check wep key #
+    if [ "${wifi1_ssid_enc:0:3}" = "wep" ]; then
+        wifi2_ssid_key_id=$(uci get wireless.wifi2_ssid_"$id2".key_id)
+        wifi1_ssid_key_id=$(uci get wireless.wifi1_ssid_"$id1".key_id)
+        if [ "$wifi2_ssid_key_id" != "$wifi1_ssid_key_id" ]; then
+            #echo "wep key id mismatch, loadbalance 0" > /dev/console
+            loadbalance=0
+            return
+        fi
+    
+        wifi2_ssid_key=$(uci get wireless.wifi2_ssid_"$id2".key"$wifi2_ssid_key_id")
+        wifi1_ssid_key=$(uci get wireless.wifi1_ssid_"$id1".key"$wifi1_ssid_key_id")
+        if [ "$wifi2_ssid_key" != "$wifi1_ssid_key" ]; then
+            #echo "wep key mismatch, loadbalance 0" > /dev/console
+            loadbalance=0
+            return
+        fi
+    fi
+
+    # check wpa-psk key #
+    if [ "${wifi1_ssid_enc:0:3}" = "psk" ]; then
+        wifi2_ssid_key=$(uci get wireless.wifi2_ssid_"$id2".key)
+        wifi1_ssid_key=$(uci get wireless.wifi1_ssid_"$id1".key)
+        if [ "$wifi2_ssid_key" != "$wifi1_ssid_key" ]; then
+            #echo "psk key mismatch, loadbalance 0" > /dev/console
+            loadbalance=0
+            return
+        fi
+    fi
+}
+## sub-function end ##
+
+## main ##
+wifi1_en=0
+wifi2_en=0
+wifi1_noch=1
+wifi2_noch=1
+index=$1
+
+for section in $(ifconfig -a | grep wifi | awk -F " " {'print $1'})
+do
+    # wifi existed #
+    [ "$section" = "wifi1" ] && wifi1_en=1
+    [ "$section" = "wifi2" ] && wifi2_en=1
+done
+
+[ "$wifi1_en" = "1" ] && config_get wifi1_noch wifi1 nochannel
+[ "$wifi2_en" = "1" ] && config_get wifi2_noch wifi2 nochannel
+
+#echo "wifi1_en: $wifi1_en wifi2_en: $wifi2_en" > /dev/console
+#echo "wifi1_noch: $wifi1_noch wifi2_noch: $wifi2_noch" > /dev/console
+
+[ "$wifi1_en" = "0" -a "$wifi2_en" = "0" ] && return
+
+#echo "===== Band-Steering check ======" > /dev/console
+bandsteer=$(uci get wireless.wifi0_ssid_$index.bandsteer_en)
+
+if [ "$(uci get functionlist.functionlist.SUPPORT_WLAN5G_2 2> /dev/null)" == "1" ]; then
+    devices="wifi0 wifi1 wifi2"
+
+    for device in $devices; do
+	if [ $(uci get wireless."${device}_ssid_$index".disabled) == "0" ]; then
+	    if [ "$device" == "wifi0" ]; then
+		wifi_cap=$(($wifi_cap+1))
+	    elif [ "$device" == "wifi1" ]; then
+		wifi_cap=$(($wifi_cap+4))
+	    elif [ "$device" == "wifi2" ]; then
+		wifi_cap=$(($wifi_cap+2))
+	    fi
+	fi
+    done
+
+else
+    devices="wifi0 wifi1"
+
+    for device in $devices; do
+	if [ $(uci get wireless."${device}_ssid_$index".disabled) == "0" ]; then
+	    if [ "$device" == "wifi0" ]; then
+		wifi_cap=$(($wifi_cap+1))
+	    elif [ "$device" == "wifi1" ]; then
+		wifi_cap=$(($wifi_cap+2))
+	    fi
+	fi
+    done
+fi
+
+#echo "===== Load-Balance check ======" > /dev/console
+if [ "$wifi1_en" = "1" -a "$wifi2_en" = "1" ]; then
+    if [ "$wifi1_noch" = "0" -a  "$wifi2_noch" = "0" ]; then
+        [ "$bandsteer" == "0" ] && sn_loadbalance_check $index
+    fi
+    echo "loadbalance: $loadbalance" > /dev/console
+    [ -n "$loadbalance" ] && echo "$loadbalance" > /proc/loadbalance
+fi
+
+# set value #
+config_get bandsteerrssi wifi0_ssid_$index bandsteerrssi
+config_get bandsteerpersent wifi0_ssid_$index bandsteerpersent
+config_get bandsteerHBrssi wifi0 bandsteerHBrssi
+config_get bandsteerHBpersent wifi0 bandsteerHBpersent
+
+bandsteerLBpersent=55
+if [ "$index" = "1" ]; then
+    n=""
+else
+    n=$(expr $index - 1)
+fi
+
+ifnames="ath0$n ath1$n ath4$n"
+[ "$wifi1_noch" = "1" ] && {
+    ifnames="ath0$n ath4$n"
+}
+[ "$wifi2_noch" = "1" ] && {
+    ifnames="ath0$n ath1$n"
+}
+[ -n "$loadbalance" -a "$bandsteer" = "0" ] && {
+    ifnames="ath1$n ath4$n"
+}
+
+[ -n "$bandsteer" -a "$bandsteer" != "0" ] && {
+    if [ "$wifi_cap" = "1" -o "$wifi_cap" = "2" -o "$wifi_cap" = "4" ]; then
+        iwpriv ath0$n bs_en 0
+    else
+        iwpriv ath0$n bs_en $(uci get wireless.wifi0_ssid_$index.bandsteer_en)
+    fi
+
+    iwpriv ath0$n bs_cap $wifi_cap
+    [ "$wifi1_noch" = "0" ] && {
+	if [ "$wifi_cap" = "1" -o "$wifi_cap" = "2" -o "$wifi_cap" = "4" ]; then
+	    iwpriv ath1$n bs_en 0
+	else
+	    iwpriv ath1$n bs_en $(uci get wireless.wifi1_ssid_$index.bandsteer_en)
+	fi
+        iwpriv ath1$n bs_cap $wifi_cap
+    }
+    [ "$wifi2_noch" = "0" ] && {
+	if [ "$wifi_cap" = "1" -o "$wifi_cap" = "2" -o "$wifi_cap" = "4" ]; then
+	    iwpriv ath4$n bs_en 0
+	else
+            iwpriv ath4$n bs_en $(uci get wireless.wifi2_ssid_$index.bandsteer_en)
+	fi
+        iwpriv ath4$n bs_cap $wifi_cap
+    }
+}
+
+i=0
+for ifname in $ifnames; do
+    [ "$bandsteer" != "0" -o "$loadbalance" != "0" ] && {
+        # load-balance settings
+        iwpriv "$ifname" bs5ghbrssi "$bandsteerHBrssi"
+        iwpriv "$ifname" bshbratio "$bandsteerHBpersent"
+        iwpriv "$ifname" bslbratio "$bandsteerLBpersent"
+        iwpriv "$ifname" bs_idx $(expr $index)
+    }
+
+    [ -n "$bandsteer" -a "$bandsteer" = "2" ] && {
+        iwpriv "$ifname" bsmin5grssi "$bandsteerrssi"
+    }
+
+    [ -n "$bandsteer" -a "$bandsteer" = "3" ] && {
+        iwpriv "$ifname" bsmin5grssi "$bandsteerrssi"
+        iwpriv "$ifname" bsloadratio "$bandsteerpersent"
+    }
+    
+    # disable band-steering
+    [ "$bandsteer" = "0" ] && {
+        iwpriv "$ifname" bs_en 0
+    }
+
+    i=$(($i+1))
+
+done
+#echo "bandsteer end" > /dev/console
+## main end ##

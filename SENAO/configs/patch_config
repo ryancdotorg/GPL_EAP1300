@@ -1,0 +1,415 @@
+#
+# Automatically generated make config: don't edit
+# version: 
+#
+
+#
+# quilt
+#
+
+#
+# packages
+#
+
+#
+# art2
+#
+# CONFIG_100-sn-art2-4-9-575-cal-2p-algorithm is not set
+
+#
+# asterisk-11.x
+#
+# CONFIG_901-sn-asterisk-rainier-feature is not set
+
+#
+# busybox
+#
+# CONFIG_960-sn-busybox_utils_mdmm is not set
+# CONFIG_961-sn-support-Sitecom-console-login is not set
+# CONFIG_961-sn-support-Torch-console-login is not set
+# CONFIG_961-sn-support-WatchGuard-console-login is not set
+# CONFIG_961-sn-support-console-login is not set
+CONFIG_961-sn-support-console-login-spf=y
+# CONFIG_962-miscutils_atheros_ethreg is not set
+# CONFIG_962-sn-dhcpc-senao-fingerprint is not set
+# CONFIG_963-sn-support-set-ash-default-TMOUT is not set
+# CONFIG_964-sn-snlog-for-remote-log is not set
+# CONFIG_965-sn-httpd-force-response-302 is not set
+# CONFIG_966-sn-httpd-force-response-302-bind-mgmt is not set
+
+#
+# coova-chilli
+#
+# CONFIG_201-support_bridge_mode is not set
+# CONFIG_306-sn-support_nfcoova_bridge_mode is not set
+# CONFIG_400-sn-support-social-network-oauth-login is not set
+
+#
+# dnsmasq
+#
+# CONFIG_112-sn-replace-hostname-dot-by-hyphen is not set
+
+#
+# exfat-nofuse
+#
+# CONFIG_001-sn-exfat-nofuse-kernel_4_X_compatiblity is not set
+
+#
+# fcgi
+#
+CONFIG_120-sn-fcgi-read_with_timeout=y
+
+#
+# fsck_hfs
+#
+# CONFIG_015-sn-sysctl-only-on-glibc is not set
+
+#
+# fstools
+#
+# CONFIG_001-sn-fix_block_links_libjson-c is not set
+# CONFIG_001-sn-fstools-eMMC_overlay_support is not set
+
+#
+# ifplugd
+#
+# CONFIG_200-sn-ifplugd-detect-ethernet-speed is not set
+CONFIG_201-sn-ifplugd-detect-ethernet-status=y
+# CONFIG_202-sn-ifplugd-cat-proc-lanState is not set
+
+#
+# ifstat
+#
+CONFIG_002-message_queue=y
+
+#
+# iproute2
+#
+CONFIG_300-sn-add_tc_nss=y
+
+#
+# iwinfo
+#
+# CONFIG_001-sn-iwinfo_support_qca_wifi_driver is not set
+
+#
+# json-c
+#
+# CONFIG_001-sn-jsonc-Add_backslash_for_string is not set
+
+#
+# miniupnpd
+#
+CONFIG_200-sn-handle-model_name_and_etc=y
+CONFIG_200-sn-handle-overflow-when-read-64bit-counter=y
+# CONFIG_200-sn-mod_device_type_for_windows_icon is not set
+
+#
+# mtd-utils
+#
+# CONFIG_998-sstar_use_another_ubi_pkg is not set
+
+#
+# netifd
+#
+# CONFIG_001-sn-clean-up-l3-device-on-remove-reload is not set
+CONFIG_001-sn-remove-static-DNS-at-DHCP=y
+# CONFIG_002-sn-release-br-lan-to-fix-vlanif-bridge-on-reload is not set
+# CONFIG_003-sn-bridge-retry-when-bridge-member-free is not set
+# CONFIG_004-sn-missing-ipv6-dns is not set
+
+#
+# openswan
+#
+# CONFIG_200-sn-openswan-compilation-lunix-3_4_103 is not set
+
+#
+# procd
+#
+# CONFIG_001-sn-procd-EIG9100-add_delay_to_get_correct_opmode is not set
+# CONFIG_002-sn-procd-SP938BS-remove_watchdog is not set
+
+#
+# qca-hostap
+#
+# CONFIG_001-sn-fast_roaming is not set
+# CONFIG_002-sn-support_80211r is not set
+# CONFIG_003-sn-QCA-hostapd_cli_pid is not set
+# CONFIG_004-sn-support_wps_stop is not set
+# CONFIG_005-sn-support_wps_disable_pin is not set
+# CONFIG_006-sn-support_wps_config_update is not set
+# CONFIG_007-sn-support_wps_pbc_win7_logo is not set
+# CONFIG_008-sn-support_nas_port is not set
+# CONFIG_009-sn-modify-eapol_key_timeout is not set
+# CONFIG_101-sn-http_chunked_transfer_encoding_parser is not set
+
+#
+# qca-ipq806x-uboot
+#
+# CONFIG_001-sn-QCA-ipq806x-uboot-env-default-values is not set
+# CONFIG_002-sn-SENAO-add-RECOVERY_MODE is not set
+
+#
+# qca-legacy-uboot
+#
+# CONFIG_310-sn-QCA-qca955x-add-ar8035 is not set
+# CONFIG_311-sn-QCA-qca955x-support-qca8337 is not set
+# CONFIG_312-sn-QCA-s17-disable-ports is not set
+# CONFIG_313-sn-SENAO-add-RECOVERY_MODE is not set
+# CONFIG_314-sn-QCA-qca955x-support-FACTORY_LOAD is not set
+# CONFIG_315-sn-SENAO-add-uboot-version is not set
+# CONFIG_316-sn-QCA-qca955x-specify-BOOTM_ADDR is not set
+# CONFIG_317-sn-QCA-qca955x-specify-PRODUCT_NAME is not set
+# CONFIG_318-sn-QCA-resvise-PCIe_info is not set
+# CONFIG_319-sn-QCA-qca955x-get-MAC_ADDR-from-art is not set
+# CONFIG_320-sn-SENAO-uboot-env-default-values is not set
+# CONFIG_321-sn-QCA-qca955x-gpio_inout_setup is not set
+# CONFIG_322-sn-QCA-ar934x-fix-pci-init is not set
+# CONFIG_323-sn-QCA-db12x-BOOTM-KERNEL-ENV-addr is not set
+# CONFIG_324-sn-QCA-db12x-uboot-env-default-values is not set
+# CONFIG_325-sn-QCA-qca955x-AR8035-u-boot-tx-rx-delay-tune is not set
+# CONFIG_326-sn-SENAO-addqca955x-ar8035-PHYADDR-DIFINE is not set
+# CONFIG_327-sn-SENAO-addqca955x-ar8033-PHYADDR-DIFINE is not set
+# CONFIG_328-sn-SENAO-add-ipaddr-serverip-BYDIFINE is not set
+# CONFIG_329-sn-SENAO-add-ethaddr-wanaddr-BYDIFINE is not set
+# CONFIG_330-sn-SENAO-add-32M-flash-support is not set
+
+#
+# qca-nss-gmac
+#
+# CONFIG_001-sn-single-phy-10mbps-fix is not set
+
+#
+# qca-ssdk
+#
+# CONFIG_001-sn-single-phy is not set
+
+#
+# qca-wifi-10.2.3
+#
+
+#
+# qca-wifi-10.2.4
+#
+
+#
+# qca-wifi-10.2.85
+#
+# CONFIG_001-sn-QCA-fast_hand_over is not set
+# CONFIG_002-sn-QCA-wifi-bandsteering is not set
+# CONFIG_003-sn-QCA-fix-ping-loss-with-WPA2AES is not set
+# CONFIG_004-sn-LSDK10.2.85-enhance is not set
+# CONFIG_004-sn-allow-change-wlan-mac is not set
+# CONFIG_005-sn-wpa_supplicant_8021X_function_to_send_auth is not set
+# CONFIG_006-sn-add-led-function is not set
+# CONFIG_006-sn-fix-packet-counter-error is not set
+# CONFIG_007-sn-get-80211ac-CalData-from-flash is not set
+# CONFIG_008-sn-connection_limit is not set
+# CONFIG_010-support_nawds is not set
+# CONFIG_011-sn-green-mode is not set
+# CONFIG_012-sn-support-nms is not set
+# CONFIG_013-sn-remove_vap_init_check_ssid_length is not set
+# CONFIG_014-sn-beacon_modification is not set
+# CONFIG_015-sn-set_dhcp_flag_to_broadcast is not set
+# CONFIG_016-sn-disable_tx_amsdu is not set
+# CONFIG_017-sn-send_wireless_event_when_sta_disconnect_from_ap is not set
+# CONFIG_020-sn-fix_client_list_rx_data_unchange_issue is not set
+# CONFIG_021-sn-support_sysctl is not set
+# CONFIG_022-sn-get_current_txrate is not set
+# CONFIG_023-sn-ht_and_vht_scan_ie is not set
+# CONFIG_024-sn-AC_pppoe_CB_passthrough is not set
+# CONFIG_025-sn-temp_node is not set
+# CONFIG_026-sn-compliance_band is not set
+# CONFIG_027-sn-fix_distance_will_be_changed_issue is not set
+# CONFIG_028-sn-MBSSID_new_oui_mac_rule is not set
+# CONFIG_029-sn-2g_init_failed is not set
+# CONFIG_030-sn-fix_adhoc_wpa_supplicant_timeout_issue is not set
+# CONFIG_031-sn-wlan_mutlicast_issue is not set
+# CONFIG_032-sn-disable_dma_FMS_queue_msg is not set
+# CONFIG_033-sn-wds_downward_compatibility is not set
+# CONFIG_034-sn-fix_the_channel_unchanged_issue_when_scanning_and_displaying_error_when_5_5m is not set
+# CONFIG_035-sn-vap_created_msg_err2info is not set
+# CONFIG_036-sn-5G-detect-DFS-running is not set
+# CONFIG_037-sn-match_channel_list_to_driver is not set
+# CONFIG_038-sn-support_senao_80211k is not set
+# CONFIG_039-sn-unicast2brocast_dhcp_ip_flag_for_CB_RPT_mode is not set
+# CONFIG_040-sn-sitesurvey-scan-issue is not set
+# CONFIG_041-sn-etsi-cca-test is not set
+# CONFIG_042-sn-11ac_vlan_passthrough_nawds_low_throughput is not set
+# CONFIG_042-sn-QCA-wifi-bandsteering-with-kick is not set
+# CONFIG_043-sn-wds_disconnect is not set
+# CONFIG_044-sn-2gACS_radom is not set
+# CONFIG_045-sn-WAR_DELETE_VAP is not set
+# CONFIG_046-sn-ath_intr_sync_host1_war is not set
+# CONFIG_047-sn-Intel_DELBA_fix is not set
+# CONFIG_048-sn-tkip is not set
+
+#
+# qca-wifi_389
+#
+# CONFIG_119-sn-QCA-fast_hand_over is not set
+# CONFIG_120-sn-QCA-wifi-bandsteering is not set
+# CONFIG_121-sn-QCA-fix-ping-loss-with-WPA2AES is not set
+# CONFIG_122-sn-allow-change-wlan-mac is not set
+
+#
+# setconfig
+#
+# CONFIG_001-sn-setconfig-EIG9100-remove_fill_0xFF is not set
+
+#
+# sysstat
+#
+# CONFIG_201-message_queue is not set
+
+#
+# transmission
+#
+# CONFIG_001-sn-transmission-web-modify is not set
+
+#
+# ubox
+#
+# CONFIG_001-sn-syslog-reorder-the-included-header is not set
+
+#
+# ubus
+#
+# CONFIG_001-sn-fix_server_need_libjson-c is not set
+
+#
+# uci
+#
+CONFIG_002-senao-uci-set-empty-value=y
+# CONFIG_101-sn-mesh-sync-uci-changes is not set
+
+#
+# wireless-tools
+#
+# CONFIG_fix_ax_data_rate_issue is not set
+# CONFIG_iwlist_background_fastscan is not set
+# CONFIG_mesh_easy_setup_scan is not set
+# CONFIG_sitesurvey is not set
+
+#
+# wireless-tools_QSDK_5_2
+#
+CONFIG_iwlist_background_fastscan_QSDK_5_2=y
+# CONFIG_mesh_easy_setup_scan_QSDK_5_2 is not set
+# CONFIG_qca9377_support is not set
+CONFIG_sitesurvey_QSDK_5_2=y
+
+#
+# zabbix
+#
+# CONFIG_200-m2m-info is not set
+# CONFIG_201-m2m-info-v2 is not set
+
+#
+# KERNEL
+#
+
+#
+# ar71xx
+#
+
+#
+# 903-sn-EWS1025-support
+#
+
+#
+# 903-sn-HUDDLE-support
+#
+
+#
+# kernel-3.3
+#
+# CONFIG_903-sn-ECB-1750-support is not set
+# CONFIG_903-sn-ECB1200-support is not set
+# CONFIG_903-sn-ENH1200EXT-support is not set
+# CONFIG_903-sn-ENH1750EXT-support is not set
+# CONFIG_903-sn-ENH202v2-support is not set
+# CONFIG_903-sn-ENS202-support is not set
+# CONFIG_903-sn-ENS202EXT-support is not set
+# CONFIG_903-sn-EOWR-support is not set
+# CONFIG_903-sn-EWS1025-support is not set
+# CONFIG_903-sn-EWS210AP-support is not set
+# CONFIG_903-sn-EWS300AP-support is not set
+# CONFIG_903-sn-EWS310AP-support is not set
+# CONFIG_903-sn-EWS320AP-support is not set
+# CONFIG_903-sn-EWS350AP-support is not set
+# CONFIG_903-sn-EWS360AP-support is not set
+# CONFIG_903-sn-EWS500AP-support is not set
+# CONFIG_903-sn-EWS510AP-support is not set
+# CONFIG_903-sn-EWS650AP-support is not set
+# CONFIG_903-sn-EWS660AP-support is not set
+# CONFIG_903-sn-EWS860AP-support is not set
+# CONFIG_903-sn-IPC1025-support is not set
+# CONFIG_903-sn-LY500-support is not set
+# CONFIG_903-sn-LY500IG-support is not set
+# CONFIG_903-sn-LY57IG-support is not set
+# CONFIG_903-sn-LY57WS-support is not set
+# CONFIG_903-sn-LY700W-support is not set
+# CONFIG_903-sn-WLR-8100-support is not set
+# CONFIG_903-sn-WX-1-support is not set
+# CONFIG_904-sn-AR8035-LAN_LED_control is not set
+# CONFIG_905-sn-WLR-3100-support is not set
+# CONFIG_906-sn-IP_NF_IP_ALIGNMENT is not set
+# CONFIG_907-sn-endless_looping_cascade_internal_add_timer is not set
+# CONFIG_908-sn-nph-module is not set
+# CONFIG_909-sn-mesh-vlan-passthrough is not set
+# CONFIG_944-sn-sgmii-reset-when-link-status-error is not set
+# CONFIG_974-sn-ar8033_ar8035_lpbk is not set
+# CONFIG_999-sn-ECB500-AC-support is not set
+
+#
+# kernel-3.6
+#
+# CONFIG_903-sn-EMR3000-support-__-kernel-3.6 is not set
+# CONFIG_903-sn-EWS1025-support-__-kernel-3.6 is not set
+# CONFIG_903-sn-HUDDLE-support-__-kernel-3.6 is not set
+# CONFIG_904-sn-AR8035-LAN_LED_control-__-kernel-3.6 is not set
+# CONFIG_905-sn-single-phy-ethreg-__-kernel-3.6 is not set
+# CONFIG_906-sn-IP_NF_IP_ALIGNMENT-__-kernel-3.6 is not set
+# CONFIG_907-sn-support-WINBOND-32Mflash-__-kernel-3.6 is not set
+# CONFIG_944-sn-sgmii-reset-when-link-status-error-__-kernel-3.6 is not set
+# CONFIG_962-fix-batman-null-structure-kernel-panic-__-kernel-3.6 is not set
+
+#
+# omap
+#
+
+#
+# kernel-4.4
+#
+# CONFIG_001-sn-openwrt-kernel-4.4-__-kernel-4.4 is not set
+# CONFIG_002-sn-bluetooth-led-trigger-__-kernel-4.4 is not set
+# CONFIG_003-sn-kernel-4.4-patch-__-kernel-4.4 is not set
+# CONFIG_004-sn-add_ti_cdce913_driver-__-kernel-4.4 is not set
+# CONFIG_005-sn-add_rainier_platform_driver-__-kernel-4.4 is not set
+
+#
+# gitdiff
+#
+# CONFIG_001-iwinfo_support_qca-wifi is not set
+# CONFIG_001-openswan-for-linux-3_4 is not set
+# CONFIG_001-sn-button-hotplug_add_wps1_button is not set
+# CONFIG_001-sn-ddns-script-add_init_ddns is not set
+# CONFIG_001-sn-dnsmasq-systemname is not set
+# CONFIG_001-sn-dnsmasq is not set
+# CONFIG_001-sn-etherwake-arp_dummy_entry is not set
+# CONFIG_001-sn-iperf-setttings is not set
+# CONFIG_001-sn-miniupnpd-model_name_etc is not set
+# CONFIG_001-sn-modemmanager-hotplug_tty_only_ttyACM is not set
+# CONFIG_001-sn-netifd-dhcp is not set
+# CONFIG_001-sn-netifd-ppp is not set
+# CONFIG_001-sn-odhcp6c is not set
+# CONFIG_001-sn-php5 is not set
+# CONFIG_001-sn-syslogd-reload is not set
+# CONFIG_001-sn-transmission is not set
+# CONFIG_001-sn-use-lighttpd is not set
+# CONFIG_001-sn-wide-dhcpv6-client-init is not set
+# CONFIG_001-sn-wide-dhcpv6-client is not set
+# CONFIG_001-sn-wide-dhcpv6-server is not set
+# CONFIG_001-sn-xl2tpd is not set
+# CONFIG_002-sn-xl2tpd is not set

@@ -1,0 +1,10 @@
+Package: qcmbr-10.4
+Version: g30bdbbe8c-1
+Depends: libc, libpthread, librt
+Source: qca/feeds/qca/utils/qcmbr-10.4
+Section: QCA
+Maintainer: Qualcomm Atheros
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 15610
+Description:  - QCA ART Driver & tools

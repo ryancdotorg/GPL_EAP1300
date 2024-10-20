@@ -1,0 +1,9 @@
+Package: manufacture_mode
+Version: 1.0
+Depends: libc
+Source: SENAO/package/manufacture_mode
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 12026
+Description:  ................

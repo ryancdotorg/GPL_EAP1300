@@ -1,0 +1,6 @@
+
+Execute:
+sudo LD_LIBRARY_PATH=../ ./test
+
+sudo to get raw socket permission
+LIB_LIBRARY_PATH to specify libmio.a/libmio.so directory

@@ -1,0 +1,11 @@
+#!/bin/sh
+uci batch <<-EOF
+del ucitrack.@dnsmasq_restart[-1]
+del_list ucitrack.@lan-ip-obtain[0].affects=dnsmasq_restart
+add ucitrack dnsmasq_restart
+set ucitrack.@dnsmasq_restart[0].exec=/usr/sbin/dnsmasq_restart
+add_list ucitrack.@lan-ip-obtain[0].affects=dnsmasq_restart
+commit ucitrack
+EOF
+
+exit 0

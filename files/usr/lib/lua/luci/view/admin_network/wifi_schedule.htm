@@ -1,0 +1,628 @@
+<% local uci = luci.model.uci.cursor() %>
+<%+header%>
+<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+<%+myid%>
+<% end %>
+<style>
+	input[type='radio']{
+		margin-right: 9px;
+	}
+	input[type='checkbox']{
+		margin-right: 9px;
+	}
+	input[name^='day_']{
+		width:30px;
+	}
+</style>
+<%
+		local uci = require "luci.model.uci".cursor()
+		local opmode_24g, opmode_5g, opmode_5g_2
+		opmode_24g = uci:get("wireless", "wifi0", "opmode") or "none"
+		opmode_5g = uci:get("wireless", "wifi1", "opmode") or "none"
+		opmode_5g_2 = uci:get("wireless", "wifi2", "opmode") or "none"
+		enjet1_en = uci:get("wireless", "wifi1", "qboost_enable") or 0
+		radioNum = 0
+%>
+<script>
+	var SCHEDULEDATA = <%=JSONDATA_WIFI_SCHEDULE%>;
+	var SCHEDULEDAY = <%=JSONDATA_WIFI_SCHEDULE_DAY%>;
+	var opmode = {}, wifiTable = {}, radioNum=0;
+<% if WLAN24G == "1" then
+	radioNum = radioNum+1
+%>
+	opmode[0]="<%=opmode_24g%>";
+	wifiTable[0]="2.4GHz";
+	radioNum=radioNum+1;
+<% end %>
+<% if WLAN5G == "1" then
+	radioNum = radioNum+1
+%>
+	opmode[1]="<%=opmode_5g%>";
+	wifiTable[1]="5GHz";
+	radioNum=radioNum+1;
+	<% if WLAN5G_2 == "1" then
+		radioNum = radioNum+1
+	%>
+		opmode[2]="<%=opmode_5g_2%>";
+		wifiTable[1]="5GHz-1";
+		wifiTable[2]="5GHz-2";
+		radioNum=radioNum+1;
+	<% end %>
+<% end %>
+
+	function auto_reboot()
+	{
+		var ret = $('#power_RB_enable').prop('checked');
+		if(ret)
+		{
+			$('input[name^="auto_reboot"]').removeAttr('disabled');
+		}
+		else
+		{
+			$('input[name^="auto_reboot"]').attr('disabled', 'disabled');
+		}
+	}
+	var schedule={};
+	schedule.status=function(){
+		var ret = $('#schedule_enable').prop('checked');
+		if(ret)
+		{
+			$('input[name^="wifi_schedule"]').removeAttr('disabled');
+			$('select[name^="wifi_schedule"]').removeAttr('disabled');
+		}
+		else
+		{
+			$('input[name^="wifi_schedule"]').attr('disabled', 'disabled');
+			$('select[name^="wifi_schedule"]').attr('disabled', 'disabled');
+		}
+	};
+	schedule.ssidChange=function(){
+		if(SCHEDULEDAY[$("#wifi_schedule_iface").val()])
+		{
+			schedule.tm.case4();
+			RefreshTemplates();
+		}
+		else
+		{
+			schedule.tm.case1();
+			$('#wifi_schedule_templates').val("0");
+		}
+	};
+	schedule.ssidOption=function(){
+		XHR.get('<%=luci.dispatcher.build_url("admin/status/overview")%>', {status:1},
+		function(x,info){
+			if(x.responseText)
+			{
+				var ret = ($('#schedule_enable').prop('checked')) ? "" : " disabled";
+				var ht = '<select name="wifi_schedule_iface" id="wifi_schedule_iface"' + ret + '>';
+				var ws = info.wifinets;
+				if(ws)
+				{
+					var show_ap = true;
+					<% 
+					local loopNum = 0
+					local start = 0
+					if COMBINED_SSID == '1' then 
+						loopNum = radioNum
+						if WLAN24G ~= '1' and WLAN5G == '1' then
+							loopNum = 2
+							start = 1
+						end
+					else
+						loopNum = 1
+					end
+					%>
+					<% for i=start,loopNum-1 do %>
+						<% if COMBINED_SSID == '1' then %>
+						var dev = ws["<%=i%>"]; // if combined ssid, show all devices's ssid.
+						<% else %>
+					var dev = ws[$('#wifi_schedule_radio').val()];
+						<% end %>
+					if (dev)
+					{
+							<% if COMBINED_SSID == '1' then %>
+							if ( dev.opmode != "ap" || ( dev.opmode == "ap" && show_ap )  )
+							{
+								if ( dev.opmode == "ap" )
+									show_ap = false ; // ap show once
+							<% end %>
+								for(var nidx = 0; nidx < dev.networks.length; nidx++)
+								{
+									var net = dev.networks[nidx];
+									var ssid = SpecHTML(net.ssid);
+									<% if enjet1_en == "1" then %>
+									if((dev.opmode=="ap" || dev.opmode=="wds_ap")) 
+									{
+										if((net.networkname.match("enjet")))
+										{
+											ht += "<option value='" + net.ifname + "'>" <% if COMBINED_SSID == '1' then %> + ((dev.opmode=="ap")?"AP":"WDS") + " - " <% end %> + ssid + "</option>"
+										}
+									}
+									<% else %>
+									if((net.nmode == dev.opmode) && net.vlan_id && !net.networkname.match("enjet") && !net.networkname.match("mgmt"))
+									{
+										ht += "<option value='" + net.ifname + "'>" <% if COMBINED_SSID == '1' then %> + ((dev.opmode=="ap")?"AP":"WDS") + " - " <% end %> + ssid + "</option>"
+									}
+									<% end %>
+								}
+							<% if COMBINED_SSID == '1' then %>
+						}
+							<% end %>
+					}
+					<% end %>
+				}
+				else
+				{
+					ht += "<option><%:Wifi not found or disabled%>.</option>"
+				}
+				ht += "</select>";
+				getById('wifi_schedule_ssid').innerHTML = ht;
+				getById('wifi_schedule_iface').selectedIndex = 0;
+				
+				$('#wifi_schedule_iface option').each(function(){
+					if($(this).val() == SCHEDULEDATA.wireless.iface)
+					$('#wifi_schedule_iface').val(SCHEDULEDATA.wireless.iface);
+				});
+				schedule.ssidChange();
+				$('#wifi_schedule_iface').change(function(){
+					schedule.ssidChange();
+				});
+			}
+		});
+	};
+	schedule.showDay=function(){
+		var ht="", days, i;
+		days=["<%:Sunday%>", "<%:Monday%>", "<%:Tuesday%>", "<%:Wednesday%>", "<%:Thursday%>", "<%:Friday%>", "<%:Saturday%>"];
+
+		for(i=0;i<days.length;i++)
+		{
+			ht+='<tr class="title-option">' +
+				'<td>'+days[i]+'</td>' +
+				'<td>' +
+					'<select name="wifi_schedule_day_sw_'+i+'" id="wifi_schedule_day_sw_'+i+'">' +
+						'<option value="1"><%:available%></option><option value="0"><%:unavailable%></option>' +
+					'</select>' +
+				'</td>' +
+				'<td>' +
+					'<input type="text" style="width:30px;" id="wifi_schedule_day_sh_'+i+'" name="wifi_schedule_day_sh_'+i+'" value="00" maxlength="2" size="2">:' +
+					'<input type="text" style="width:30px;" id="wifi_schedule_day_sm_'+i+'" name="wifi_schedule_day_sm_'+i+'" value="00" maxlength="2" size="2">~' +
+					'<input type="text" style="width:30px;" id="wifi_schedule_day_eh_'+i+'" name="wifi_schedule_day_eh_'+i+'" value="24" maxlength="2" size="2">:' +
+					'<input type="text" style="width:30px;" id="wifi_schedule_day_em_'+i+'" name="wifi_schedule_day_em_'+i+'" value="00" maxlength="2" size="2">' +
+				'</td>' +
+			'</tr>';
+		}
+		document.write(ht);
+	};
+	schedule.templateInvoke=function(caseId){
+		switch(parseInt(caseId))
+		{
+			case 3: //<%#Available 8-5 daily execpt weekends%>
+					schedule.tm.case3();
+				break;
+			case 2: //<%#Available 8-5 daily%>
+					schedule.tm.case2();
+				break;
+			case 1: //<%#always available%>
+					schedule.tm.case1();
+				break;
+			case 4: //<%#Custom schedule%>
+					schedule.tm.case4();
+				break;
+			default :
+			case 0: //<%#choose a template%>
+				break;
+		}
+	};
+	schedule.tm={}
+	schedule.tm.case1=function(){
+		$('select[name^="wifi_schedule_day_"]').val(1);
+		$('input[name^="wifi_schedule_day_sh"], input[name^="wifi_schedule_day_em"], input[name^="wifi_schedule_day_sm"]').val("00");
+		$('input[name^="wifi_schedule_day_eh"]').val("24");
+	};
+	schedule.tm.case2=function(){
+		$('select[name^="wifi_schedule_day_"]').val(1);
+		$('input[name^="wifi_schedule_day_em"], input[name^="wifi_schedule_day_sm"]').val("00");
+		$('input[name^="wifi_schedule_day_eh"]').val("17");
+		$('input[name^="wifi_schedule_day_sh"]').val("08");
+	};
+	schedule.tm.case3=function(){
+		$('select[name^="wifi_schedule_day_"]').val(1);
+		$('input[name^="wifi_schedule_day_em"], input[name^="wifi_schedule_day_sm"]').val("00");
+		$('input[name^="wifi_schedule_day_sh"]').val("08");
+		$('input[name^="wifi_schedule_day_eh"]').val("17");
+		$('select[name^="wifi_schedule_day_"]:first').val(0);
+		$('select[name^="wifi_schedule_day_"]:last').val(0);
+		$('input[name^="wifi_schedule_day_sh"]:first, input[name^="wifi_schedule_day_sh"]:last').val("00");
+		$('input[name^="wifi_schedule_day_eh"]:first, input[name^="wifi_schedule_day_eh"]:last').val("24");
+	};
+	schedule.tm.case4=function(){
+		var i, sidx, sh, eh, sm, em, sche=SCHEDULEDATA;
+
+		for(i=0;i<=6;i++)
+		{
+			sidx = "#wifi_schedule_day_sw_"+i;
+			sh = "#wifi_schedule_day_sh_"+i;
+			eh = "#wifi_schedule_day_eh_"+i;
+			sm = "#wifi_schedule_day_sm_"+i;
+			em = "#wifi_schedule_day_em_"+i;
+
+			$(sidx).val(sche[SCHEDULEDAY[getById("wifi_schedule_iface").value]["day"+i]].status);
+			$(sh).val(sche[SCHEDULEDAY[getById("wifi_schedule_iface").value]["day"+i]].timeStart.split(":")[0]);
+			$(sm).val(sche[SCHEDULEDAY[getById("wifi_schedule_iface").value]["day"+i]].timeStart.split(":")[1]);
+			$(eh).val(sche[SCHEDULEDAY[getById("wifi_schedule_iface").value]["day"+i]].timeEnd.split(":")[0]);
+			$(em).val(sche[SCHEDULEDAY[getById("wifi_schedule_iface").value]["day"+i]].timeEnd.split(":")[1]);
+		}
+	};
+	function init(){
+		var auto = SCHEDULEDATA.reboot;
+		var sche = SCHEDULEDATA.wireless;
+		var radio_face;
+		if(auto)
+		{
+			document.getElementsByName("power_en")[(auto.status=="1")?0:1].checked=true;
+			document.getElementsByName('auto_reboot_hour')[0].value=auto.time.split(":")[0];
+			document.getElementsByName('auto_reboot_minute')[0].value=auto.time.split(":")[1];
+			if(auto.day)
+			{
+				var i,days= auto.day.split(",");
+				for(i=0;i<days.length;i++)
+				{
+					document.getElementsByName('auto_reboot_day')[parseInt(days[i])].checked=true;
+				}
+			}
+		}
+		if(sche)
+		{
+			document.getElementsByName("schedule_en")[(sche.ScheduleEnable=="1")?0:1].checked=true;
+
+			for (var i=0;i < 3;i++){
+				if(opmode[i] == "ap" || opmode[i] == "wds_ap")
+				{
+					radio_face += '<option value="'+i+'">'+wifiTable[i]+'</option>';
+				}
+			}
+
+			$('#wifi_schedule_radio').html(radio_face);
+			
+			if(opmode[parseInt(sche.radio,10)] == "ap" || opmode[parseInt(sche.radio,10)] == "wds_ap")
+			{
+				$('#wifi_schedule_radio').val(sche.radio);
+			}
+
+			$('#wifi_schedule_templates').val(sche.templates);
+		}
+
+		auto_reboot();
+		schedule.status();
+		schedule.ssidOption();
+		
+        //Disable WiFi schedule function when project only support 2.4G
+        if((opmode[1]==null) && (opmode[2]==null))
+        {
+		    if(opmode[parseInt(sche.radio,10)] == "ap" || opmode[parseInt(sche.radio,10)] == "wds_ap")
+		    {
+		        //do nothing
+		    }
+		    else
+		    {
+		        document.getElementsByName("schedule_en")[0].disabled=true;
+       		    document.getElementsByName("schedule_en")[1].disabled=true;
+		    }
+		}
+		//Disable WiFi schedule function when project only support 5G
+		else if ((opmode[0]==null) && (opmode[2]==null))
+		{
+			if (opmode[1] != "ap" && opmode[1]!="wds_ap")
+			{
+				document.getElementsByName("schedule_en")[0].disabled=true;
+				document.getElementsByName("schedule_en")[1].disabled=true;
+				$('input[name^="wifi_schedule"]').attr('disabled', 'disabled');
+				$('select[name^="wifi_schedule"]').attr('disabled', 'disabled');
+			}
+		}
+	}
+	$(function() {
+		<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+		        AddMyid("form", "wifisch_idchange");
+   		<% end %>
+		init();
+	});
+
+	function savechanges(type){
+		var ret=false, sh, sm, eh, em;
+		var str = "<%:%s must be zero!%>", str2 = "<%:Invalid time range! Start value should be less than end value.%>";
+		if(!isRange(document.getElementsByName('auto_reboot_hour')[0], "<%:Auto Reboot Hour%>", 0, 24))
+		{
+			return false;
+		}
+		if(!isRange(document.getElementsByName('auto_reboot_minute')[0], "<%:Auto Reboot Minute%>", 0, 59))
+		{
+			return false
+		}
+		if(parseInt(document.getElementsByName('auto_reboot_hour')[0].value) == 24 && parseInt(document.getElementsByName('auto_reboot_minute')[0].value) != 0)
+		{
+			alert(String.format(str, "<%:Reboot minute%>"));
+			setfocus(document.getElementsByName('auto_reboot_minute')[0]);
+			return false;
+		}
+		
+		$('input[name^="wifi_schedule_day_sh"]').each(function(){
+			if(!isClockRange($(this).val(), "<%:Schedule Table Start Hour%>", 0, 24))
+			{
+				setfocus($(this));
+				ret = true;
+				return false;
+			}
+		});
+		if(ret) return false;
+		
+		$('input[name^="wifi_schedule_day_sm"]').each(function(){
+			if(!isClockRange($(this).val(), "<%:Schedule Table Start Minute%>", 0, 60))
+			{
+				setfocus($(this));
+				ret = true;
+				return false;
+			}
+		});
+		if(ret) return false;
+		
+		$('input[name^="wifi_schedule_day_eh"]').each(function(){
+			if(!isClockRange($(this).val(), "<%:Schedule Table End Hour%>", 0, 24))
+			{
+				setfocus($(this));
+				ret = true;
+				return false;
+			}
+		});
+		if(ret) return false;
+		
+		$('input[name^="wifi_schedule_day_em"]').each(function(){
+			if(!isClockRange($(this).val(), "<%:Schedule Table End Minute%>", 0, 60))
+			{
+				setfocus($(this));
+				ret = true;
+				return false;
+			}
+		});
+		if(ret) return false;
+		
+		for(var i=0;i<7;i++)
+		{
+			sh = document.getElementById('wifi_schedule_day_sh_'+i);
+			sm = document.getElementById('wifi_schedule_day_sm_'+i);
+			eh = document.getElementById('wifi_schedule_day_eh_'+i);
+			em = document.getElementById('wifi_schedule_day_em_'+i);
+			
+			if(parseInt(sh.value) == 24 && parseInt(sm.value) != 0)
+			{
+				alert(String.format(str, "<%:Start minute%>"));
+				setfocus(sm);
+				ret = true;
+				break;
+			}
+
+			if(parseInt(eh.value) == 24 && parseInt(em.value) != 0)
+			{
+				alert(String.format(str, "<%:End minute%>"));
+				setfocus(em);
+				ret = true;
+				break;
+			}
+			
+			if((parseInt(sh.value) == 0 && parseInt(eh.value) == 24))
+			{
+				if(parseInt(sh.value) == parseInt(eh.value))
+				{
+					if(parseInt(sm.value) >= parseInt(em.value))
+					{
+						alert(str2);
+						setfocus(sm);
+						ret = true;
+						break;
+					}
+				}
+			}
+			else
+			{
+				if(parseInt(sh.value) > parseInt(eh.value))
+				{
+					alert(str2);
+					setfocus(sh);
+					ret = true;
+					break;
+				}
+				else if(parseInt(sh.value) == parseInt(eh.value))
+				{
+					if(parseInt(sm.value) >= parseInt(em.value))
+					{
+						alert(str2);
+						setfocus(sm);
+						ret = true;
+						break;
+					}
+				}
+			}
+		}
+		if(ret) return false;
+		
+		type = type || 0;
+		getById('submitType').value = type;
+		RefreshTemplates();
+		ajax_setCsrf();
+			
+		return true;
+	}
+
+	var CheckTemplatesFlag=0;//<%#When this flag is 0 means that the schedule table match the kind of template.%>
+	function RefreshTemplates()
+	{
+		var i;
+		getById("wifi_schedule_templates").value="4";//<%#initial template%>
+		//<%#CASE 1%>
+		for(i=0; i<=6; i++)
+		{
+			CheckScheduleTable(i,"1","00","00","24","00");
+			if(CheckTemplatesFlag==1) break;
+		}
+		if(CheckTemplatesFlag==0)
+		{
+			getById("wifi_schedule_templates").value="1";
+		}
+
+		//<%#CASE 2%>
+		CheckTemplatesFlag=0;
+		for(i=0; i<=6; i++)
+		{
+			CheckScheduleTable(i,"1","08","00","17","00");
+			if(CheckTemplatesFlag==1) break;
+		}
+		if(CheckTemplatesFlag==0)
+		{
+			getById("wifi_schedule_templates").value="2";
+		}
+
+		//<%#CASE 3%>
+		CheckTemplatesFlag=0;
+		for(i=1; i<=5; i++)
+		{
+			CheckScheduleTable(i,"1","08","00","17","00");
+			if(CheckTemplatesFlag==1) break;
+		}
+		CheckScheduleTable(0,"0","00","00","24","00");
+		CheckScheduleTable(6,"0","00","00","24","00");
+		if(CheckTemplatesFlag==0)
+		{
+			getById("wifi_schedule_templates").value="3";
+		}
+	}
+	function CheckScheduleTable(day,sw,startHour,startMin,endHour,endMin)
+	{
+		if(document.getElementById("wifi_schedule_day_sw_"+day).value!=sw)
+		{
+			CheckTemplatesFlag=1;
+		}
+		if(document.getElementById("wifi_schedule_day_sh_"+day).value!=startHour)
+		{
+			CheckTemplatesFlag=1;
+		}
+		if(document.getElementById("wifi_schedule_day_sm_"+day).value!=startMin)
+		{
+			CheckTemplatesFlag=1;
+		}
+		if(document.getElementById("wifi_schedule_day_eh_"+day).value!=endHour)
+		{
+			CheckTemplatesFlag=1;
+		}
+		if(document.getElementById("wifi_schedule_day_em_"+day).value!=endMin)
+		{
+			CheckTemplatesFlag=1;
+		}
+	}
+</script>
+<form name="form" action="<%=REQUEST_URI%>" method="post">
+<fieldset class="cbi-section">
+	<table>
+		<tr>
+			<td colspan="2" class="title"><%:Auto Reboot Setting%></td>
+		</tr>
+		<tr class="title-option">
+			<td style="width:20%;"><label for="power_RB_enable"><%:Status%></label></td>
+			<td>
+				<input type="radio" name="power_en" id="power_RB_enable" value="1" onclick="auto_reboot()"/>
+				<label for="power_RB_enable"><%:Enable%></label>
+				<input type="radio" name="power_en" id="power_RB_disable" value="0" onclick="auto_reboot()" checked/>
+				<label for="power_RB_disable"><%:Disable%></label>
+			</td>
+		</tr>
+		<tr class="title-option">
+			<td style="width:20%;"><%:Timer%></td>
+			<td>
+				<input value="0" name="auto_reboot_day" type="checkbox"/><%:Sunday%>
+				<input value="1" name="auto_reboot_day" type="checkbox"/><%:Monday%>
+				<input value="2" name="auto_reboot_day" type="checkbox"/><%:Tuesday%>
+				<input value="3" name="auto_reboot_day" type="checkbox"/><%:Wednesday%>
+				<input value="4" name="auto_reboot_day" type="checkbox"/><%:Thursday%>
+				<input value="5" name="auto_reboot_day" type="checkbox"/><%:Friday%>
+				<input value="6" name="auto_reboot_day" type="checkbox"/><%:Saturday%>
+			</td>
+		</tr>
+		<tr class="title-option">
+			<td style="width:20%;"></td>
+			<td>
+				<input value="0" name="auto_reboot_hour" size="5" style="width:100px;" type="text"/>:
+				<input value="0" name="auto_reboot_minute" size="5" style="width:100px;" type="text"/>
+			</td>
+		</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+	<table>
+		<tr>
+			<td colspan="2" class="title"><%:Wi-Fi Scheduler%></td>
+		</tr>
+		<tr class="title-option">
+			<td style="width:20%;"><%:Status%></td>
+			<td style="line-height: 18px;">
+				<input type="radio" name="schedule_en" value="1" id="schedule_enable" onclick="schedule.status()"/><label for="schedule_enable"><%:Enable%></label>
+				<input type="radio" name="schedule_en" value="0" id="schedule_disable" onclick="schedule.status()" checked/><label for="schedule_disable"><%:Disable%></label>
+				<br/>
+				<span style="color: red;"><%:NOTE%>:</span><%:Please assure that the Time Zone Settings is synced with your local time when enabling the Wi-Fi Scheduler%>
+			</td>
+		</tr>
+<% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') ~= '1' then %>
+		<tr class="title-option" <% if uci:get('functionlist','functionlist','SUPPORT_WIFI_SCH_ALL') == "1" then %> style="display: none" <% end %> >
+			<td style="width:20%;"><%:Wireless Radio%></td>
+			<td>
+				<select name="wifi_schedule_radio" id="wifi_schedule_radio" onchange="schedule.ssidOption()">
+<% if uci:get('functionlist','functionlist','SUPPORT_WLAN24G') == '1' then %>
+					<option value="0">2.4GHz</option>
+<% end %>
+<% if uci:get('functionlist','functionlist','SUPPORT_WLAN5G') == '1' then %>
+					<option value="1">5GHz</option>
+<% end %>
+				</select>
+			</td>
+		</tr>
+<% end %>
+		<tr class="title-option" <% if uci:get('functionlist','functionlist','SUPPORT_WIFI_SCH_ALL') == "1" then %> style="display: none" <% end %> >
+			<td style="width:20%;"><%:SSID Selection%></td>
+			<td id="wifi_schedule_ssid"></td>
+		</tr>
+		<tr class="title-option">
+			<td style="width:20%;"><%:Schedule Templates%></td>
+			<td>
+				<select name="wifi_schedule_templates" id="wifi_schedule_templates" onchange="schedule.templateInvoke(this.value)">
+					<option value="0"><%:Choose a template%></option>
+					<option value="1"><%:Always available%></option>
+					<option value="2"><%:Available 8-17 daily%></option>
+					<option value="3"><%:Available 8-17 daily except weekends%></option>
+					<option value="4"><%:Custom schedule%></option>
+				</select>
+			</td>
+		</tr>
+	</table>
+	<table>
+		<tr class="title-option">
+			<td style="width:20%;" rowspan="9"><%:Schedule Table%></td>
+		</tr>
+		<tr>
+			<td class="title" style="width:15%"><%:Day%></td>
+			<td class="title" style="width:25%"><%:Available%></td>
+			<td class="title" style="width:60%"><%:Duration%></td>
+		</tr>
+		<script>
+			schedule.showDay();
+		</script>
+	</table>
+</fieldset>
+<div class="cbi-page-actions">
+	<input type="hidden" id="submitType" name="submitType"/>
+<%if luci.model.uci.cursor():get('functionlist','functionlist','HAS_ALL_APPLY') == '1' then%>	
+	<input class="cbi-button cbi-button-save" onclick="return savechanges('1')" type="submit" value="<%:Apply%>" name="cbi.apply" myid="button_save" class="cbi-button cbi-button-apply" >&nbsp;<span class="btn_desc"><%:Apply saved settings to take effect %></span>
+<%else%>	
+	<input class="cbi-button cbi-button-save" onclick="return savechanges('0')" type="submit" value="<%:Save%>" myid="button_save" class="cbi-button cbi-button-save">&nbsp;<span class="btn_desc"><%:Save current setting(s)%></span>
+<%end%>	
+</div>
+</form>
+<%+footer%>

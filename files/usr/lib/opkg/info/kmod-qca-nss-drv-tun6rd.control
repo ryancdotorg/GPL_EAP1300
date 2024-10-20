@@ -1,0 +1,8 @@
+Package: kmod-qca-nss-drv-tun6rd
+Version: 4.4.60+g30bdbbe8c-2
+Depends: kernel (=4.4.60-1-00d4d08f108a4ac04f94cf3f2682d73e), kmod-qca-nss-drv, kmod-sit
+Source: qca/feeds/nss-host/qca-nss-clients
+Section: kernel
+Architecture: ipq40xx
+Installed-Size: 4187
+Description:  Kernel driver for NSS (connection manager) - tun6rd

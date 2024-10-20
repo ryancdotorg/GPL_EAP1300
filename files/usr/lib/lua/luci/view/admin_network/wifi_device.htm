@@ -1,0 +1,20 @@
+<html>
+     <%
+            local uci = require "luci.model.uci".cursor()
+            local cbi = require "luci.cbi"
+            local tpl = require "luci.template"
+            local device = luci.http.formvalue("device")
+            local map=""
+            if device == "wifi0" then
+            	map = "admin_network/wifi_deviceRa1Setting"
+            elseif device == "wifi1" then
+            	map = "admin_network/wifi_deviceRa2Setting"
+            elseif uci:get('functionlist','functionlist','SUPPORT_WLAN5G_2')=="1" and device == "wifi2" then
+                map = "admin_network/wifi_deviceRa3Setting"
+            end
+
+            if map ~= "" then  
+            	luci.cbi.load(map)[1]:render()
+            end
+    %>       
+</html>

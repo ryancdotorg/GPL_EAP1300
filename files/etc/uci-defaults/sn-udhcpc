@@ -1,0 +1,10 @@
+#!/bin/sh
+uci batch <<-EOF
+add ucitrack sn-udhcpc
+set ucitrack.@sn-udhcpc[0].init=sn-udhcpc
+add_list ucitrack.@portal[0].affects=sn-udhcpc
+commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

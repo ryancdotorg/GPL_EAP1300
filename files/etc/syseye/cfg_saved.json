@@ -1,0 +1,29 @@
+{
+     "EZMCloud": {
+         "wireless": {
+             "ssid_map": []
+         }
+    },
+     "wireless": {
+         "max_psscan": 512
+    },
+    "linkcheck": {
+        "icmp":{
+            "retry":3
+        },
+        "dns":{
+            "query_host":"aws.amazon.com",
+            "retry":3
+        },
+        "http":{
+            "query_host":"aws.amazon.com",
+            "query_path":"/",
+            "retry":2
+        },
+        "https":{
+            "query_host":"aws.amazon.com",
+            "query_path":"/",
+            "retry":2
+        }
+    }
+}

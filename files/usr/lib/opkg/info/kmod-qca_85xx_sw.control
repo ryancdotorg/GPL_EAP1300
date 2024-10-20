@@ -1,0 +1,10 @@
+Package: kmod-qca_85xx_sw
+Version: 4.4.60-1
+Depends: kernel (=4.4.60-1-00d4d08f108a4ac04f94cf3f2682d73e)
+Source: package/kernel/linux
+License: GPLv2
+Section: kernel
+Status: unknown hold not-installed
+Architecture: ipq40xx
+Installed-Size: 9295
+Description:  QCA 85xx Switch Driver

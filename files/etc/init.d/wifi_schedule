@@ -1,0 +1,69 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+restore_beacon()
+{
+	# default no beacon must restore here
+	if [ -x /usr/sbin/wifi-control.sh ]
+	then
+		sections=`/usr/sbin/foreach /rom/etc/config/wireless wifi-iface nobeaconup 1`
+		for section in $sections
+		do
+			disabled=$(uci -q get wireless.$section.disabled)
+			if [ "$disabled" != "1" ]
+			then
+				ifname=$(uci -q get wireless.$section.ifname)
+				wifi-control.sh beacon on $ifname
+			fi
+		done
+	fi
+}
+
+start() {
+	#remove redundant rules
+	restore_beacon
+	/usr/shc/wifi_schedule stop
+	/usr/shc/wifi_schedule start
+}
+
+stop() {
+	/usr/shc/wifi_schedule stop
+}
+
+boot() {
+	for wifi_dev in wifi0 wifi1 wifi2
+	do
+		dev_opmode=""
+		opmode=$(uci get wireless.${wifi_dev}.opmode)
+		case $opmode in
+			ap)
+				dev_opmode=${wifi_dev}_ssid_
+			;;
+			wds_ap)
+				dev_opmode=${wifi_dev}_wds_
+			;;
+			*)
+				continue
+			;;
+		esac
+
+		enable_iface=$(foreach wireless wifi-iface disabled 0 | grep $dev_opmode)
+
+		for section in $enable_iface
+		do
+			[ "$(uci get wireless.$section.mode)" != "ap" ] && continue # to skip wds_sta
+
+			ifname=$(uci get wireless.$section.ifname)
+
+			if [ "$(cat /sys/class/net/$ifname/carrier)" != "1" ]
+			then
+				( sleep 45 ; luci-reload auto wifi_schedule )&
+				echo "[wifi_schedule] $ifname not ready, retry after 45s." > /dev/console
+				return
+			fi
+		done
+	done
+
+	start
+}

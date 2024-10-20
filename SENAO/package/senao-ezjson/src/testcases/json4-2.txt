@@ -1,0 +1,98 @@
+{
+    "data": [
+        {
+            "box_ssn": "AR9344-8CC7AA01B231",
+            "id": "5a8fc6ac85bba9000128d47b",
+            "name": "Main Profile",
+            "schedule": "1:0-1440,2:0-1440,3:0-1440,4:0-1440,5:0-1440,6:0-1440,7:0-1440",
+            "type": 1
+        },
+        {
+            "action_type": 0,
+            "allowed_apps": [],
+            "bed_time": [
+                {
+                    "days": [
+                        4
+                    ],
+                    "from": 1260,
+                    "to": 420
+                }
+            ],
+            "bed_time_enable": false,
+            "blocked_apps": [],
+            "blocked_categories": [
+                110,
+                120,
+                121
+            ],
+            "box_ssn": "AR9344-8CC7AA01B231",
+            "has_icon": false,
+            "id": "5a8fe69685bba9000128d491",
+            "layout_type": 0,
+            "management_enable": true,
+            "name": "\u6cd3\u7fd4",
+            "type": 2
+        },
+        {
+            "action_type": 0,
+            "allowed_webs": [],
+            "bed_time": [
+                {
+                    "days": [
+                        1
+                    ],
+                    "from": 1260,
+                    "to": 420
+                },
+                {
+                    "days": [
+                        2
+                    ],
+                    "from": 1260,
+                    "to": 420
+                },
+                {
+                    "days": [
+                        3
+                    ],
+                    "from": 1260,
+                    "to": 420
+                },
+                {
+                    "days": [
+                        4
+                    ],
+                    "from": 1260,
+                    "to": 420
+                },
+                {
+                    "days": [
+                        5
+                    ],
+                    "from": 1260,
+                    "to": 420
+                }
+            ],
+            "bed_time_enable": true,
+            "blocked_categories": [
+                110,
+                120,
+                121,
+                150,
+                151,
+                152,
+                153,
+                154,
+                200
+            ],
+            "blocked_webs": [],
+            "box_ssn": "AR9344-8CC7AA01B231",
+            "has_icon": false,
+            "id": "5a93b47285bba9000128d4a2",
+            "management_enable": true,
+            "name": "senao",
+            "type": 2
+        }
+    ]
+}

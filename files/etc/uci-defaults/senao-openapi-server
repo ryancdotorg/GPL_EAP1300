@@ -1,0 +1,22 @@
+#!/bin/sh
+
+[ -z "$(uci show firewall | grep "for openapi-server")" ] && {
+
+    port="$(uci get senao-openapi-server.server.port)"
+
+uci -q batch <<-EOF >/dev/null
+    add firewall rule
+    set firewall.@rule[-1].name=Allow-SSDP
+    set firewall.@rule[-1].name="Allow port $port for openapi-server"
+    set firewall.@rule[-1].src=wan
+    set firewall.@rule[-1].proto=tcp
+    set firewall.@rule[-1].dest_port=$port
+    set firewall.@rule[-1].target=ACCEPT
+    set firewall.@rule[-1].family=ipv4
+
+    commit firewall
+EOF
+}
+
+rm -f /tmp/luci-indexcache
+exit 0

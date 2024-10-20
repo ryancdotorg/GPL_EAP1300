@@ -1,0 +1,3 @@
+config sntcd 'sntcd'
+	option rate_unit 'Kbps'
+

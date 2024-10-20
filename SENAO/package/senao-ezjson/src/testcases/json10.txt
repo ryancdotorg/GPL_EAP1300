@@ -1,0 +1,8 @@
+{
+	"wireless": {
+		"ssid_map": [],
+		"clients": []
+	},
+	"Action": []
+}
+

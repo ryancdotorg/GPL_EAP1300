@@ -1,0 +1,28 @@
+batctl 2016.5
+
+ * reimplement traceroute/ping commands in userspace without debugfs
+ * switch interface manipulation from (legacy) sysfs to rtnetlink
+ * coding style cleanups
+
+ -- Thu, 15 Dec 2016 18:11:55 +0100
+
+batctl 2016.4:
+
+ * integrate support for batman-adv netlink
+ * coding style cleanups
+ * documentation updates
+ * bugs squashed:
+   - fix endless loop in TP meter on some platforms
+   - fix build errors caused by name conflicts
+
+ -- Thu, 27 Oct 2016 21:19:38 +0200
+
+batctl 2016.3
+
+ * synchronize common headers with batman-adv
+ * support multicast logging and debug table
+ * split tcpdump OGM packet filter in OGM and OGMv2 filter
+ * add infrastructure to communicate with batadv netlink family
+ * integrate command to control new kernel throughput meter
+
+ -- Thu, 01 Sep 2016 16:18:35 +0200

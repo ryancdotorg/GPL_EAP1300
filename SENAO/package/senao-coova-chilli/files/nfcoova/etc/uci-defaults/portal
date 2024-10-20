@@ -1,0 +1,40 @@
+#!/bin/sh
+uci batch <<-EOF
+del_list ucitrack.@wireless[0].affects=portal
+del_list ucitrack.@network[0].affects=portal
+del_list ucitrack.@dhcp[0].affects=portal
+del_list ucitrack.@firewall[0].affects=portal
+add_list ucitrack.@wireless[0].affects=portal
+add_list ucitrack.@network[0].affects=portal
+add_list ucitrack.@dhcp[0].affects=portal
+add_list ucitrack.@firewall[0].affects=portal
+del ucitrack.@portal[0]
+add ucitrack portal
+set ucitrack.@portal[0].init=portal
+add_list ucitrack.@portal[0].affects=dnsmasq
+add_list ucitrack.@portal[0].affects=wifi_schedule
+del ucitrack.@dnsmasq[0]
+add ucitrack dnsmasq
+set ucitrack.@dnsmasq[0].init=dnsmasq
+del ucitrack.@guest_network[0]
+add ucitrack guest_network
+set ucitrack.@guest_network[0].exec=/usr/sbin/guest_network
+del_list ucitrack.@lan-ip-obtain[0].affects=guest_network
+del_list ucitrack.@network[0].affects=guest_network
+add_list ucitrack.@lan-ip-obtain[0].affects=guest_network
+add_list ucitrack.@network[0].affects=guest_network
+set portal.ssid_1="portal"
+set portal.ssid_2="portal"
+set portal.ssid_3="portal"
+set portal.ssid_4="portal"
+set portal.ssid_5="portal"
+set portal.ssid_6="portal"
+set portal.ssid_7="portal"
+set portal.ssid_8="portal"
+set portal.port_3="portal"
+commit portal
+commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

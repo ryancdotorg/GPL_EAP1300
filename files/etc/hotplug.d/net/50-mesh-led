@@ -1,0 +1,3 @@
+if [ "$INTERFACE" = "bat0" ]; then
+	/etc/init.d/led reload 
+fi

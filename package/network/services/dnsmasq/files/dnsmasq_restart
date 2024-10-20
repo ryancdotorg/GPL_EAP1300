@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# for br-lan got new ip and restart dnsmasq.
+
+if [ -e "/etc/init.d/syskey" ]
+then
+    /etc/init.d/syskey setValue "dnsmasq_restart" "${1:-ucitrack}" "1"
+else
+    ( sleep 5 && /etc/init.d/dnsmasq restart ) &
+fi

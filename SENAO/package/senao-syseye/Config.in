@@ -1,0 +1,9 @@
+# SYSEYE ACT LINKCHECK advanced configuration
+
+menu "Configuration"
+
+config PACKAGE_syseye-use-fork
+        bool "usefork"
+        default n
+
+endmenu 

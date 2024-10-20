@@ -1,0 +1,8 @@
+/usr/bin/snmpstatus
+/usr/bin/snmptrap
+/etc/init.d/snmpdtrap
+/usr/bin/snmpset
+/usr/bin/snmpget
+/usr/bin/snmpwalk
+/usr/sbin/snmpdtrap.sh
+/usr/bin/snmptest

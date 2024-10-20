@@ -1,0 +1,10 @@
+Package: libstorage
+Version: g30bdbbe8c-1
+Depends: libc, libhyficommon, libuci
+Source: qca/feeds/ieee1905-security/qca-ieee1905-security-config/libstorage
+Section: QCA
+Maintainer: Qualcomm Atheros, Inc.
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 10691
+Description:  This Package installs the Storage Abstration Library

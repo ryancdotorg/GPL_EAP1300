@@ -1,0 +1,17 @@
+qca_spf_8_0_CS/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_8_0_CSU1/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_9_0_ES/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_9_0_rel3/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_9_0_rel4/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_9_0_CS/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_ES2/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_FC/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_CS_PREVIEW/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_CS/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_CS_PATCH1/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_CS_PATCH2/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_10_0_CS_PATCH5/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_11_0_csu1/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_11_1_csu2/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_11_2/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_11_0_csu3/* filter=lfs diff=lfs merge=lfs -text

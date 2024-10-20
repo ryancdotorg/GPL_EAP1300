@@ -1,0 +1,265 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+SERVICE_USE_PID=1
+
+START=50
+
+. /lib/senao-shell-libs/network.sh
+
+OPENAPI_CONFIG_FOLDER="/tmp/etc/senao-openapi-server"
+OPENAPI_CONFIG_FILE="/tmp/etc/senao-openapi-server/senao-openapi-server.conf"
+
+SSL_SERVER_PORT="4430"
+redirect="0"
+
+EXTRA_COMMANDS="check_ip_conflict"
+
+addconfig() {
+	[ -n "$*" ] && cat <<EOF >> $OPENAPI_CONFIG_FILE
+$*
+EOF
+}
+
+generate_server_config() {
+	addconfig '# senao-openapi-server configuration file'
+	addconfig '#'
+	addconfig '## modules to load'
+	addconfig '# all other module should only be loaded if really neccesary'
+	addconfig '# - saves some time'
+	addconfig '# - saves memory'
+	addconfig 'server.modules = ('
+	addconfig '#	"mod_rewrite",'
+
+	if [ "1" -eq "$redirect" ]; then
+		addconfig '	"mod_redirect",'
+	else
+		addconfig '#	"mod_redirect",'
+	fi
+
+	addconfig '#	"mod_alias",'
+	addconfig '	"mod_auth",'
+	addconfig '	"mod_openssl",'
+	addconfig '#	"mod_status",'
+	addconfig '#	"mod_setenv",'
+	addconfig '	"mod_fastcgi",'
+	addconfig '#	"mod_proxy",'
+	addconfig '#	"mod_simple_vhost",'
+	addconfig '	"mod_cgi",'
+	addconfig '#	"mod_ssi",'
+	addconfig '#	"mod_usertrack",'
+	addconfig '#	"mod_expire",'
+	addconfig '#	"mod_webdav"'
+	addconfig ')'
+        addconfig 'server.max-request-size     = 30000'
+	addconfig '# force use of the "write" backend (closes: #2401)'
+	
+        addconfig 'server.network-backend = "write"'
+
+	addconfig '## a static document-root, for virtual-hosting take look at the '
+	addconfig '## server.virtual-* options'
+	addconfig 'server.document-root = "/www/"'
+
+	addconfig '## files to check for if .../ is requested'
+	addconfig 'index-file.names = ( "index.html", "default.html", "index.htm", "default.htm" )'
+
+	addconfig '## mimetype mapping'
+	addconfig 'mimetype.assign = ('
+	addconfig '	".pdf"   => "application/pdf",'
+	addconfig '	".class" => "application/octet-stream",'
+	addconfig '	".pac"   => "application/x-ns-proxy-autoconfig",'
+	addconfig '	".swf"   => "application/x-shockwave-flash",'
+	addconfig '	".wav"   => "audio/x-wav",'
+	addconfig '	".gif"   => "image/gif",'
+	addconfig '	".jpg"   => "image/jpeg",'
+	addconfig '	".jpeg"  => "image/jpeg",'
+	addconfig '	".png"   => "image/png",'
+	addconfig '	".svg"   => "image/svg+xml",'
+	addconfig '	".css"   => "text/css",'
+	addconfig '	".html"  => "text/html",'
+	addconfig '	".htm"   => "text/html",'
+	addconfig '	".js"    => "text/javascript",'
+	addconfig '	".txt"   => "text/plain",'
+	addconfig '	".dtd"   => "text/xml",'
+	addconfig '	".xml"   => "text/xml"'
+	addconfig ')'
+
+	addconfig '$HTTP["url"] =~ "\.pdf$" {'
+	addconfig '	server.range-requests = "disable"'
+	addconfig '}'
+
+	addconfig '##'
+	addconfig '# which extensions should not be handle via static-file transfer'
+	addconfig '#'
+	addconfig '# .php, .pl, .fcgi are most often handled by mod_fastcgi or mod_cgi'
+	addconfig 'static-file.exclude-extensions = ( ".php", ".pl", ".fcgi" )'
+
+	addconfig '## bind to port (default: 80)'
+	addconfig 'server.port = 8000'
+
+	addconfig '## bind to localhost (default: all interfaces)'
+	addconfig 'server.bind = "[::]"'
+
+	addconfig '## to help the rc.scripts'
+	addconfig 'server.pid-file = "/var/run/senao-openapi-server.pid"'
+
+	addconfig '## change uid to <uid> (default: don'"'"'t care)'
+	addconfig '#server.username = "nobody"'
+	addconfig '#'
+	addconfig 'server.upload-dirs = ( "/tmp" )'
+
+	addconfig 'fastcgi.debug = 1'
+	addconfig 'fastcgi.server = ('
+	addconfig '	"/api" => ('
+	addconfig '		"api.fcgi.handler" => ('
+	addconfig '			"socket" => "/tmp/api.fcgi.socket",'
+	addconfig '			"check-local" => "disable",'
+	addconfig '			"bin-path" => "/www/cgi-bin/api.fcgi",'
+	addconfig '			"max-procs" => 8'
+	addconfig '		)'
+	addconfig '	)'
+	addconfig ')'
+        addconfig 'cgi.assign = ( ".cgi" => "" )'
+	addconfig 'ssl.use-sslv2 = "disable"'
+	addconfig 'ssl.use-sslv3 = "disable"'
+	addconfig '#### SSL engine'
+	addconfig '$SERVER["socket"] == ":'$SSL_SERVER_PORT'" {'
+	addconfig '	ssl.engine                  = "enable"'
+	addconfig '	ssl.pemfile                 = "/etc/senao-openapi-server/senao-openapi-server.pem"'
+	addconfig '	ssl.cipher-list             = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"'
+	addconfig '}'
+
+	addconfig '$SERVER["socket"] == "[::]:'$SSL_SERVER_PORT'" {'
+	addconfig '	ssl.engine                  = "enable"'
+	addconfig '	ssl.pemfile                 = "/etc/senao-openapi-server/senao-openapi-server.pem"'
+	addconfig '	ssl.cipher-list             = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"'
+	addconfig '}'
+
+	addconfig '#### auth module'
+	addconfig '## read authentification.txt for more info'
+	addconfig '#auth.backend = "plain"'
+	addconfig '#auth.backend.plain.userfile = "/etc/senao-openapi-server/senao-openapi-server.dav"'
+	addconfig '#auth.backend.plain.groupfile = "lighttpd.group"'
+	addconfig '#auth.require = ('
+	addconfig '#	"/api" => ('
+	addconfig '#		"method"  => "basic",'
+	addconfig '#		"realm"   => "Please input username/passwd",'
+	addconfig '#		"require" => "user=admin"'
+	addconfig '#	)'
+	addconfig '#	"/server-info" => ('
+	addconfig '#		"method"  => "digest",'
+	addconfig '#		"realm"   => "download archiv",'
+	addconfig '#		"require" => "group=www|user=jan|host=192.168.2.10"'
+	addconfig '#	)'
+	addconfig '#)'
+
+	if [ "1" -eq "$redirect" ]; then
+		addconfig '$SERVER["socket"] == ":8000"{'
+		addconfig '	$HTTP["host"] =~ "(.*)"{'
+		addconfig '		url.redirect = ("^/(.*)" => "https://%1/$1" )'
+		addconfig '	}'
+		addconfig '}'
+
+		addconfig '$SERVER["socket"] == "[::]:8000"{'
+		addconfig '	$HTTP["host"] =~ "(.*)"{'
+		addconfig '		url.redirect = ("^/(.*)" => "https://%1/$1" )'
+		addconfig '	}'
+		addconfig '}'
+	fi
+}
+
+check_ip_conflict() {
+	ip_test_list="51 101 151"
+	app_network_3="101"
+	app_ip=$(uci get network.app.ipaddr)
+	lan_ip=$(get_iface ip br-lan)
+	app_network_1_2=""
+
+	if [ "${app_ip%%.*}" = "192" ]
+	then
+		app_network_1_2="192.168"
+	else
+		app_network_1_2="172.30"
+	fi
+
+	if [ "${app_ip%%.*}" = "${lan_ip%%.*}" ]
+	then
+		if [ "${app_ip%%.*}" = "192" ]
+		then
+			app_network_1_2="172.30"
+		else
+			app_network_1_2="192.168"
+		fi
+	fi
+
+	app_new_ip="${app_network_1_2}.${app_network_3}.1"
+
+	ip_conflict=$(skip_dev=br-app is_ip_conflict ${app_new_ip}/24)
+
+	echo ip:$app_new_ip ip_conflict:$ip_conflict > /dev/console
+
+	if [ "$ip_conflict" = "1" ]
+	then
+		for test_ip in $ip_test_list
+		do
+			app_network_3=${test_ip}
+			app_new_ip="${app_network_1_2}.${app_network_3}.1"
+			ip_conflict=$(skip_dev=br-app is_ip_conflict ${app_new_ip}/24)
+			echo ip:${app_new_ip} ip_conflict:$ip_conflict > /dev/console
+			if [ "$ip_conflict" = "0" ]
+			then
+				break
+			fi
+		done
+	fi
+
+	echo br-app:new_ip[${app_network_1_2}.${app_network_3}.1] original_ip[$app_ip] > /dev/console
+
+	if [ "${app_network_1_2}.${app_network_3}.1" != "$app_ip" ]
+	then
+		uci set network.app.ipaddr=${app_network_1_2}.${app_network_3}.1
+		uci set dhcp.app.start=${app_network_1_2}.${app_network_3}.100
+		uci commit network
+		uci commit dhcp
+		luci-reload auto network
+	fi
+}
+
+start() {
+
+	if [ "$(uci get network.app)" == "interface" ]; then
+		check_ip_conflict
+	fi
+
+	username="$(/lib/auth.sh get_username)"
+	password_hash="$(/lib/auth.sh get_password)"
+
+	if [ $(/lib/auth.sh check_restfulAPI_acct $username $password_hash) -eq 0 ]; then
+		/lib/auth.sh set_restfulAPI_auth "$username" "$password_hash"
+	fi
+
+	if [ ! -d "$OPENAPI_CONFIG_FOLDER" ]; then
+		mkdir -m 0755 -p $OPENAPI_CONFIG_FOLDER
+	fi
+
+	if [ -f "$OPENAPI_CONFIG_FILE" ]; then
+		rm -f $OPENAPI_CONFIG_FILE
+	fi
+
+	redirect="$(uci get senao-openapi-server.server.redirect 2> /dev/null)"
+	port="$(uci get senao-openapi-server.server.port 2> /dev/null)"
+
+	if [ -n "$port" ]; then
+		SSL_SERVER_PORT="$port"
+	fi
+
+	generate_server_config
+
+	mkdir -m 0755 -p /var/log/senao-openapi-server
+	service_start /usr/sbin/senao-openapi-server -f /tmp/etc/senao-openapi-server/senao-openapi-server.conf
+}
+
+stop() {
+	service_stop /usr/sbin/senao-openapi-server
+}
+

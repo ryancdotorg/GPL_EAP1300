@@ -1,0 +1,37 @@
+#!/bin/sh
+
+echo "[ IPv6 Redial ] $ACTION " >> /dev/console
+
+config_load 'network'
+proto=$(uci get network.wan6.proto)
+
+# Netifd trigger the protocol daemon which disappear.
+# So we don't need to trigger the protocol daemon manually.
+# 6rd is based on udhcpc
+# ds-lite is based on odhcp6c
+
+[ down = "$ACTION" ] && {
+	local pid_num
+
+        case "$proto" in
+		static|pppoe)
+			ifdown wan6
+		;;
+		dhcpv6)
+			pid_num=`pidof odhcp6c`
+			/bin/kill -SIGTERM $pid_num
+		;;
+		6rd)
+			pid_num=`pidof udhcpc`
+			/bin/kill -SIGTERM $pid_num
+		;;
+	esac
+}
+
+[ up = "$ACTION" ] && {
+	case "$proto" in
+		static|pppoe)
+			ifup wan6
+                ;;
+	esac
+}

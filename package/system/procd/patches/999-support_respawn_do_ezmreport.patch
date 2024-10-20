@@ -1,0 +1,37 @@
+Index: procd-2015-10-29.1/service/instance.c
+===================================================================
+--- procd-2015-10-29.1.orig/service/instance.c
++++ procd-2015-10-29.1/service/instance.c
+@@ -34,6 +34,22 @@
+ #include "instance.h"
+ 
+ 
++#define NONE "\033[m"
++#define RED "\033[0;32;31m"
++#define EZMREPORT(x, ...) do { \
++    FILE *fp = fopen("/dev/console", "a"); \
++    if (fp) { \
++        fprintf(fp, RED x NONE, ##__VA_ARGS__ ); \
++        fclose(fp); \
++    } \
++    if(access("/tmp/ezmcloud_debug", F_OK) != -1) \
++    { \
++        char buf[256] = {0} ;\
++        snprintf(buf, sizeof(buf), "ezmreport -t procd " "\""x"\" &" , ##__VA_ARGS__); \
++        system(buf); \
++    } \
++} while(0)
++
+ enum {
+ 	INSTANCE_ATTR_COMMAND,
+ 	INSTANCE_ATTR_ENV,
+@@ -462,6 +478,9 @@ instance_exit(struct uloop_process *p, i
+ 	} else if (in->restart) {
+ 		instance_start(in);
+ 	} else if (in->respawn) {
++		if(in->respawn_count < 15)
++			EZMREPORT("%s::%s crashes, runtime %ld/%u, count %d/%d. %s\n",
++					in->srv->name, in->name, runtime, in->respawn_threshold, (in->respawn_count + 1), in->respawn_retry, (in->respawn_count == 14) ? "Report stopped!" : "");
+ 		if (runtime < in->respawn_threshold)
+ 			in->respawn_count++;
+ 		else

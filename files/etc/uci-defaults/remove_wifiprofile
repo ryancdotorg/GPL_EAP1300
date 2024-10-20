@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Remove wifiprofile let qcawifi.sh create again
+rm /etc/config/wifiprofile
+sync
+
+exit 0

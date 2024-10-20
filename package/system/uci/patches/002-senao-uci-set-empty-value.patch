@@ -1,0 +1,13 @@
+Index: uci-2014-02-18.1/list.c
+===================================================================
+--- uci-2014-02-18.1.orig/list.c
++++ uci-2014-02-18.1/list.c
+@@ -679,7 +679,7 @@ int uci_set(struct uci_context *ctx, str
+ 		if (e)
+ 			ptr->o = uci_to_option(e);
+ 	}
+-	if (!ptr->value[0]) {
++	if (!ptr->value[0] && !ptr->o && !ptr->s) {
+ 		/* if setting a nonexistant option/section to a nonexistant value,
+ 		 * exit without errors */
+ 		if (!(ptr->flags & UCI_LOOKUP_COMPLETE))

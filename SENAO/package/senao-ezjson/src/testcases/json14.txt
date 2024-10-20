@@ -1,0 +1,22 @@
+ {
+	"Action": [
+		{
+			"id": 2,
+			"scan_list": [
+				{
+					"js_idx_bssid": "BSSID",
+					"bssid": "BSSID",
+					"ssid": "SSID",
+					"len": "LEN"
+				},
+				{
+					"js_idx_bssid": "8E:DC:96:0B:12:11",
+					"bssid": "8E:DC:96:0B:12:11",
+					"ssid": "0",
+					"len": "0"
+				}
+			]
+		}
+	]
+}
+

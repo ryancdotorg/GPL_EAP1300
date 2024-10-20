@@ -1,0 +1,12 @@
+#!/bin/sh /etc/rc.common
+. /etc/functions.sh
+START=99
+
+start() {
+	/usr/shc/zfingerprint_v2 start
+}
+
+stop() {
+	/usr/shc/zfingerprint_v2 stop
+}
+

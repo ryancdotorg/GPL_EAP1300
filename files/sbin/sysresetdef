@@ -1,0 +1,40 @@
+#!/bin/sh
+. /lib/functions.sh
+
+# hooks
+do_backup_ewsconffiles() {
+	local ac
+	local force_ac
+	local WLANVLANEnable
+	local ManagementVLANID
+
+	config_load apcontroller
+	config_get ac capwap ac
+	config_get force_ac capwap force_ac
+
+	[ -n "$ac" ] && {
+		[ -d "/overlay/upper/etc/" ] || mkdir /overlay/upper/etc/
+		echo "ac=$ac" >> /overlay/upper/etc/ewsconfig
+	}
+
+	[ -n "$force_ac" ] && {
+		[ -d "/overlay/upper/etc/" ] || mkdir /overlay/upper/etc/
+		echo "force_ac=$force_ac" >> /overlay/upper/etc/ewsconfig
+	}
+
+	config_load network
+	config_get WLANVLANEnable sys WLANVLANEnable
+	config_get ManagementVLANID sys ManagementVLANID
+
+	[ "$WLANVLANEnable" -eq 1 ] && {
+	    [ -n "ManagementVLANID" ] && {
+		[ -d "/overlay/upper/etc/" ] || mkdir /overlay/upper/etc/
+		echo "ManagementVLANID=$ManagementVLANID" >> /overlay/upper/etc/ewsconfig
+	    }
+	}
+}
+
+rm -rf /overlay/upper/*
+[ -d "/etc/capwap" ] && do_backup_ewsconffiles
+
+sync

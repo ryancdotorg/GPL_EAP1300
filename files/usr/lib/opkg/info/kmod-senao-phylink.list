@@ -1,0 +1,2 @@
+/etc/modules.d/10-senao-phylink
+/lib/modules/4.4.60/phylink_module.ko

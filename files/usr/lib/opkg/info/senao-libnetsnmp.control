@@ -1,0 +1,15 @@
+Package: senao-libnetsnmp
+Version: 1.0-1-g5b9431a
+Depends: libc, libopenssl, libapi
+Source: SENAO/package/senao-net-snmp
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 387985
+Description:  Simple Network Management Protocol (SNMP) is a widely used protocol for
+ monitoring the health and welfare of network equipment (eg. routers),
+ computer equipment and even devices like UPSs. Net-SNMP is a suite of
+ applications used to implement SNMP v1, SNMP v2c and SNMP v3 using both
+ IPv4 and IPv6.
+ .
+ This package contains shared libraries, needed by other programs.

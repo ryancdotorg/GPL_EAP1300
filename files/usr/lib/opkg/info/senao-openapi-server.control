@@ -1,0 +1,9 @@
+Package: senao-openapi-server
+Version: 1.0-9-g966afb8
+Depends: libc, libopenssl, libpcre, libpthread, senao-openapi-server-mod-cgi, senao-openapi-server-mod-fastcgi, senao-openapi-server-mod-auth, senao-openapi-server-mod-redirect, libapi, libjson-c, libsnjson
+Source: SENAO/package/senao-openapi-server
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 145039
+Description:  A flexible and lightweight web server

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ -e "/etc/config/ezmcloud" ]; then
+	uci set sysProductInfo.model.fccDfsCertified='3'
+	uci set sysProductInfo.model.etsiDfsCertified='3'
+	uci set sysProductInfo.model.intDfsCertified='3'
+	uci commit sysProductInfo
+fi
+
+exit 0

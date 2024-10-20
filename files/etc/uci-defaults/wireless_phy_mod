@@ -1,0 +1,9 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+        set wireless.wifi0.phy="wifi0"
+        set wireless.wifi1.phy="wifi1"
+        commit wireless
+EOF
+
+exit 0

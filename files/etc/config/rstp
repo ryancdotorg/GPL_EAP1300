@@ -1,0 +1,13 @@
+config rstp global
+	option enable '0'
+	option autoMode '1'
+
+config bridge 'lan'
+        option enable '1'
+        option ifname 'br-lan'
+        option priority '32768'
+        option helloTime '2'
+        option maxAge '20'
+        option forwardDelay '15'
+        option forceProtocolVersion '2'
+

@@ -1,0 +1,7 @@
+/etc/hotplug.d/button/40-wsplcd
+/usr/sbin/wsplcd
+/etc/init.d/wsplcd
+/etc/athx100.conf
+/etc/config/wsplcd
+/sbin/uci2cfg.sh
+/usr/sbin/ucpkgen

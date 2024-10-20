@@ -1,0 +1,9 @@
+Package: ezjson
+Version: 1.0-3-g7880ed2
+Depends: libc
+Source: SENAO/package/senao-ezjson
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 41288
+Description:  EZJson Library

@@ -1,0 +1,10 @@
+/usr/sbin/wifi-control.sh
+/sbin/setMacFilter.sh
+/sbin/opmode.sh
+/sbin/factory_apps_init
+/sbin/apps_init
+/lib/senao-shell-libs/senao-package-list
+/bin/login_ssh.sh
+/bin/login.sh
+/lib/senao-shell-libs/wifi/wifi-control-libs.sh
+/usr/sbin/dl.sh

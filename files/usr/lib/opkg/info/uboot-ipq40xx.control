@@ -1,0 +1,9 @@
+Package: uboot-ipq40xx
+Version: 1
+Depends: libc
+Source: SENAO/package/uboot-ipq40xx
+Section: boot
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 104
+Description:  U-boot for ipq40xx based platforms

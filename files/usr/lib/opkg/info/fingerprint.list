@@ -1,0 +1,9 @@
+/usr/bin/arp_scan.sh
+/etc/assoc_notify.d/fingerprint_notify.sh
+/etc/uci-defaults/fingerprint
+/usr/bin/finger_syncli
+/etc/init.d/fingerprint
+/usr/bin/fingerprint_dump.sh
+/usr/sbin/wifi_list
+/etc/init.d/cpu_rps
+/usr/bin/fingerprint

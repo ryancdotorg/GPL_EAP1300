@@ -1,0 +1,206 @@
+#!/bin/sh
+# (C) 2008 openwrt.org
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+config_load wireless
+
+led_set_attr() {
+	[ -f "/sys/class/leds/$1/$2" ] && echo "$3" > "/sys/class/leds/$1/$2"
+}
+
+check_wlan_led() {
+	local device
+	case "$1" in
+		"wlan_2g_led")
+			device="wifi0"
+			;;
+		"wlan_5g_led")
+			device="wifi1"
+			;;
+		"wlan_5g_2_led")
+			device="wifi2"
+			;;
+	esac
+
+	local vifs=$(eval "/usr/sbin/foreach wireless wifi-iface device $device")
+	for vif in $vifs; do
+		config_get ifname "$vif" ifname
+		config_get disabled "$vif" disabled
+		config_get opmode "$device" opmode
+		config_get mode_display "$vif" mode_display
+		[ "$opmode" != "$mode_display" ] &&  continue
+		[ "$disabled" == "0" ] && wlan_flag="1"
+	done
+}
+
+load_led() {
+	local name
+	local sysfs
+	local trigger
+	local dev
+	local mode
+	local default
+	local delayon
+	local delayoff
+	local interval
+	local brightness
+	local procName
+    local lan_state
+
+	config_get sysfs $1 sysfs
+	config_get name $1 name "$sysfs"
+	config_get trigger $1 trigger "none"
+	config_get dev $1 dev
+	config_get mode $1 mode "link"
+	config_get_bool default $1 default "nil"
+	config_get delayon $1 delayon
+	config_get delayoff $1 delayoff
+	config_get interval $1 interval "50"
+	config_get port_state $1 port_state
+	config_get brightness $1 brightness
+
+	case "${sysfs}" in
+		"wlan_2g_led")
+			procName="WLAN_2G_Led"
+			fakeInterface="ath29"
+			;;
+		"wlan_5g_led")
+			procName="WLAN_5G_Led"
+			fakeInterface="ath59"
+			;;
+		"wlan_5g_2_led")
+			procName="WLAN_5G_2_Led"
+			fakeInterface="ath49"
+			;;
+	esac
+
+	[ -e /proc/LAN_STATE ] && {
+        lan_state=$(cat /proc/LAN_STATE)
+    }
+	[ -e /sys/class/leds/${sysfs}/brightness ] && {
+		echo "setting up led ${name}"
+		[ "$default" != nil ] && {
+			[ $default -eq 0 ] && {
+				led_set_attr "${sysfs}" "brightness" "1"
+				[ -f "/proc/$procName" ] && echo "0" > "/proc/$procName"
+			} || {
+				led_set_attr "${sysfs}" "brightness" "0"
+				[ -f "/proc/$procName" ] && echo "1" > "/proc/$procName"
+			}
+		}
+		led_set_attr "${sysfs}" "trigger" "$trigger"
+		case "$default:$trigger" in
+		"0:netdev")
+			[ -n "$dev" ] && {
+				echo "${dev} ${sysfs}"
+				led_set_attr "${sysfs}" "device_name" "$dev"
+				led_set_attr "${sysfs}" "mode" "$mode"
+			}
+			;;
+
+		"0:timer")
+			[ -n "$delayon" ] && \
+				led_set_attr "${sysfs}" "delay_on" "$delayon"
+			[ -n "$delayoff" ] && \
+				led_set_attr "${sysfs}" "delay_off" "$delayoff"
+			;;
+
+		"0:usbdev")
+			[ -n "$dev" ] && {
+				led_set_attr "${sysfs}" "device_name" "$dev"
+				led_set_attr "${sysfs}" "activity_interval" "$interval"
+			}
+			;;
+
+		"0:port_state")
+			[ -n "$port_state" ] && \
+				led_set_attr "${sysfs}" "port_state" "$port_state"
+			;;
+
+		"0:"switch[0-9]*)
+			local port_mask
+
+			config_get port_mask $1 port_mask
+			[ -n "$port_mask" ] && \
+				led_set_attr "${sysfs}" "port_mask" "$port_mask"
+			;;
+
+		"0:none")
+			[ -n "$brightness" ] && \
+				led_set_attr "${sysfs}" "brightness" "$brightness"
+			;;
+		esac
+	}
+
+	[ "${sysfs#*wlan}" != "$sysfs" ] && {
+		wlan_flag=0
+		check_wlan_led "${sysfs}"
+		[ "$wlan_flag" -eq 0 ] && {
+			led_set_attr "${sysfs}" "brightness" "0"
+			[ -f "/proc/$procName" ] && echo "1" > "/proc/$procName"
+		}
+	}
+
+
+			[ ${sysfs} == "lan_led1" ] && {
+            [ $(($lan_state&10)) = 0 ] && {
+				led_set_attr "${sysfs}" "brightness" "0"
+				}
+			}
+
+#	# for mesh mode led.
+	if [ "$name" = "MESH" ]; then
+		[ "$default" = "1" ] && {             
+			led_set_attr "${sysfs}" "trigger" "none"                      
+			led_set_attr "${sysfs}" "brightness" "0"                      
+		} || {
+			#if [ "$(uci get wireless.wifi0_mesh.disabled)" = "0" -o "$(uci get wireless.wifi1_mesh.disabled)" = "0" ]
+			if [ "$(uci get mesh.wifi.disabled)" = "0" ]; then
+				if [ "$(uci get mesh.wifi.mode)" = "mesh_ap" ]; then
+					# Mesh AP: Blinking
+					led_set_attr "${sysfs}" "trigger" "timer"
+					led_set_attr "${sysfs}" "delay_on" "1000"
+					led_set_attr "${sysfs}" "delay_off" "1000"
+				else
+					# Mesh: solid light
+					led_set_attr "${sysfs}" "trigger" "none"
+					led_set_attr "${sysfs}" "brightness" "1"
+				fi
+			else
+				led_set_attr "${sysfs}" "trigger" "none"
+				led_set_attr "${sysfs}" "brightness" "0"
+			fi
+		}
+	fi
+#		# for mesh mode led.
+#		if [ "$name" = "MESH" ]
+#		then
+#			led_set_attr ${sysfs} "trigger" "none"                      
+#			led_set_attr ${sysfs} "brightness" "0"                      
+#
+#
+#			[ "$default" = "0" ] && {                                 
+#					#check batman status 
+#					local batmanInfo=$(batctl o |awk -F ' ' 'NR==3')
+#					local batmanResult=$(batctl o |grep "No batman nodes in range ...")
+#					if [ "$batmanResult" != "No batman nodes in range ..." ] && [ "$batmanInfo" != "" ];then
+#						led_set_attr "${sysfs}" "trigger" "none"
+#						led_set_attr "${sysfs}"  "brightness" "1"
+#					fi
+#				#fi
+#			}
+#		fi
+}
+
+start() {
+	[ -e /sys/class/leds/ ] && {
+		config_load system
+		config_foreach load_led led
+	}
+}
+
+case "$1" in
+	start) start;;
+esac

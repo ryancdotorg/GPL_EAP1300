@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions.sh
+
+START=99
+
+SERVICE_DAEMONIZE=1
+
+start() {
+    service_start /usr/bin/swd
+}
+
+stop() {
+    service_stop /usr/bin/swd
+}
+
+reload() {
+    stop
+    start
+}
+

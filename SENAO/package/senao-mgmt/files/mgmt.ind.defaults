@@ -1,0 +1,87 @@
+#!/bin/sh
+uci batch <<-EOF
+delete ucitrack.@senao-mgmt-preinit[-1]
+del_list ucitrack.@network[0].affects=senao-mgmt-preinit
+add ucitrack senao-mgmt-preinit
+reorder ucitrack.@senao-mgmt-preinit[0]=0
+set ucitrack.@senao-mgmt-preinit[0].init=senao-mgmt-preinit
+add_list ucitrack.@network[0].affects=senao-mgmt-preinit
+
+delete ucitrack.@senao-mgmt[-1]
+del_list ucitrack.@network[0].affects=senao-mgmt
+del_list ucitrack.@lan-ip-obtain[0].affects=senao-mgmt
+add ucitrack senao-mgmt
+set ucitrack.@senao-mgmt[0].init=senao-mgmt
+add_list ucitrack.@network[0].affects=senao-mgmt
+
+delete ucitrack.@senao-mgmt-lan-ip-reload[-1]
+del_list ucitrack.@lan-ip-obtain[0].affects=senao-mgmt-lan-ip-reload
+add ucitrack senao-mgmt-lan-ip-reload
+set ucitrack.@senao-mgmt-lan-ip-reload[0].exec='/etc/init.d/senao-mgmt lan_ip_obtain_reload'
+add_list ucitrack.@lan-ip-obtain[0].affects=senao-mgmt-lan-ip-reload
+commit ucitrack
+EOF
+
+uci -q batch <<-EOF >/dev/null
+delete network.mgmt
+set network.mgmt="interface"
+set network.mgmt.type="bridge"
+set network.mgmt.proto="static"
+set network.mgmt.ipaddr="192.168.100.1"
+set network.mgmt.netmask="255.255.255.0"
+set network.mgmt.defaultroute="0"
+set network.mgmt.peerdns="0"
+set network.mgmt.stp="0"
+set network.mgmt.gateway="0.0.0.0"
+set network.mgmt.dns="0.0.0.0 0.0.0.0"
+commit network
+EOF
+
+uci -q batch <<-EOF >/dev/null
+delete dhcp.mgmt
+set dhcp.mgmt="dhcp"
+set dhcp.mgmt.interface="mgmt"
+set dhcp.mgmt.limit="100"
+set dhcp.mgmt.leasetime="24h"
+set dhcp.mgmt.start="192.168.100.100"
+set dhcp.mgmt.dhcp_option="44,0.0.0.0"
+set dhcp.mgmt.ignore="0"
+set dhcp.mgmt.force="1"
+add_list dhcp.mgmt.redirectUrl="aplogin.com"
+add_list dhcp.mgmt.redirectUrl="aplogin.net"
+commit dhcp
+EOF
+
+uci -q batch <<-EOF >/dev/null
+delete firewall.mgmt
+set firewall.mgmt=zone
+set firewall.mgmt.name='mgmt'
+add_list firewall.mgmt.network='mgmt'
+set firewall.mgmt.input='ACCEPT'
+set firewall.mgmt.output='ACCEPT'
+set firewall.mgmt.forward='DROP'
+set firewall.mgmt.conntrack='1'
+commit firewall
+EOF
+
+# support senao-mgmt first time.
+# Check
+radio=$(uci -c /rom/etc/config/ get functionlist.vendorlist.MANAGEMENT_SUPPORT_RADIO) && {
+    case "$radio" in
+        1) iface="wifi0_mgmt" ;;
+        2) iface="wifi1_mgmt" ;;
+        *) ifcae="" ;;
+    esac
+    if [ -n "$iface" ]; then
+        if [ -z "$(uci get wireless.$iface)" ]; then
+            mgmt_configs=$(eval "uci show /rom/etc/config/wireless.$iface")
+            for i in $mgmt_configs; do
+                eval uci set ${i}
+            done
+            uci commit wireless
+        fi
+    fi
+    uci set wireless.${iface}.network="mgmt"
+}
+
+exit 0

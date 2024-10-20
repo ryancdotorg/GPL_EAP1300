@@ -1,0 +1,9 @@
+Package: senao-cli
+Version: 1.9.11-1
+Depends: libc, libpcre, libuci, libapi
+Source: SENAO/package/senao-cli
+Section: base
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 111671
+Description:  Senao CLI.

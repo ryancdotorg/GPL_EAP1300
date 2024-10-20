@@ -1,0 +1,6 @@
+#!/bin/sh /etc/rc.common
+STOP=11
+stop(){
+	#Add reboot flag file for LOG
+	echo `date -u` > /etc/do_reboot
+}

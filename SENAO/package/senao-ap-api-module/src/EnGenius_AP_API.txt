@@ -1,0 +1,1054 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: EnGenius AP API
+  description: The document declares APIs used in EnGenius AP products.
+servers:
+  - url: 'https://192.168.1.1:4430/api'
+security:
+  - api_auth: []
+paths:
+  /wifi/radio/24g:
+    post:
+      tags:
+        - wifi
+      description: Set 2.4GHz wifi radio configuration
+      operationId: setWifiRadio24g
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Radio_24G'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return 2.4GHz wifi radio configuration
+      operationId: getWifiRadio24g
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Radio_24G'
+  /wifi/radio/5g:
+    post:
+      tags:
+        - wifi
+      description: Set 5GHz wifi radio configuration
+      operationId: setWifiRadio5g
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Radio_5G'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return 5GHz wifi radio configuration
+      operationId: getWifiRadio5g
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Radio_5G'
+  '/wifi/radio/triband/5g/{id}':
+    post:
+      tags:
+        - wifi
+      description: >-
+        Set 5GHz wifi radio configuration according to specified ID for tri-band
+        AP
+      operationId: setWifiTriband5g
+      parameters:
+        - name: id
+          in: path
+          description: ID of 5G band to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Radio_5G'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: >-
+        Return 5GHz wifi radio configuration according to specified ID for
+        tri-band AP
+      operationId: getWifiTriband5g
+      parameters:
+        - name: id
+          in: path
+          description: ID of 5G band to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Radio_5G'
+  /net/ethernet:
+    post:
+      tags:
+        - net
+      description: Set configuration for Ethernet interface
+      operationId: setNetEthernet
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ethernet'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - net
+      description: Return Ethernet interface configuration
+      operationId: getNetEthernet
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ethernet'
+  /wifi/mesh:
+    post:
+      tags:
+        - wifi
+      description: Set configuration for Mesh interface
+      operationId: setWifiMesh
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mesh'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return WiFi Mesh interface configuration
+      operationId: getWifiMesh
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mesh'
+  /wifi/mesh/mesh_info:
+    get:
+      tags:
+        - wifi
+      description: Return wireless mesh information
+      operationId: getWifiMeshInfo
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeshInfo'
+  /wifi/ssids:
+    get:
+      tags:
+        - wifi
+      description: Get all SSID configuration
+      operationId: getWifiSsids
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSIDs'
+  '/wifi/ssid/{id}':
+    post:
+      tags:
+        - wifi
+      description: Set SSID configuration according to specified ID
+      operationId: setWifiSsidById
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SSID'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return SSID configuration according to specified ID
+      operationId: getWifiSsidById
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSID'
+  '/wifi/ssid/{id}/captive_portal':
+    post:
+      tags:
+        - wifi
+      description: Set captive_portal configuration according to specified SSID
+      operationId: setWifiCaptivePortalBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptivePortal'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return captive_portal configuration according to specified SSID
+      operationId: getWifiCaptivePortalBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptivePortal'
+  '/wifi/ssid/{id}/accounting_server':
+    post:
+      tags:
+        - wifi
+      description: Set accounting_server configuration according to specified SSID
+      operationId: setWifiAccountServBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingServer'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return accounting_server configuration according to specified SSID
+      operationId: getWifiAccoutServBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountingServer'
+  '/wifi/ssid/{id}/traffic_shaping':
+    post:
+      tags:
+        - wifi
+      description: Set traffic_shaping configuration according to specified SSID
+      operationId: setWifiTrafficShapingBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrafficShaping'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return traffic_shaping configuration according to specified SSID
+      operationId: getWifiTrafficShapingBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrafficShaping'
+  '/wifi/ssid/{id}/band_steering':
+    post:
+      tags:
+        - wifi
+      description: Set band_steering configuration according to specified SSID
+      operationId: setWifiBandSteeringBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BandSteering'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return band_steering configuration according to specified SSID
+      operationId: getWifiBandSteeringBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BandSteering'
+  '/wifi/ssid/{id}/radius_server':
+    post:
+      tags:
+        - wifi
+      description: Set radius_server configuration according to specified SSID
+      operationId: setWifiRadiusServerBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadiusServer'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return radius_server configuration according to specified SSID
+      operationId: getWifiRadiusServerBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadiusServer'
+  '/wifi/ssid/{id}/scheduling':
+    post:
+      tags:
+        - wifi
+      description: Set scheduling configuration according to specified SSID
+      operationId: setWifiSchedulingBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Scheduling'
+      responses:
+        '400':
+          description: Invalid Input
+    get:
+      tags:
+        - wifi
+      description: Return scheduling configuration according to specified SSID
+      operationId: getWifiSchedulingBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scheduling'
+  '/wifi/ssid/{id}/l2_acl':
+    post:
+      tags:
+        - wifi
+      description: Set L2 ACL rules according to specified SSID
+      operationId: setWifiL2AclBySsidId
+      parameters:
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/L2Acl'
+      responses:
+        '400':
+          description: Invalid Input
+  /wifi/wifi_client_info:
+    get:
+      tags:
+        - wifi
+      description: Return coneected wifi client information
+      operationId: getWifiClientInfo
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WiFiClientInfo'
+  /sys/sys_info:
+    get:
+      tags:
+        - sys
+      description: Return device system information
+      operationId: getSysInfo
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemInfo'
+  /sys/system_config:
+    post:
+      tags:
+        - sys
+      description: Set system configuration
+      operationId: setSystemCfg
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemCfg'
+      responses:
+        '400':
+          description: Invalid Input
+  /sys/fw_upgrade:
+    post:
+      tags:
+        - sys
+      description: Set firmware upgrade relative configuration
+      operationId: setSysFwUpgrade
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FwUpgrade'
+      responses:
+        '400':
+          description: Invalid Input
+components:
+  securitySchemes:
+    api_auth:
+      type: http
+      scheme: basic
+  schemas:
+    Radio_24G:
+      properties:
+        enable:
+          type: boolean
+        channel:
+          type: integer
+        ext_channel:
+          type: integer
+        ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT40
+        tx_power:
+          type: integer
+        client_limit:
+          type: integer
+        min_bitrate:
+          type: integer
+        rssi_threshold:
+          type: integer
+        opmode:
+          type: string
+          enum:
+            - AP
+            - WDS_AP
+            - WDS_BRIDGE
+            - WDS_STA
+            - STA_AP
+            - STA
+    Radio_5G:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        channel:
+          type: integer
+        ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT40
+            - HT80
+        tx_power:
+          type: integer
+        client_limit:
+          type: integer
+        min_bitrate:
+          type: integer
+        rssi_threshold:
+          type: integer
+        opmode:
+          type: string
+          enum:
+            - AP
+            - WDS_AP
+            - WDS_BRIDGE
+            - WDS_STA
+            - STA_AP
+            - STA
+        dfs_backup_channel:
+          type: integer
+    WPA:
+      type: object
+      properties:
+        cipherType:
+          type: string
+          enum:
+            - TKIP
+            - AES
+            - BOTH
+        key_interval:
+          type: integer
+        passphrase:
+          type: string
+    Ethernet:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - Static
+            - DHCP
+        lacp_mode:
+          type: boolean
+        ip:
+          type: string
+        mask:
+          type: string
+        gateway:
+          type: string
+        primary_dns:
+          type: string
+        secondary_dns:
+          type: string
+    Mesh:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        wifi_radio:
+          type: string
+          enum:
+            - 2_4G
+            - 5G-1
+            - 5G-2
+        mesh_id:
+          type: string
+        mesh_pw:
+          type: string
+        mesh_rssi:
+          type: integer
+    BandSteering:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        steering_type:
+          type: string
+          enum:
+            - band_balance
+            - force_5g
+            - prefer_5G
+        5g_rssi_threshold:
+          type: integer
+        5g_client_percent:
+          type: integer
+    TrafficShaping:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        download_limit:
+          type: integer
+        upload_limit:
+          type: integer
+        perclient_download_limit:
+          type: integer
+        perclient_upload_limit:
+          type: integer
+    WifiSecurity:
+      type: object
+      properties:
+        auth_type:
+          type: string
+          enum:
+            - Disabled
+            - WEP
+            - WPA-PSK
+            - WPA2-PSK
+            - WPA-PSK-Mixed
+            - WPA-Enterprise
+            - WPA2-Enterprise
+            - WPA-Mixed-Enterprise
+        wpa:
+          $ref: '#/components/schemas/WPA'
+        radius_server:
+          $ref: '#/components/schemas/RadiusServer'
+        accounting_server:
+          $ref: '#/components/schemas/AccountingServer'
+    RadiusServer:
+      type: object
+      properties:
+        retries:
+          type: integer
+        interval:
+          type: integer
+        server1Ip:
+          type: string
+        server1Port:
+          type: integer
+        server1Secret:
+          type: string
+        server2Ip:
+          type: string
+        server2Port:
+          type: integer
+        server2Secret:
+          type: string
+    AccountingServer:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        nasId:
+          type: integer
+        nasIpAddr:
+          type: string
+        server1Ip:
+          type: string
+        server1Port:
+          type: integer
+        server1Secret:
+          type: string
+        server2Ip:
+          type: string
+        server2Port:
+          type: integer
+        server2Secret:
+          type: string
+    CaptivePortal:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        opmode:
+          type: string
+          enum:
+            - bridge
+            - nat
+        auth_type:
+          type: string
+          enum:
+            - splash
+            - cloud_radius
+            - customer-radius
+            - 3rd-party
+            - social-login
+        external_splash_url:
+          type: string
+        after_splash_redirect_url:
+          type: string
+        enable_redirect_client_track:
+          type: boolean
+        session_timeout:
+          type: integer
+        idle_timeout:
+          type: integer
+        walled_garden:
+          type: string
+    DaySch:
+      type: object
+      properties:
+        available:
+          type: boolean
+        start:
+          type: string
+        end:
+          type: string
+    WeekSch:
+      type: object
+      properties:
+        su:
+          $ref: '#/components/schemas/DaySch'
+        mo:
+          $ref: '#/components/schemas/DaySch'
+        tu:
+          $ref: '#/components/schemas/DaySch'
+        we:
+          $ref: '#/components/schemas/DaySch'
+        th:
+          $ref: '#/components/schemas/DaySch'
+        fr:
+          $ref: '#/components/schemas/DaySch'
+        sa:
+          $ref: '#/components/schemas/DaySch'
+    Scheduling:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        days:
+          $ref: '#/components/schemas/WeekSch'
+    SSID:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        enable_bands:
+          type: string
+          enum:
+            - 2_4G
+            - 5G
+            - 2_4G|5G
+            - 5G|5G-2
+            - 2_4G|5G|5G-2
+        ssid_name:
+          type: string
+        hidden_ssid:
+          type: boolean
+        client_isolation:
+          type: boolean
+        l2_isolation:
+          type: boolean
+        vlan_isolation:
+          type: boolean
+        vlan_id:
+          type: integer
+        fast_roaming:
+          type: boolean
+        band_steering:
+          $ref: '#/components/schemas/BandSteering'
+        traffic_shaping:
+          $ref: '#/components/schemas/TrafficShaping'
+        wireless_security:
+          $ref: '#/components/schemas/WifiSecurity'
+        captive_portal:
+          $ref: '#/components/schemas/CaptivePortal'
+        scheduling:
+          $ref: '#/components/schemas/Scheduling'
+        l2_acl:
+          $ref: '#/components/schemas/L2Acl'
+    SSIDs:
+      type: object
+      properties:
+        '1':
+          $ref: '#/components/schemas/SSID'
+        '2':
+          $ref: '#/components/schemas/SSID'
+        '3':
+          $ref: '#/components/schemas/SSID'
+        '4':
+          $ref: '#/components/schemas/SSID'
+        '5':
+          $ref: '#/components/schemas/SSID'
+        '6':
+          $ref: '#/components/schemas/SSID'
+        '7':
+          $ref: '#/components/schemas/SSID'
+        '8':
+          $ref: '#/components/schemas/SSID'
+    SystemInfo:
+      type: object
+      properties:
+        LAN_IP:
+          type: string
+        gateway_IP:
+          type: string
+        firmware_version:
+          type: string
+        uptime:
+          type: string
+        cpu_loading:
+          type: string
+        mem_usage:
+          type: string
+        ethr_link_status:
+          type: string
+        sys_cfg:
+          $ref: '#/components/schemas/SystemCfg'
+    SystemCfg:
+      type: object
+      properties:
+        system_name:
+          type: string
+        time_zone:
+          type: string
+        led_enable:
+          type: boolean
+        location:
+          type: string
+    WiFiClientInfo:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+        os_info:
+          type: string
+        channel:
+          type: integer
+        ssid_id:
+          type: integer
+        rssi:
+          type: integer
+        tx_byte:
+          type: integer
+        rx_byte:
+          type: integer
+    MeshLearnTable:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+        learn_rssi:
+          type: integer
+        link_flags:
+          type: string
+    MeshRobust:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        threshold:
+          type: integer
+    MeshNodeTq:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+        tq_val:
+          type: integer
+    MeshLink:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+        rssi:
+          type: integer
+        tx_datarate:
+          type: integer
+        rx_datarate:
+          type: integer
+    MeshOutgoingGw:
+      type: object
+      properties:
+        gw_mac_addr:
+          type: string
+        next_hop_mac_addr:
+          type: string
+    MeshInfo:
+      type: object
+      properties:
+        mesh_role:
+          type: string
+        mesh_channel:
+          type: integer
+        mesh_learn_table:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeshLearnTable'
+        mesh_robust:
+          $ref: '#/components/schemas/MeshRobust'
+        mesh_node_tq:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeshNodeTq'
+        mesh_link:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeshLink'
+        mesh_outgoing_gw:
+          $ref: '#/components/schemas/MeshOutgoingGw'
+    L2Acl:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        client_mac_list:
+          type: string
+        policy:
+          type: string
+          enum:
+            - DENY
+            - ALLOW
+    FwUpgrade:
+      type: object
+      properties:
+        upgrade_url:
+          type: string
+        do_reset_after_upgrade:
+          type: boolean
+

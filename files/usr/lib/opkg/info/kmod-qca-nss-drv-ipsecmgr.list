@@ -1,0 +1,2 @@
+/etc/modules.d/58-qca-nss-drv-ipsecmgr
+/lib/modules/4.4.60/qca-nss-ipsecmgr.ko

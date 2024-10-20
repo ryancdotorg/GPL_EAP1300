@@ -1,0 +1,101 @@
+define Package/kmod-$(PKG_NAME)/override_version
+choice
+    prompt "overwrite package version"
+    default $(PKG_NAME)_2016.3
+    depends on PACKAGE_kmod-$(PKG_NAME)
+
+#    config $(PKG_NAME)_2013.4.0
+#        bool 2013.4.0
+#        help
+#            $(PKG_NAME)_2013.4.0
+
+#    config $(PKG_NAME)_2015.2
+#        bool 2015.2
+#        help
+#            $(PKG_NAME)_2015.2
+
+#    config $(PKG_NAME)_2016.0
+#        bool 2016.0
+#        help
+#            $(PKG_NAME)_2016.0
+
+    config $(PKG_NAME)_2016.3
+        bool 2016.3
+        help
+            $(PKG_NAME)_2016.3
+
+#    config $(PKG_NAME)_2016.5
+#        bool 2016.5
+#        help
+#            $(PKG_NAME)_2016.5
+
+#    config $(PKG_NAME)_2017.2
+#        bool 2017.2
+#        help
+#            $(PKG_NAME)_2017.2
+
+#    config $(PKG_NAME)_2018.0
+#        bool 2018.0
+#        help
+#            $(PKG_NAME)_2018.0
+
+    config $(PKG_NAME)_2019.3
+        bool 2019.3
+        help
+            $(PKG_NAME)_2019.3
+
+    config $(PKG_NAME)_2020.2
+        bool 2020.2
+        help
+            $(PKG_NAME)_2020.2
+
+endchoice
+
+config KMOD_BATMAN_ADV_DEBUG_LOG
+	bool "enable verbose debug logging"
+	depends on PACKAGE_kmod-batman-adv
+	default y
+
+config KMOD_BATMAN_ADV_BLA
+	bool "enable bridge loop avoidance"
+	depends on PACKAGE_kmod-batman-adv
+	default y
+
+config KMOD_BATMAN_ADV_DAT
+	bool "enable distributed arp table"
+	depends on PACKAGE_kmod-batman-adv
+	default y
+
+config KMOD_BATMAN_ADV_NC
+	bool "enable network coding [requires promisc mode support]"
+	depends on PACKAGE_kmod-batman-adv
+	default n
+
+config KMOD_BATMAN_ADV_BATCTL
+	bool "enable batctl"
+	depends on PACKAGE_kmod-batman-adv
+	default y
+	help
+	  batctl is a more intuitive managment utility for B.A.T.M.A.N.-Advanced.
+	  It is an easier method for configuring batman-adv and
+	  provides some additional tools for debugging as well.
+
+config KMOD_BATMAN_ADV_BATMAN_V
+	bool "enable B.A.T.M.A.N. V routing algorithm and it's only supported with Linux 3.15+"
+	depends on PACKAGE_kmod-batman-adv
+	default y
+
+config SENAO_BATCTL_ICMP_COMMUNICATION
+	bool "enable senao batman ping communication"
+	depends on PACKAGE_kmod-batman-adv
+        default n
+	help
+	  add info in batctl ping echo/reply packet to communication
+
+config	SENAO_SPIN_LOCK_BH_DELAY
+	bool "add delay in spin_lock_bh()"
+	depends on PACKAGE_kmod-batman-adv
+        default n
+	help
+	  add delay to void system hang when havig huge amount of soft irq
+endef

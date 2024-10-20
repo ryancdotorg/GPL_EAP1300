@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2008 Steven Barth <steven@midlink.org>
+Copyright 2008-2012 Jo-Philipp Wich <xm@subsignal.org>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+$Id: sysauth.htm 8327 2012-03-04 15:03:05Z jow $
+-%>
+<%
+local uci = require "luci.model.uci".cursor()
+local ntm = require "luci.model.network"
+ntm.init(uci)
+local mediaPath = luci.sys.exec("uci get luci.main.mediaurlbase")
+local t = "web_ECB_FANCY"
+local trim = luci.util.trim
+local ip = luci.http.getenv("REMOTE_ADDR")
+mediaPath = luci.util.split(mediaPath, "/")
+if t == trim(mediaPath[3]) then
+%>
+<%
+ local firmwareVersion_sha = luci.util.trim(luci.util.exec("cat /etc/version | grep build"))
+ local firmwareVersion = luci.util.trim(luci.util.exec("cat /etc/version | grep Firmware"))
+ local ICON_LOGO = uci:get('functionlist','vendorlist','ICON_LOGO') or "/pictures/icon_logo.png"
+ local COPYRIGHT = tostring(uci:get('functionlist','vendorlist','COPYRIGHT')or "EnGenius") 
+ COPYRIGHT = string.gsub(COPYRIGHT,"__SPACE__"," ")
+
+	if uci:get("functionlist","functionlist","SUPPORT_MD5_PASSWORD") == "1" then
+%>
+<script type="text/javascript" src="/luci-static/resources/md5.js"></script>
+<%end%>
+<script type="text/javascript">
+//var firmwareVersion_sha = '<%=firmwareVersion_sha or "?"%>';
+//var firmwareVersion = '<%=firmwareVersion or "?"%>';
+function saveChanges()
+{   
+	var f = document.formname;
+	<%
+		if uci:get("functionlist","functionlist","SUPPORT_MD5_PASSWORD") == "1" then
+	%>
+		f.password.value = hex_md5(f.password_plain_text.value+"\n");
+	<%
+		else
+	%>
+		f.password.value = f.password_plain_text.value;
+	<%
+	end
+	%>
+	f.username.value = f.account.value;
+    document.getElementById('account').disabled = true;
+    document.getElementById('password_plain_text').disabled = true; 
+	document.formname.submit();	
+}
+</script>
+<html>
+<head>
+	<title><%=striptags(luci.sys.hostname())%></title>
+	<script src="<%=media%>/jquery-1.10.1.min.js"></script>
+	<script>
+		$( document ).ready(function() {
+		<%
+			if uci:get("functionlist","functionlist","SUPPORT_MD5_PASSWORD") == "1" then
+		%>
+			document.getElementsByName('account')[0].focus();
+		<%
+			else
+		%>
+			document.getElementsByName('username')[0].focus();
+		<%
+			end
+		%>
+			$("input").on( "keydown", function( event ) {
+				if ( event.which == 13 ) {
+					saveChanges();
+				}
+			});
+		});
+	</script>
+</head>
+<style>
+	input:focus {
+		outline: 0;
+	}
+</style>
+<body style="background: url('<%=media%>/pictures/img_bg_horizon.png') repeat-x;background-color: #f7f7f7;">
+<FORM method="post" name="formname" action="<%=pcdata(luci.http.getenv("REQUEST_URI"))%>">
+<input type="hidden" name="username" value="">
+<input type="hidden" name="password" value="">
+<table align="center" height="768">
+<tbody>
+<TR>
+	<TD height="90%" valign="center">
+		<TABLE cellSpacing="0" cellPadding="0" width="622">
+			<TR>
+				<TD colSpan=2><IMG style="MARGIN-BOTTOM: 26px; MARGIN-LEFT: 8px" alt="" src="<%=media%><%=ICON_LOGO%>"></TD>
+			</TR>
+			<TR>
+				<TD style="TEXT-ALIGN: center; WIDTH: 193px; FONT-FAMILY: helvetica,arial,verdana,sans-serif; BACKGROUND: url(<%=media%>/pictures/img_form_model.png); HEIGHT: 274px; COLOR: #ffffff; FONT-SIZE: 18pt">
+					<%=striptags(luci.sys.hostname())%>
+				</TD>
+				<TD style="WIDTH: 429px; BACKGROUND: url(<%=media%>/pictures/img_form_form.png) no-repeat; HEIGHT: 274px" vAlign="center" align="middle">
+					<TABLE style="TEXT-ALIGN: center; WIDTH: 368px; BACKGROUND: url(<%=media%>/pictures/img_form_form1.png); HEIGHT: 207px" border="0" cellSpacing="0" cellPadding="0">
+					<tbody>
+						<TR>
+							<TD style="height: 41px;"></TD>
+							<TD >
+								<%- if fuser then %>
+								<div class="error" style="TEXT-ALIGN:left"><font color="red">Invalid username or password!</font></div>
+								<% end -%>
+							</TD>
+						</TR>
+						<TR>
+							<TD width="80"><IMG alt="" src="<%=media%>/pictures/icon_user.png"></TD>
+							<TD align="left">
+								<input id="account" name="account" maxLength="12" type="text" size="25" placeholder="  Username" myid="username" value="" style="height: 34px; width: 253px; background: url(<%=media%>/pictures/blank_login.jpg) no-repeat; border: 0;padding-left: 10px; padding-top: 5px;"/>
+							</TD>
+						</TR>
+						<TR>
+							<TD width="80"><IMG alt="" src="<%=media%>/pictures/icon_pw.png"></TD>
+							<TD align="left">
+								<input id="password_plain_text" name="password_plain_text" type="password" myid="password" maxLength="12" size="25" placeholder="  Password" style="height: 34px; width: 253px; background: url(<%=media%>/pictures/blank_login.jpg) no-repeat; border: 0;padding-left: 10px; padding-top: 5px;"/>
+							</TD>
+						</TR>
+						<TR>
+							<TD colSpan="2"><IMG onmouseover="this.src='<%=media%>/pictures/button_login_on.png';this.style.cursor='pointer'" onclick="saveChanges();" myid="login" onmouseout="this.src='<%=media%>/pictures/button_login_off.png'" src="<%=media%>/pictures/button_login_off.png"/></TD>
+						</TR>
+					</tbody>
+					</TABLE>
+				</TD>
+			</TR>
+			<TR>
+				<TD style="TEXT-ALIGN: right; PADDING-RIGHT: 25px; FONT-FAMILY: helvetica,arial,verdana,sans-serif; BACKGROUND: url(<%=media%>/pictures/img_form_buttom.png); HEIGHT: 31px; COLOR: #6ba5e4; FONT-SIZE: 9px" colSpan="2"><%if COPYRIGHT ~= "APCam" then%>Copyright &copy; 2019 <%=COPYRIGHT%>. All rights reserved.<%end%></TD>
+			</TR>
+			<TR>
+				<TD colSpan="2"><IMG alt="" src="<%=media%>/pictures/img_shadow.png" width="622" height="68"> </TD>
+			</TR>
+		</TABLE>
+	</TD>
+</TR>
+</tbody>
+</TABLE>
+</FORM>
+</body>
+</html>
+<%
+else
+%>
+<%+header%>
+
+<form method="post" action="<%=pcdata(luci.http.getenv("REQUEST_URI"))%>">
+	<div class="cbi-map">
+		<h2><a id="content" name="content"><%:Authorization Required%></a></h2>
+		<div class="cbi-map-descr">
+			<%:Please enter your username and password.%>
+			<%- if fuser then %>
+			<div class="error"><%:Invalid username or password! Please try again.%></div>
+			<br />
+			<% end -%>
+		</div>
+		<fieldset class="cbi-section"><fieldset class="cbi-section-node">
+			<div class="cbi-value">
+				<label class="cbi-value-title"><%:Username%></label>
+				<div class="cbi-value-field">
+					<input class="cbi-input-user" type="text" name="username" value="" />
+				</div>
+			</div>
+			<div class="cbi-value cbi-value-last">
+				<label class="cbi-value-title"><%:Password%></label>
+				<div class="cbi-value-field">
+					<input id="focus_password" class="cbi-input-password" type="password" name="password" />
+				</div>
+			</div>
+		</fieldset></fieldset>
+	</div>
+
+	<div>
+		<input type="submit" value="<%:Login%>" class="cbi-button cbi-button-apply" />
+		<input type="reset" value="<%:Reset%>" class="cbi-button cbi-button-reset" />
+	</div>
+</form>
+<script type="text/javascript">//<![CDATA[
+	var input = document.getElementById('focus_password');
+	if (input)
+		input.focus();
+//]]></script>
+<%+footer%>
+<%
+end
+%>

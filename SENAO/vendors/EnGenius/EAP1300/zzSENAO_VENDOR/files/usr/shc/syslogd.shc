@@ -1,0 +1,88 @@
+#!/bin/sh
+# Copyright (C) 2006-2011 OpenWrt.org
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+
+syslogd_config() {
+       local cfg="$1"
+       local conloglevel
+
+       config_get conloglevel "$cfg" conloglevel
+       config_get buffersize "$cfg" buffersize
+       [ -z "$conloglevel" -a -z "$buffersize" ] || dmesg ${conloglevel:+-n $conloglevel} ${buffersize:+-s $buffersize}
+
+    local flag
+    config_get syslog_enable "$cfg" syslog_enable
+    config_get trafficlog_enable "$cfg" trafficlog_enable
+    config_get remotelog_enable "$cfg" remotelog_enable
+    if [ "$syslog_enable" = "1" ]; then
+            flag="1"
+    fi
+
+    #disable traffic log rule
+    sysctl -w net.bridge.bridge-nf-call-iptables=0
+    sysctl -w net.bridge.bridge-nf-call-ip6tables=0
+
+    if [ "$remotelog_enable" = "1" ]; then
+            flag="1"
+	    if [ "$trafficlog_enable" = "1" ]; then
+			if [ -e /etc/init.d/syskey ]; then
+				/etc/init.d/syskey setValue "bridge_nf_call_iptable" "trafficlog" "1"
+			else
+				sysctl -w net.bridge.bridge-nf-call-iptables=1
+				sysctl -w net.bridge.bridge-nf-call-ip6tables=1
+			fi
+		else
+			if [ -e /etc/init.d/syskey ]; then
+				/etc/init.d/syskey setValue "bridge_nf_call_iptable" "trafficlog" "0"
+			fi
+	    fi
+    fi
+    luci-reload auto firewall
+    if [ -x /sbin/syslogd ] && [ "$flag" = "1" ]; then
+            local args log_ip log_size log_port log_type log_file
+            if [ "$remotelog_enable" = "1" ]; then
+                    config_get log_ip "$cfg" log_ip
+            fi
+            config_get log_size "$cfg" log_size 16
+            config_get log_port "$cfg" log_port 514
+            config_get log_type "$cfg" log_type circular
+            config_get log_file "$cfg" log_file "/var/log/messages"
+            args="${log_ip:+-L -R ${log_ip}:${log_port}} ${conloglevel:+-l $conloglevel}"
+            if [ "$log_type" = "file" ]; then
+                    args="$args -s $log_size -O $log_file -S"
+            else
+                    args="$args -C${log_size}"
+            fi
+            service_start /sbin/syslogd $args
+    fi
+    if [ -x /sbin/klogd ]; then
+            config_get klogconloglevel "$cfg" klogconloglevel
+            args="${klogconloglevel:+-c $klogconloglevel}"
+            service_start /sbin/klogd $args
+    fi
+}
+
+apply_uci_config() {
+       sh -c '. /lib/functions.sh; include /lib/config; uci_apply_defaults'
+}
+
+start() {
+       touch /var/log/wtmp
+       touch /var/log/lastlog
+
+       apply_uci_config
+       config_load system
+       config_foreach syslogd_config system
+}
+
+stop() {
+       service_stop /sbin/syslogd
+}
+
+case "$1" in
+	start) start;;
+	stop) stop;;
+esac

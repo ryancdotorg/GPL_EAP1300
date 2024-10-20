@@ -1,0 +1,72 @@
+# CoovaChilli advanced configuration
+
+menu "Configuration"
+	depends on PACKAGE_senao-coova-chilli
+
+config SENAO_COOVACHILLI_PROXY
+        bool "Enable support for chilli proxy. Required for AAA Proxy through http"
+        default n
+
+config SENAO_COOVACHILLI_REDIR
+	bool "Enable support for redir server. Required for uamregex"
+	default n
+
+config SENAO_COOVACHILLI_MINIPORTAL
+	bool "Enable support Coova miniportal"
+	default y
+
+config SENAO_COOVACHILLI_USERAGENT
+	bool "Enable recording user-agent"
+	default n
+
+config SENAO_COOVACHILLI_DNSLOG
+	bool "Enable support to log DNS name queries"
+	default n
+
+config SENAO_COOVACHILLI_UAMDOMAINFILE
+	bool "Enable loading of mass uamdomains from file"
+	default n
+
+config SENAO_COOVACHILLI_EAPOL
+	bool "Enable eapol"
+	default n
+
+config SENAO_COOVACHILLI_LARGELIMITS
+	bool "Enable larger limits for use with non-embedded systems"
+	default y
+
+config SENAO_COOVACHILLI_NFQUEUE
+	bool "Netfilter queue"
+	depends on PACKAGE_kmod-ipt-nfcoova
+	default n
+
+config SENAO_COOVACHILLI_REDIRDNSREQ
+	bool "support REDIRDNSREQ"
+	default n
+
+choice
+	prompt "SSL library"
+	default SENAO_COOVACHILLI_OPENSSL
+
+config SENAO_COOVACHILLI_NOSSL
+	bool "No SSL support"
+
+config SENAO_COOVACHILLI_MATRIXSSL
+	bool "MatrixSSL"
+
+config SENAO_COOVACHILLI_CYASSL
+	bool "CyaSSL"
+
+config SENAO_COOVACHILLI_OPENSSL
+	bool "OpenSSL"
+
+endchoice
+
+config SENAO_COOVACHILLI_SESSGARDEN
+	bool "Session wallgarden"
+
+config SENAO_COOVACHILLI_INSPECT
+	bool "Enable inspect"
+	default y
+
+endmenu

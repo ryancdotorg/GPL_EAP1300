@@ -1,0 +1,121 @@
+menu "APP agent related setting"
+depends on PACKAGE_senao-app-agent
+
+config APP_AGENT_SUPPORT_ENCRYPT_PAYLOAD
+	bool "Encrypt payload in APP agent"
+	help
+	  Encrypt payload in APP agent.
+
+config APP_AGENT_SUPPORT_USB_SETTING
+	bool "USB related settings in APP agent"
+	help
+	  USB related settings in APP agent.
+
+config APP_AGENT_SUPPORT_STREAM_BOOST_SETTING
+	bool "Stream Boost related settings in APP agent"
+	help
+	  Stream Boost related settings in APP agent.
+
+config APP_AGENT_SUPPORT_REDIRECT_DEVICE_SETTING
+	bool "Redirect app agent command to target device."
+	help
+	  Redirect app agent command to target device.
+
+config APP_AGENT_SUPPORT_MESH_JSON
+	bool "MESH related setting in APP agent."
+	depends on SUPPORT_MESH_SETTING
+	help
+	  MESH related setting in APP agent.
+
+config APP_AGENT_SUPPORT_ENGENIUS
+	bool "Engenius Products"
+	help
+	  Engenius Products.
+
+config APP_AGENT_SUPPORT_IPCAM
+	bool "Support IP Camera"
+	help
+	  Support IP Camera
+
+config APP_AGENT_SUPPORT_ENCRYPT_PAYLOAD
+	bool "SUPPORT ENCRYPT PAYLOAD"
+	help
+	  SUPPORT ENCRYPT PAYLOAD
+
+config APP_AGENT_SUPPORT_SSL
+	bool "SUPPORT SSL"
+	help
+	  SUPPORT SSL
+
+config APP_AGENT_SUPPORT_WLAN_DONGLE
+	bool "SUPPORT WLAN DONGLE"
+	help
+	  SUPPORT WLAN DONGLE
+
+config APP_AGENT_SUPPORT_WLAN_5G_2_SETTING
+	bool "Support wireless 5G - 2 band"
+	depends on SUPPORT_WLAN_5G_SETTING
+	help
+	  SUPPORT WLAN DONGLE
+
+config APP_AGENT_SUPPORT_AP
+	bool "AP Products"
+	help
+	  AP Products
+config APP_AGENT_SUPPORT_BATMAN_2019
+	bool "Support batman 2019.3 format"
+	help
+	  SUPPORT BATMAN 2019
+#config APP_AGENT_SUPPORT_COMMAND_LIST
+#	bool "Support command list queue"
+#	help
+#	  Create a thread to execute external commands.
+
+config APP_AGENT_SUPPORT_ENGENIUS_DDNS
+	bool
+	default y if PACKAGE_senao-ddns-update
+	help
+	 Support EnGenius DDNS
+
+config APP_AGENT_SUPPORT_NAT_TRAVERSAL
+	bool
+	default y if PACKAGE_senao-nat-traversal
+	help
+		Support NAT TRAVERSAL
+
+config APP_AGENT_SUPPORT_SYSTIME
+	bool "Support SENAO systime"
+	help
+		Support SENAO systime
+
+config APP_AGENT_SUPPORT_EG_AUTO_FW_CHECK
+	bool "Support auto firmware upgrade of EnGenius"
+	help
+	   Support auto firmware upgrade of EnGenius.
+
+config APP_AGENT_SUPPORT_LIMIT_APP_ACCOUNT_LOGIN
+	bool "Support limit login account number of an APP"
+	help
+	  Support limit login account number of an APP
+
+config APP_AGENT_SUPPORT_UPDATE_NODE_INFO_AT_LOGIN
+	bool "Update nodes information while login"
+	help
+	  Update nodes information while login
+
+config APP_AGENT_SUPPORT_WAN_AUTO_DETECTION
+	bool "Auto-detect the WAN type"
+	help
+	  Auto-detect the WAN type
+
+config APP_AGENT_SUPPORT_MESH_EZSETUP_FOR_AP_MODE
+	bool
+	default y if AP_MODE_SUPPORT_MESH_EZSETUP
+	help
+	  AP mode support mesh EzSetup
+
+config APP_AGENT_SUPPORT_MESH_STATIC_ROUTE
+	bool "Support mesh static route mode"
+	help
+	  Support mesh static route mode.
+endmenu

@@ -1,0 +1,29 @@
+<? # -*- mode: shell-script -*-
+
+. /etc/chilli/fbwifi-libs.sh
+
+http_all_redirect() {
+
+fbwifi_include_urls_config $CONFIG_NAME
+
+location_url=${fbwifi_landing_page_url:-$(fbwifi_get_landing_page $$CONFIG_NAME)}
+
+printf "HTTP/1.1 302 Found\r\n"
+printf "Location: $location_url\r\n"
+printf "\r\n"
+
+printf "<html><head><title>Redirecting to Captive Portal</title></head><body>"
+printf "If you are not redirected within 5 seconds, please"
+printf "<a href=\"$location_url\">"
+printf "click here</a>.</body></html>"
+printf "\r\n"
+
+    exit
+}
+
+
+section_name=$(fbwifi_get_section_name $CONFIG_NAME)
+gateway_id=$(fbwifi_get_gateway_id $CONFIG_NAME)
+
+http_all_redirect
+?>

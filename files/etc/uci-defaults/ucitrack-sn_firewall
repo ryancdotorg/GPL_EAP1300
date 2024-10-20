@@ -1,0 +1,12 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@sn_firewall[-1]
+	add ucitrack sn_firewall
+	add_list ucitrack.@sn_firewall[-1].affects=firewall
+	add_list ucitrack.@network[0].affects=firewall
+	commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

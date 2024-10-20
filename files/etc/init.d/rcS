@@ -1,0 +1,52 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+run_scripts() {
+	## SENAO boot_mode_sel
+	mtd=$(cat /proc/mtd | grep "u-boot-env"  | awk -F ":" '{printf"%s",$1}')
+	op=$(cat /dev/$mtd | grep op_mode | awk -F "=" '{printf"%s",$2}')
+	case "$op" in
+	"2")
+		echo "== boot_mode_sel 2 ==" > /dev/console
+		for i in /etc/none.d/N*; do
+			[ -x $i ] && $i $2 2>&1
+		done | $LOGGER
+		;;
+	"3")
+		echo "== boot_mode_sel 3 ==" > /dev/console
+		for i in /etc/factory.d/F*; do
+			[ -x $i ] && $i $2 2>&1
+		done | $LOGGER
+		;;
+	"4")
+		echo "== boot_mode_sel 4 ==" > /dev/console
+		for i in /etc/tp.d/T*; do
+			[ -x $i ] && $i $2 2>&1
+		done | $LOGGER
+		;;
+	*)
+		echo "== boot_mode_sel 0 ==" > /dev/console
+		for i in /etc/rc.d/$1*; do
+			[ -x $i ] && $i $2 2>&1
+		done | $LOGGER
+		;;
+	esac
+}
+
+system_config() {
+	config_get_bool foreground $1 foreground 0
+}
+
+LOGGER="cat"
+[ -x /usr/bin/logger ] && LOGGER="logger -s -p 6 -t sysinit"
+
+. /lib/functions.sh
+
+config_load system
+config_foreach system_config system
+
+if [ "$1" = "S" -a "$foreground" != "1" ]; then
+	run_scripts "$1" "$2" &
+else
+	run_scripts "$1" "$2"
+fi

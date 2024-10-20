@@ -1,0 +1,24 @@
+variables:
+  GIT_DEPTH: 3
+
+stages:
+  - build
+  - test
+
+before_script:
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - eval $(ssh-agent -s)
+  - ssh-add <(echo "$SSH_PRIVATE_KEY" | base64 -d)
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+SigmaStar/SAV532:
+  only:
+    - schedules
+  stage: build
+  script:
+    - cd SENAO/vendors/SigmaStar/SAV532
+    - ./rebuild-all.sh -j1
+  tags:
+    - SigmaStar/SAV532

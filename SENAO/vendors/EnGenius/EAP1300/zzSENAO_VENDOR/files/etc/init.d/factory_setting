@@ -1,0 +1,11 @@
+#!/bin/sh /etc/rc.common
+
+START=19
+
+start() {
+	/usr/shc/factory_setting start
+}
+
+stop() {
+	/usr/shc/factory_setting stop
+}

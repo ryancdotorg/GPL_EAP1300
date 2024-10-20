@@ -1,0 +1,188 @@
+#!/bin/sh
+#
+# chilli CoovaChilli init
+#
+# chkconfig: 2345 65 35
+# description: CoovaChilli
+### BEGIN INIT INFO
+# Provides:       chilli
+# Required-Start: network 
+# Should-Start: 
+# Required-Stop:  network
+# Should-Stop: 
+# Default-Start:  2 3 5
+# Default-Stop:
+# Description:    CoovaChilli access controller
+### END INIT INFO
+
+# WAR: fix core_dump cause oom.
+rm -f /tmp/chilli_proxy.*.core
+
+[ -f @SBINDIR@/chilli ] || exit 0
+
+. @ETCCHILLI@/functions
+
+killallprocess() {
+	for f in $(ls /var/run/chilli.*.sh)
+	do
+		sh $f 2>/dev/null
+	done
+	sleep 1
+	pidchilli=$(pgrep "chilli.|/usr/sbin/chilli")
+	[ -n "$pidchilli" ] && {
+		echo "kill process: $pidchilli"
+		# don't use killall chilli, it will kill /etc/init.d/chilli process
+		for pid in $pidchilli
+		do
+			kill -9 $pid
+		done
+		rm -f /var/run/chilli*
+	}
+}
+
+MULTI=$(ls $CHILLI/*/chilli.conf 2>/dev/null)
+[ -z "$CONFIG_NAME" ] && [ -n "$MULTI" ] && {
+	action=$1
+	if [ "$action" = "restart" ]
+	then
+		# stop all chilli before start
+		action="stop start"
+	fi
+	for act in $action
+	do
+		for c in $MULTI; 
+		do
+			echo "Found configuration $c"
+			CONFIG_NAME=$(basename $(echo $c|sed 's#/chilli.conf##'))
+			[ -z $CONFIG_NAME ] && continue
+			export CONFIG_NAME
+			echo "Running CONFIG_NAME=$CONFIG_NAME $0 $act"
+			sh $0 $act
+		done
+		if [ "$act" = "stop" ]
+		then
+			# force kill again
+			killallprocess
+		fi
+	
+	done
+	exit
+}
+
+if [ -n "$CONFIG_NAME" ]; then
+	CONFIG=$CHILLI/chilli.conf
+	pidfile=@VARRUN@/chilli.$CONFIG_NAME.pid
+else
+	CONFIG=@SYSCONFDIR@/chilli.conf
+	pidfile=@VARRUN@/chilli.pid
+fi
+
+[ -f $CONFIG ] || {
+	echo "$CONFIG Not found"
+	exit 0
+}
+
+check_required
+
+RETVAL=0
+prog="chilli"
+
+case $1 in
+	start)
+		echo -n "Starting $prog: "
+
+		/sbin/modprobe tun >/dev/null 2>&1
+		echo 1 > /proc/sys/net/ipv4/ip_forward
+
+		[ -e /dev/net/tun ] || {
+			(cd /dev; 
+			mkdir net; 
+			cd net; 
+			mknod tun c 10 200)
+		}
+
+		writeconfig
+		radiusconfig
+
+		test ${HS_ADMINTERVAL:-0} -gt 0 && {	
+				(crontab -l 2>&- | grep -v $0
+			echo "*/$HS_ADMINTERVAL * * * * $0 radconfig"
+			) | crontab - 2>&-
+		}
+		
+		[ "$HS_BRIDGEMODE" != "on" ] && ifconfig $HS_LANIF 0.0.0.0
+		if [ "$(which start-stop-daemon)" = "" ] || [ -n "$CONFIG_NAME" ]; then
+			@SBINDIR@/chilli -c $CONFIG --pidfile=$pidfile &
+		else
+			start-stop-daemon -S -b -n $prog \
+			-x @SBINDIR@/chilli -- -c $CONFIG --pidfile=$pidfile
+		fi
+		echo
+	;;
+    
+	radconfig)
+		[ -e $MAIN_CONF ] || writeconfig
+		radiusconfig
+	;;
+
+	reload)
+		killall -HUP chilli
+		test -f /etc/l2_block/l2_block-re.init && /etc/l2_block/l2_block-re.init
+	;;
+
+	restart)
+		CONFIG_NAME=$CONFIG_NAME $0 stop
+		sleep 1
+		CONFIG_NAME=$CONFIG_NAME $0 start
+		RETVAL=$?
+	;;
+    
+	stop)
+		echo -n $"Shutting down $prog: "
+
+		crontab -l 2>&- | grep -v $0 | crontab -
+
+		if [ "$(which start-stop-daemon)" != "" ]; then
+				start-stop-daemon -K -p $pidfile -n $prog \
+			@SBINDIR@/chilli 
+		fi
+
+		[ -f $pidfile ] && { 
+			cpid=$(cat $pidfile)
+			kill $cpid
+			RETVAL=$?
+			[ $RETVAL = 0 ] && {
+			rm -f $pidfile 2>/dev/null
+			rm -f $RUN_D/$IPCFILE
+			rm -f $CMDSOCK
+			rm -f $RUN_D/chilli.$cpid.cfg.bin
+			}
+		}
+
+	
+		if [ -z $CONFIG_NAME ]
+		then
+			killallprocess
+		else
+			sleep 1
+			# kill one chilli
+			for chilli_pid in `pgrep -f "/usr/sbin/chilli"`
+			do
+				if [ $chilli_pid -gt 10 -a -n "$(cat /proc/$chilli_pid/cmdline |grep /$CONFIG_NAME/)" ]
+				then
+					echo "CP: force kill dummy chilli $chilli_pid $CONFIG_NAME..." > /dev/console
+					kill -9 $chilli_pid
+				fi
+			done
+		fi
+	
+
+		echo
+	;;
+    
+    *)
+		echo "Usage: $0 {start|stop|restart|reload|radconfig}"
+		exit 1
+esac
+
+exit $?

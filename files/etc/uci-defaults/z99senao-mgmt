@@ -1,0 +1,44 @@
+#!/bin/sh
+uci batch <<-EOF
+delete ucitrack.@senao-mgmt-preinit[-1]
+del_list ucitrack.@network[0].affects=senao-mgmt-preinit
+add ucitrack senao-mgmt-preinit
+reorder ucitrack.@senao-mgmt-preinit[0]=0
+set ucitrack.@senao-mgmt-preinit[0].init=senao-mgmt-preinit
+add_list ucitrack.@network[0].affects=senao-mgmt-preinit
+
+delete ucitrack.@senao-mgmt[-1]
+del_list ucitrack.@network[0].affects=senao-mgmt
+del_list ucitrack.@lan-ip-obtain[0].affects=senao-mgmt
+add ucitrack senao-mgmt
+set ucitrack.@senao-mgmt[0].init=senao-mgmt
+add_list ucitrack.@network[0].affects=senao-mgmt
+
+delete ucitrack.@senao-mgmt-lan-ip-reload[-1]
+del_list ucitrack.@lan-ip-obtain[0].affects=senao-mgmt-lan-ip-reload
+add ucitrack senao-mgmt-lan-ip-reload
+set ucitrack.@senao-mgmt-lan-ip-reload[0].exec='/etc/init.d/senao-mgmt lan_ip_obtain_reload'
+add_list ucitrack.@lan-ip-obtain[0].affects=senao-mgmt-lan-ip-reload
+commit ucitrack
+EOF
+
+# support senao-mgmt first time.
+# Check
+radio=$(uci -c /rom/etc/config/ get functionlist.vendorlist.MANAGEMENT_SUPPORT_RADIO) && {
+    case "$radio" in
+        1) iface="wifi0_mgmt" ;;
+        2) iface="wifi1_mgmt" ;;
+        *) ifcae="" ;;
+    esac
+    if [ -n "$iface" ]; then
+        if [ -z "$(uci get wireless.$iface)" ]; then
+            mgmt_configs=$(eval "uci show /rom/etc/config/wireless.$iface")
+            for i in $mgmt_configs; do
+                eval uci set ${i}
+            done
+            uci commit wireless
+        fi
+    fi
+}
+
+exit 0

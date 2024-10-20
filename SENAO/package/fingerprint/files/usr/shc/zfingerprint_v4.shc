@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+start() {
+	if [ -z "`pgrep -f "fingerprint"`" ] ; then
+		fingerprint &
+	fi
+}
+
+stop() {
+    killall -9 fingerprint
+}
+
+case "$1" in
+ 		start) start;;
+		stop) stop;;
+esac

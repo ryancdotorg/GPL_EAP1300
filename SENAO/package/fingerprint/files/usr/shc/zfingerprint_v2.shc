@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+set_schedule()
+{
+CRONSCHED="* * * * *"
+cron_relay="/sbin/update_fingerprint_v2.sh"
+cronlist="$(crontab -l | grep -v "update_fingerprint_v2.sh")"
+echo -e "$CRONSCHED $cron_relay\n$cronlist" | grep -v "^[ \t]*$" | crontab -
+}
+
+start() {
+	set_schedule
+	if [ -z "`pgrep -f "fingerprint"`" ] ; then
+		fingerprint &
+	fi
+}
+
+stop() {
+    killall -9 fingerprint
+    sed '/update_fingerprint_v2/d' /etc/crontabs/root -i    
+}
+
+case "$1" in
+ 		start) start;;
+		stop) stop;;
+esac

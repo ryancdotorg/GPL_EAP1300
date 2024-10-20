@@ -1,0 +1,5 @@
+/etc/init.d/sntcd
+/usr/bin/sntcd
+/etc/assoc_notify.d/sntcd_notify.sh
+/etc/config/sntcd
+/etc/uci-defaults/sntcd

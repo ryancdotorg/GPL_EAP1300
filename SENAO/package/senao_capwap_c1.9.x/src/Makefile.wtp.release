@@ -1,0 +1,60 @@
+#
+# Copyright (C) 2008-2009 OpenWrt.org
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+
+include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/target.mk
+
+PKG_NAME:=senao-capwap
+PKG_VERSION:=0.0
+PKG_RELEASE:=1
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:= @SF/$(PKG_NAME)
+PKG_MD5SUM:=c788a7e924dc8383097a205205a8927b
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/senao-capwap
+  SECTION:=net
+  CATEGORY:=Network
+  TITLE:=CAPWAP
+  URL:=http://capwap.sourceforge.net/
+  DEPENDS:=+libopenssl
+endef
+
+#define Package/senao-capwap/config
+#	source "$(SOURCE)/Config.in"
+#endef
+
+define Package/senao-capwap/description
+  This package is an implementation of CAPWAP agents for WTPs and ACs.
+endef
+
+define Build/Compile
+	
+endef
+
+define Package/senao-capwap/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/wtp	$(1)/usr/bin/wtp
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/lldpd	$(1)/usr/bin/lldpd
+	$(INSTALL_DIR) $(1)/etc/capwap
+#	$(INSTALL_BIN) $(PKG_BUILD_DIR)/client.pem	$(1)/etc/capwap/client.pem
+#	$(INSTALL_BIN) $(PKG_BUILD_DIR)/root.pem	$(1)/etc/capwap/root.pem
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/config.wtp	$(1)/etc/capwap/config.wtp
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/defaultWTP.pem	$(1)/etc/capwap/defaultWTP.pem
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/defaultWTPRoot.pem	$(1)/etc/capwap/defaultWTPRoot.pem
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/defaultWTPKey.pem	$(1)/etc/capwap/defaultWTPKey.pem
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/currentWTP.pem	$(1)/etc/capwap/currentWTP.pem
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/currentWTPRoot.pem	$(1)/etc/capwap/currentWTPRoot.pem
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/currentWTPKey.pem	$(1)/etc/capwap/currentWTPKey.pem
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/wtp $(1)/etc/init.d/wtp
+endef
+
+$(eval $(call BuildPackage,senao-capwap))

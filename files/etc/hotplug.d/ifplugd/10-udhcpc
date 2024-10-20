@@ -1,0 +1,17 @@
+#!/bin/sh
+
+config_load 'network'
+proto=$(uci get network.lan.proto)
+local PID
+
+case $proto in
+    dhcp)
+        PID=`pidof udhcpc`
+        #1. release
+        /bin/kill -SIGUSR2 $PID
+        #2. renew
+        /bin/kill -SIGUSR1 $PID
+        ;;
+    *)
+        ;;
+esac

@@ -1,0 +1,9 @@
+Package: zzSENAO_VENDOR
+Version: 1.0.0-1
+Depends: libc, libpthread
+Source: SENAO/vendors/EnGenius/EAP1300/zzSENAO_VENDOR
+Section: opt
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 57047
+Description:  SENAO vendor shell scripts compile as binary

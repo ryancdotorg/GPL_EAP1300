@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+#STOP=10
+
+start() {
+	/usr/shc/locator start
+}
+
+stop() {
+	/usr/shc/locator stop
+}
+

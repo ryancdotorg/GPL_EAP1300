@@ -1,0 +1,37 @@
+#ifndef __CAPWAP_WTPSITESURVEY_HEADER__
+#define __CAPWAP_WTPSITESURVEY_HEADER__
+
+void CWWTPStartSitesurvey(CWRadioFreqType radioType);
+void CWWTPStopSitesurvey(CWRadioFreqType radioType);
+CWBool CWWTPCheckSitesurveyDoing(CWRadioFreqType radioType);
+CWBool CWWTPCheckSitesurveyEnable(CWRadioFreqType radioType);
+void CWWTPEnableBackgroundSitesurvey(CWRadioFreqType radioType, CWBool enable);
+void CWWTPSetBackgroundSitesurveyInterval(CWRadioFreqType radioType, unsigned int interval);
+
+#define CWWTPStart2gSitesurvey() CWWTPStartSitesurvey(CW_RADIOFREQTYPE_2G)
+#define CWWTPStop2gSitesurvey() CWWTPStopSitesurvey(CW_RADIOFREQTYPE_2G)
+#define CWWTPCheck2gSitesurveyDoing() CWWTPCheckSitesurveyDoing(CW_RADIOFREQTYPE_2G)
+#define CWWTPCheck2gSitesurveyEnable() CWWTPCheckSitesurveyEnable(CW_RADIOFREQTYPE_2G)
+#define CWWTPEnableBackground2gSitesurvey(_enable) CWWTPEnableBackgroundSitesurvey(CW_RADIOFREQTYPE_2G, _enable)
+#define CWWTPSetBackground2gSitesurveyInterval(_interval) CWWTPSetBackgroundSitesurveyInterval(CW_RADIOFREQTYPE_2G, _interval)
+
+#define CWWTPStart5gSitesurvey() CWWTPStartSitesurvey(CW_RADIOFREQTYPE_5G)
+#define CWWTPStop5gSitesurvey() CWWTPStopSitesurvey(CW_RADIOFREQTYPE_5G)
+#define CWWTPCheck5gSitesurveyDoing() CWWTPCheckSitesurveyDoing(CW_RADIOFREQTYPE_5G)
+#define CWWTPCheck5gSitesurveyEnable() CWWTPCheckSitesurveyEnable(CW_RADIOFREQTYPE_5G)
+#define CWWTPEnableBackground5gSitesurvey(_enable) CWWTPEnableBackgroundSitesurvey(CW_RADIOFREQTYPE_5G, _enable)
+#define CWWTPSetBackground5gSitesurveyInterval(_interval) CWWTPSetBackgroundSitesurveyInterval(CW_RADIOFREQTYPE_5G, _interval)
+
+
+#define CWWTPStart5gOneSitesurvey() CWWTPStartSitesurvey(CW_RADIOFREQTYPE_5G_1)
+#define CWWTPStop5gOneSitesurvey() CWWTPStopSitesurvey(CW_RADIOFREQTYPE_5G_1)
+#define CWWTPCheck5gOneSitesurveyDoing() CWWTPCheckSitesurveyDoing(CW_RADIOFREQTYPE_5G_1)
+#define CWWTPCheck5gOneSitesurveyEnable() CWWTPCheckSitesurveyEnable(CW_RADIOFREQTYPE_5G_1)
+#define CWWTPEnableBackground5gOneSitesurvey(_enable) CWWTPEnableBackgroundSitesurvey(CW_RADIOFREQTYPE_5G_1, _enable)
+#define CWWTPSetBackground5gOneSitesurveyInterval(_interval) CWWTPSetBackgroundSitesurveyInterval(CW_RADIOFREQTYPE_5G_1, _interval)
+
+
+void CWWTPStartAllSitesurvey();
+void CWWTPStopAllSitesurvey();
+#endif
+

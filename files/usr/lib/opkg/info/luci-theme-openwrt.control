@@ -1,0 +1,9 @@
+Package: luci-theme-openwrt
+Version: 0.11-1
+Depends: libc, luci-theme-base
+Source: SENAO/package/senao-luci/luci-0.11svn9960_ECB_FANCY/contrib/package/luci
+Section: luci_ECB_FNACY
+Maintainer: LuCI Development Team <luci@lists.subsignal.org>
+Architecture: ipq40xx
+Installed-Size: 8195
+Description:  OpenWrt.org (default)

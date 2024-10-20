@@ -1,0 +1,194 @@
+--- a/miniupnpd.c
++++ b/miniupnpd.c
+@@ -1431,6 +1431,29 @@
+ 				}
+ 				break;
+ #endif
++#ifdef SSTAR
++                        case UPNPDEVICETYPE:
++                                strncpy(upnp_device_type, ary_options[i].value, UPNP_CUSTOM_MAX_LEN);
++                                upnp_device_type[UPNP_CUSTOM_MAX_LEN-1] = '\0';
++                                break;
++                        case UPNPSERVICETYPE:
++                                strncpy(upnp_service_type, ary_options[i].value, UPNP_CUSTOM_MAX_LEN);
++                                upnp_service_type[UPNP_CUSTOM_MAX_LEN-1] = '\0';
++                                break;
++                        case UPNPSERVICEID:
++                                strncpy(upnp_service_id, ary_options[i].value, UPNP_CUSTOM_MAX_LEN);
++                                upnp_service_id[UPNP_CUSTOM_MAX_LEN-1] = '\0';
++                                break;
++                        case UPNPCONTROL_URL:
++                                strncpy(upnp_control_url, ary_options[i].value, UPNP_CUSTOM_MAX_LEN);
++                                upnp_control_url[UPNP_CUSTOM_MAX_LEN-1] = '\0';
++                                break;
++                        case UPNPEVENTSUB_URL:
++                                strncpy(upnp_event_sub_url, ary_options[i].value, UPNP_CUSTOM_MAX_LEN);
++                                upnp_event_sub_url[UPNP_CUSTOM_MAX_LEN-1] = '\0';
++                                break;
++#endif
++
+ 			default:
+ 				fprintf(stderr, "Unknown option in file %s\n",
+ 				        optionsfile);
+--- a/miniupnpdpath.h
++++ b/miniupnpdpath.h
+@@ -45,5 +45,9 @@
+ #define DP_EVENTURL			"/evt/DP"
+ #endif
+ 
++#ifdef SSTAR
++#define MANUAL_PATH		"/scpd_basic.xml"
++#endif
++
+ #endif
+ 
+--- a/options.c
++++ b/options.c
+@@ -95,6 +95,13 @@
+ 	{ UPNPFORCEIGDDESCV1, "force_igd_desc_v1"},
+ #endif
+ 	{ UPNPMINISSDPDSOCKET, "minissdpdsocket"},
++#ifdef SSTAR
++        { UPNPDEVICETYPE, "device_type"},
++        { UPNPSERVICETYPE, "service_type"},
++        { UPNPSERVICEID, "service_id"},
++        { UPNPCONTROL_URL, "control_url"},
++        { UPNPEVENTSUB_URL, "event_sub_url"},
++#endif
+ 	{ UPNPSECUREMODE, "secure_mode"}
+ };
+ 
+--- a/options.h
++++ b/options.h
+@@ -77,6 +77,13 @@
+ #ifdef IGD_V2
+ 	UPNPFORCEIGDDESCV1,
+ #endif
++#ifdef SSTAR
++	UPNPDEVICETYPE,
++	UPNPSERVICETYPE,
++	UPNPSERVICEID,
++	UPNPCONTROL_URL,
++	UPNPEVENTSUB_URL,
++#endif
+ 	UPNPENABLE				/* enable_upnp */
+ };
+ 
+--- a/testupnpdescgen.c
++++ b/testupnpdescgen.c
+@@ -39,6 +39,13 @@
+ #ifdef RANDOMIZE_URLS
+ char random_url[] = "RANDOM";
+ #endif /* RANDOMIZE_URLS */
++#ifdef SSTAR
++char upnp_device_type[] = "urn:schemas-upnp-org:device:InternetGatewayDevice:1";
++char upnp_service_type[] = "urn:schemas-upnp-org:service:BasicService:1";
++char upnp_service_id[] = "urn:schemas-upnp-org:serviceId:BasicServiceId";
++char upnp_control_url[] = "/upnp/control/BasicServiceId";
++char upnp_event_sub_url[] = "/upnp/event/BasicServiceId";
++#endif
+ unsigned int upnp_configid = 666;
+ 
+ const char * use_ext_ip_addr = NULL;
+--- a/upnpdescgen.c
++++ b/upnpdescgen.c
+@@ -145,6 +145,37 @@
+  * in "Network connections" in Windows XP if it is not present. */
+ static const struct XMLElt rootDesc[] =
+ {
++#ifdef SSTAR
++/* 0 */
++        {root_device, INITHELPER(1,2)},
++        {"specVersion", INITHELPER(3,2)},
++        {"device", INITHELPER(5,12)},
++        {"/major", "1"},
++        {"/minor", "0"},
++/* 5 */
++        {"/deviceType", upnp_device_type},
++        {"/friendlyName", friendly_name},  /* required */
++        {"/manufacturer", manufacturer_name},          /* required */
++/* 8 */
++        {"/manufacturerURL", manufacturer_url},   /* optional */
++        {"/modelDescription", model_description}, /* recommended */
++        {"/modelName", model_name},        /* required */
++/* 11 */
++        {"/modelNumber", modelnumber},
++        {"/modelURL", model_url},
++        {"/serialNumber", serialnumber},
++        {"/UDN", uuidvalue_igd},    /* required */
++/*15 */
++        {"serviceList", INITHELPER(17,1)},
++        {"/presentationURL", presentationurl},  /* recommended */
++        {"service", INITHELPER(18,5)},
++        {"/serviceType", upnp_service_type},
++        {"/serviceId", upnp_service_id},
++        {"/controlURL", upnp_control_url},
++        {"/eventSubURL", upnp_event_sub_url},
++        {"/SCPDURL", MANUAL_PATH},
++        {0, 0}
++#else
+ /* 0 */
+ 	{root_device, INITHELPER(1,2)},
+ 	{"specVersion", INITHELPER(3,2)},
+@@ -314,6 +345,7 @@
+ 	{"/eventSubURL", DP_EVENTURL},
+ #endif
+ 	{0, 0}
++#endif
+ };
+ 
+ /* WANIPCn.xml */
+--- a/upnpglobalvars.c
++++ b/upnpglobalvars.c
+@@ -90,6 +90,14 @@
+ char model_url[MODEL_URL_MAX_LEN] = ROOTDEV_MODELURL;
+ #endif
+ 
++#ifdef SSTAR
++char upnp_device_type[UPNP_CUSTOM_MAX_LEN] = "urn:schemas-upnp-org:device:InternetGatewayDevice:1";
++char upnp_service_type[UPNP_CUSTOM_MAX_LEN] = "urn:schemas-upnp-org:service:BasicService:1";
++char upnp_service_id[UPNP_CUSTOM_MAX_LEN] = "urn:schemas-upnp-org:serviceId:BasicServiceId";
++char upnp_control_url[UPNP_CUSTOM_MAX_LEN] = "/upnp/control/BasicServiceId";
++char upnp_event_sub_url[UPNP_CUSTOM_MAX_LEN] = "/upnp/event/BasicServiceId";
++#endif
++
+ /* UPnP permission rules : */
+ struct upnpperm * upnppermlist = 0;
+ unsigned int num_upnpperm = 0;
+--- a/upnpglobalvars.h
++++ b/upnpglobalvars.h
+@@ -122,6 +122,14 @@
+ #define MODEL_URL_MAX_LEN (64)
+ extern char model_url[];
+ #endif
++#ifdef SSTAR
++#define UPNP_CUSTOM_MAX_LEN (64)
++extern char upnp_device_type[];
++extern char upnp_service_type[];
++extern char upnp_service_id[];
++extern char upnp_control_url[];
++extern char upnp_event_sub_url[];
++#endif
+ 
+ /* UPnP permission rules : */
+ extern struct upnpperm * upnppermlist;
+--- a/configure
++++ b/configure
+@@ -26,6 +26,7 @@
+ 	--debug) DEBUG=1 ;;
+ 	--leasefile) LEASEFILE=1 ;;
+ 	--vendorcfg) VENDORCFG=1 ;;
++       --sstar) SSTAR=1;;
+ 	--pcp-peer) PCP_PEER=1 ;;
+ 	--portinuse) PORTINUSE=1 ;;
+ 	--uda-version=*)
+@@ -797,6 +798,9 @@
+ else
+ 	echo "/*#define ENABLE_MANUFACTURER_INFO_CONFIGURATION*/" >> ${CONFIGFILE}
+ fi
++if [ -n "$VENDORCFG" ] ; then
++       echo "#define SSTAR" >> ${CONFIGFILE}
++fi
+ echo "" >> ${CONFIGFILE}
+ 
+ cat >> ${CONFIGFILE} <<EOF

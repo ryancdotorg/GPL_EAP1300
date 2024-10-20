@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ "${INTERFACE:0:4}" = "vlan" -o "${interface:0:7}" = "br-vlan" -o "$INTERFACE" = "99" -o "$interface" = "br-99" ]
+then
+	. /etc/sn-udhcpc.sh
+else
+	case "$1" in
+		renew|bound)
+			luci-reload auto lan-ip-obtain
+			if [ "$1" = "bound" ];then
+				# even firewall will reload when hotplug detect iface down/up, but ip not ready, reload here again
+				/sbin/GuestNetwork &
+				[ -e "/etc/init.d/ezmcloud" ] && /etc/init.d/ezmcloud restart_panda
+				which snlogger > /dev/null && {
+					snlogger "event.info 1.0" "ap_sys_info_ip,ip='$(ifconfig br-lan | awk '/inet addr/{print substr($2,6)}')'"
+				}
+			[ -e "/usr/sbin/setRPMac" -a "$(uci -q get mesh.wifi.disabled)" == "0" ] && /sbin/chkEth2GW.sh
+			fi
+			;;
+		*)
+			;;
+	esac
+fi

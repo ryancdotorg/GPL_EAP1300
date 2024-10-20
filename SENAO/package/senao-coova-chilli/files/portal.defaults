@@ -1,0 +1,16 @@
+#!/bin/sh
+uci batch <<-EOF
+add ucitrack portal
+set ucitrack.@portal[0].init=portal
+add_list ucitrack.@portal[0].affects=dnsmasq
+add_list ucitrack.@portal[0].affects=l2_block
+add_list ucitrack.@wireless[0].affects=portal
+add_list ucitrack.@network[0].affects=portal
+add_list ucitrack.@dhcp[0].affects=portal
+add ucitrack dnsmasq
+set ucitrack.@dnsmasq[0].init=dnsmasq
+commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

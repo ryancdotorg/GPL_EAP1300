@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Set zone_auto_detect to 0 for remove auto time zone detect function.
+
+uci set system.@system[0].zone_auto_detect="0"
+uci commit system
+
+exit 0

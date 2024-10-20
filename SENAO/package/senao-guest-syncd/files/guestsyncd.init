@@ -1,0 +1,33 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions.sh
+
+START=99
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+boot() {
+	start
+}
+
+start() {
+	config_load guestsyncd
+	config_get_bool enabled guestsyncd enabled 0
+
+	if [ "1" == "$enabled" ]; then
+		config_get interface guestsyncd interface
+		config_get networkId guestsyncd networkId
+		config_get group guestsyncd group $networkId
+		service_start /usr/sbin/guest_syncd -i br-lan ${group:+-g "$group"}
+	fi
+}
+
+stop() {
+	service_stop /usr/sbin/guest_syncd
+}
+
+reload() {
+	stop
+	start
+}

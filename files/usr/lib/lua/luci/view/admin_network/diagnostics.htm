@@ -1,0 +1,575 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2010 Jo-Philipp Wich <xm@subsignal.org>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+$Id: diagnostics.htm 9623 2013-01-18 14:08:37Z jow $
+
+-%>
+
+<%+header%>
+
+<%
+local fs   = require "nixio.fs"
+local uci = luci.model.uci.cursor()
+local has_ping6 = fs.access("/bin/ping6") or fs.access("/usr/bin/ping6")
+local has_traceroute6 = fs.access("/usr/bin/traceroute6")
+
+local tabs_i18n = {}
+tabs_map = {["ping"]=translate("Ping"), ["traceroute"]=translate("Traceroute"), ["nslookup"]=translate("Nslookup"), ["iperf"]=translate("Speed Test"), ["led"]=translate("LED"), ["locator"]=translate("Device Discovery")}
+
+-- default tabs
+local tabs = {"ping", "traceroute", "nslookup", "iperf", "led", "locator"}
+
+if uci:get('functionlist','functionlist','SUPPORT_HIDE_LED_SETTING') == '1' then
+	table.remove(tabs, 5)
+end
+
+for k,v in ipairs(tabs) do
+	tabs_i18n[tabs[k]] = tabs_map[v]
+end
+
+local curtab = luci.http.formvalue("tab")
+if curtab == nil then curtab = "ping" end
+
+local discover = fs.access("/usr/sbin/discover")
+local power_led, lan1_led, wifi0_led, wifi1_led, wifi2_led, mesh_led, led1, led2, led3, led4, led5, led_status
+local PING_SIZE_MAX = uci:get('functionlist','vendorlist','PING_SIZE_MAX') or 20480
+local PING_SIZE_MIN = uci:get('functionlist','vendorlist','PING_SIZE_MIN') or 64
+
+if uci:get('functionlist','functionlist','SUPPORT_LED_ONLY_STATUS') == '1' then --[[ #### SUPPORT_LED_ONLY_STATUS START ### --]]
+	led_status = luci.util.trim(luci.util.exec("uci get system.@system[0].led_status"))
+else
+	if uci:get('functionlist','functionlist','SUPPORT_LED_MODULE_NAME') == '1' then --[[ #### SUPPORT_LED_MODULE_NAME START ### --]]
+		power_led = luci.model.uci.cursor():get("system", "power_led", "default") or 0
+		lan1_led = luci.model.uci.cursor():get("system", "lan1_led", "default") or 0
+		wifi0_led = luci.model.uci.cursor():get("system", "wifi0_led", "default") or 0
+		wifi1_led = luci.model.uci.cursor():get("system", "wifi1_led", "default") or 0
+		mesh_led = luci.model.uci.cursor():get("system", "mesh_led", "default") or 0 --[[ #### mesh led ### --]]
+		wifi2_led = luci.model.uci.cursor():get("system", "wifi2_led", "default") or 0
+	else
+		led1 = luci.model.uci.cursor():get_first("system", "led1", "default") or 0
+		led2 = luci.model.uci.cursor():get_first("system", "led2", "default") or 0
+		led3 = luci.model.uci.cursor():get_first("system", "led3", "default") or 0
+		led4 = luci.model.uci.cursor():get_first("system", "led4", "default") or 0
+		led5 = luci.model.uci.cursor():get_first("system", "led5", "default") or 0  --[[ #### mesh led ### --]]
+	end
+end --[[ #### SUPPORT_LED_ONLY_STATUS END ### --]]
+%>
+
+<script type="text/javascript">//<![CDATA[
+	var stxhr = new XHR();
+
+	function update_status(field, proto, output_id, legend_id)
+	{
+		var tool = field, invalid_addr = false, timer, op_str;
+		var addr = document.getElementsByName(field)[0].value;
+		var protocol = proto ? "6" : "";
+		var output_id = output_id || "diag-rc-output",
+			legend_id = legend_id || "diag-rc-legend";
+
+		/*Check rule*/
+
+		if(!/^[a-zA-Z0-9][a-zA-Z0-9%-.:_]+$/.test(addr)) invalid_addr = true;
+		if(isMulticast(addr)) invalid_addr = true;
+		if(isBroadcastIp(addr, "<%=luci.model.uci.cursor():get('network', 'lan', 'netmask') or '255.255.255.0'%>")) invalid_addr = true;
+		if(isLoopback(addr)) invalid_addr = true;
+		if(isInvalid(addr)) invalid_addr = true;
+		if(addr[addr.length-1] == "\.") invalid_addr = true;
+
+		if(invalid_addr)
+		{
+			setfocus(getByName(field));
+			alert("<%=translate('The Target IP / Domain Name is invalid.')%>");
+			return false;
+		}
+
+		var legend = document.getElementById(legend_id);
+		var output = document.getElementById(output_id);
+		var data = null;
+		
+		if(tool == "ping")
+		{
+			if(!isBetween(getById('pks').value, <%=PING_SIZE_MIN%>, <%=PING_SIZE_MAX%>) || !isNumber(getById('pks').value))
+			{
+				setfocus(getById('pks'));
+				alert(String.format("<%:The packet size is invalid. The range of packet size is %s %s - %s.%>", ":",<%=PING_SIZE_MIN%>, <%=PING_SIZE_MAX%>,"]"));
+				return false;
+			}
+			if(!isBetween(getById('pings').value, 1, 200) || !isNumber(getById('pings').value))
+			{
+				setfocus(getById('pings'));
+				alert("<%=translate('The number of pings is invalid. The range of pings is 1 - 200.')%>");
+				return false;
+			}
+			data = {pks:document.getElementById('pks').value, pings:document.getElementById('pings').value};
+		}
+		
+		if(tool == "iperf")
+		{
+			var port_value = document.getElementById('iperf_port').value;
+			var iperf_addr = document.getElementById('iperf').value;
+			if(!isBetween(getById('iperf_timePeriod').value, 1, 9999) || !isNumber(getById('iperf_timePeriod').value))
+			{
+				setfocus(getById('iperf_timePeriod'));
+				alert("<%=translate('The time period is invalid. The range of time period is 1 - 9999.')%>");
+				return false;
+			}
+<%
+local checkIntervalMax
+if uci:get("iperf3","iperf3","disabled") == "0" then
+    checkIntervalMax=60
+else
+	checkIntervalMax=9999
+end
+%>
+            if(!isBetween(getById('iperf_checkInterval').value, 1, <%=checkIntervalMax%>) || !isNumber(getById('iperf_checkInterval').value))
+			{
+				setfocus(getById('iperf_checkInterval'));
+				alert(String.format("<%:The check interval is invalid. The range of check interval is %s - %s.%>", "1",<%=checkIntervalMax%>));
+				return false;
+			}
+			if(Number(getById('iperf_checkInterval').value) > Number(getById('iperf_timePeriod').value))
+			{
+				setfocus(getById('iperf_checkInterval'));
+				alert("<%:The check interval should be smaller than the time period.%>")
+				return false;
+			}
+			if(!isBetween(getById('iperf_port').value, 1, 65535))
+			{
+				setfocus(getById('iperf_port'));
+				alert("<%=translate('The port is invalid. The range of port is 1 - 65535.')%>");
+				return false;
+			}
+<% if uci:get('functionlist','functionlist','SUPPORT_IPERF_PORT_V6') == '1' then --[[ #### SUPPORT_IPERF_PORT_V6 START ### --]] %>
+			if(!isBetween(getById('iperf_port_v6').value, 1, 65535))
+			{
+				setfocus(getById('iperf_port_v6'));
+				alert("<%=translate('The port is invalid. The range of port is 1 - 65535.')%>");
+				return false;
+			}
+
+			if(isIpv6Addr(addr)==true){
+				port_value = document.getElementById('iperf_port_v6').value;
+				if(addr.indexOf("fe80") == 0){
+					iperf_addr+="\%br-lan";
+				}
+			}		
+<% end --[[ #### SUPPORT_IPERF_PORT_V6 END ### --]] %>
+			data = {port:port_value, timeperiod:document.getElementById('iperf_timePeriod').value, checkinterval:document.getElementById('iperf_checkInterval').value, iperf:iperf_addr};
+			addr = "";
+		}
+
+		if(tool == "traceroute")
+		{
+			if(isIpv6Addr(addr)==true)
+				tool = "traceroute6";
+		}
+
+		if (legend && output)
+		{
+			output.innerHTML =
+				'<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" /> ';
+
+			legend.parentNode.style.display = 'block';
+			legend.style.display = 'inline';
+			
+			var timeCount=0;
+			timer = setInterval(function(){
+				XHR.get('<%=luci.dispatcher.build_url("admin", "network", "diag_cat")%>', {"tool":tool},
+				function(x,j){
+					if(x.responseText)
+					{
+						legend.style.display = 'none';
+						output.innerHTML = String.format('<pre style="font-family:monospace; font-size: 12px; line-height: 1.3;">%h</pre>', x.responseText);
+					}
+					else
+					{
+						if(tool == "iperf")
+						{
+							timeCount += 2.5;
+							if (timeCount > getById('iperf_checkInterval').value)
+							{
+								legend.style.display = 'none';
+								output.innerHTML ='<span class="error"><%:Bad address specified!%></span>';
+								timeCount=0;
+								clearInterval(timer);
+							}
+						}
+					}
+				});
+			}, 2500);
+
+			stxhr.get('<%=luci.dispatcher.build_url("admin", "network")%>/diag_' + tool + protocol + '/' + addr, data,
+				function(x,j)
+				{
+					legend.style.display = 'none';
+					if(tool != "iperf")
+					{
+						if(x.responseText)
+						{
+							op_str = String.format('<pre>%h</pre>', x.responseText);
+						}
+						else
+						{
+							op_str = '<span class="error"><%:Bad address specified!%></span>';
+						}
+						
+						output.innerHTML = op_str;
+						clearInterval(timer);
+					}
+					else
+					{
+						setTimeout(function(){
+							clearInterval(timer);
+						}, 5000);
+					}
+				}
+			);
+		}
+	}
+
+	function update_device(){
+		var exist_discover = "<%=discover%>",
+				emptyRow="<tr class='title-option'><td colspan='5'>&nbsp;</td></tr>";
+		if(exist_discover == "true")
+		{
+			var html="";
+			html="<img src='<%=resource%>/icons/loading.gif' style='width:21px;'>&nbsp;<%:Loading%>....";
+			document.getElementById('locator_loading').innerHTML=html;
+			XHR.get('<%=luci.dispatcher.build_url("admin", "network")%>/diag_deviceDiscover',null,
+					function(x)
+					{
+						if(x.responseText)
+						{
+							var rows="", device;
+							rows=x.responseText.split("\n");
+							if(rows.length>2)
+							{
+								html="";
+								for(var i=1; i<rows.length; i++)
+								{
+									device=rows[i].split("\t");
+									if(device[0]!="")
+									{
+										html+="<tr class='title-option'>"+
+												"<td>"+device[0]+"</td>"+
+												"<td>"+device[1]+"</td>"+
+												"<td>"+device[2]+"</td>"+
+												"<td>"+device[3]+"</td>"+
+												"<td>"+device[4]+"</td>"+
+												"</tr>";
+									}
+								}
+								html += emptyRow;
+							}
+							else
+							{
+								html = emptyRow;
+							}
+						}
+						else
+						{
+							html = emptyRow;
+						}
+						document.getElementById('locator_content').innerHTML=html;
+						document.getElementById('locator_loading').innerHTML="";
+					}
+			);
+		}
+	}
+	function set_otherled(value){
+<% if uci:get('functionlist','functionlist','SUPPORT_LED_MODULE_NAME') == '1' then %>
+		$("input[name='led_lan_1'][value='"+value+"']").prop("checked",true);
+<% else %>
+		$("input[name='led_lan'][value='"+value+"']").prop("checked",true);
+<% end %>
+		$("input[name='led_wlan24'][value='"+value+"']").prop("checked",true);
+		$("input[name='led_wlan5'][value='"+value+"']").prop("checked",true);
+		$("input[name='led_mesh'][value='"+value+"']").prop("checked",true);
+		$("input[name='led_wlan5_2'][value='"+value+"']").prop("checked",true);
+	}
+//]]></script>
+<div id="Traceroute_Test_Parameters_info" class="popbox">
+    <p><%:It can specify the destination for Traceroute troubleshooting on network paths from this device.%></p>
+</div>
+<div id="Nslookup_Test_Parameters_info" class="popbox">
+    <p><%:This utility performs DNS look up for available domain records.%></p>
+</div>
+<div class="cbi-map">
+	<fieldset class="cbi-section-node">
+		<div class="cbi-section-descr"></div>
+		<fieldset class="cbi-section-node">
+			<div class="cbi-value cbi-value-last">
+				<ul class="cbi-tabmenu">
+					<%for k,v in ipairs(tabs) do%>
+						<li class="cbi-tab<%if curtab ~= v then print("-disable") else print(" active") end%>"><a myid="<%=v%>" href="<%=REQUEST_URI%>?tab=<%=v%>"><%=tabs_i18n[v]%></a></li>
+					<%end%>
+				</ul>
+			</div>
+		</fieldset>
+	</fieldset>
+	<fieldset class="cbi-section">
+		<table style="<%if curtab ~= "ping" then print("display:none;") end%>">
+			<tr>
+				<td class="title" colspan="2"><%:Ping Test Parameters%></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Target IP%> / <%:Domain Name%></td>
+				<td><input type="text" myid="ping_ip" name="ping" maxlength="63"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Ping Packet Size%></td>
+				<td><input id="pks" myid="ping_size" type="text" maxlength="5" size="5" value="64"/>&nbsp;<%:Bytes%></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Number of Pings%></td>
+				<td><input id="pings" myid="ping_number" type="text" maxlength="4" size="5" value="4"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%; vertical-align: top;"><input type="button" myid="button_save_ping" value="<%:Start%>" class="cbi-button" onclick="update_status('ping', '', 'diag-rc-output1', 'diag-rc-legend1')" /></td>
+				<td>
+					<fieldset class="cbi-section" style="display:none">
+						<legend id="diag-rc-legend1"><%:Collecting data...%></legend>
+						<span id="diag-rc-output1"></span>
+					</fieldset>
+				</td>
+			</tr>
+		</table>
+
+
+		<table style="<%if curtab ~= "traceroute" then print("display:none;") end%>">
+			<tr>
+				<td class="title" colspan="2">
+					<%:Traceroute Test Parameters%>&nbsp;<img class="popper" data-popbox="Traceroute_Test_Parameters_info" src="<%=media%>/pictures/icon_info_blue.png">
+				</td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Target IP%> / <%:Domain Name%></td>
+				<td><input type="text" myid="trace_ip" name="traceroute"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%; vertical-align: top;"><input myid="button_save_traceroute" type="button" value="<%:Start%>" class="cbi-button" onclick="update_status('traceroute', '', 'diag-rc-output2', 'diag-rc-legend2')" /></td>
+				<td>
+					<fieldset class="cbi-section" style="display:none">
+						<legend id="diag-rc-legend2"><%:Collecting data...%></legend>
+						<span id="diag-rc-output2"></span>
+					</fieldset>
+				</td>
+			</tr>
+		</table>
+
+		<table style="<%if curtab ~= "nslookup" then print("display:none;") end%>">
+			<tr>
+				<td class="title" colspan="2">
+					<%:Nslookup Test Parameters%>&nbsp;<img class="popper" data-popbox="Nslookup_Test_Parameters_info" src="<%=media%>/pictures/icon_info_blue.png">
+				</td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Target IP%> / <%:Domain Name%></td>
+				<td><input type="text" myid="nslookup_ip" name="nslookup"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%; vertical-align: top;"><input type="button" myid="button_save_nslookup" value="<%:Start%>" class="cbi-button" onclick="update_status('nslookup', '', 'diag-rc-output3', 'diag-rc-legend3')" /></td>
+				<td>
+					<fieldset class="cbi-section" style="display:none">
+						<legend id="diag-rc-legend3"><%:Collecting data...%></legend>
+						<span id="diag-rc-output3"></span>
+					</fieldset>
+				</td>
+			</tr>
+		</table>
+
+		<table style="<%if curtab ~= "iperf" then print("display:none;") end%>">
+			<tr>
+				<td class="title" colspan="2"><%:Speed Test Parameters%></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Target IP%> / <%:Domain Name%></td>
+				<td><input type="text" name="iperf" myid="iperf_ip" id="iperf"/></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Time Period%></td>
+				<td><input type="text" value="20" id="iperf_timePeriod" myid="iperf_timePeriod" name="iperf_timePeriod"/>&nbsp;<%:Sec%></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Check Interval%></td>
+				<td><input type="text" value="5" id="iperf_checkInterval" myid="iperf_checkInterval" name="iperf_checkInterval"/>&nbsp;<%:Sec%></td>
+			</tr>
+<%
+local iperf_port=5001
+if uci:get("iperf3","iperf3","disabled") == "0" then     
+	iperf_port=5201
+end
+%>
+<% if uci:get('functionlist','functionlist','SUPPORT_IPERF_PORT_V6') == '1' then --[[ #### SUPPORT_IPERF_PORT_V6 START ### --]] %>
+<%
+local iperf_port_v6=5002
+if uci:get("iperf3","iperf3","disabled") == "0" then     
+	iperf_port_v6=60001
+end
+%>
+			<tr class="title-option">
+				<td style="width: 30%">IPv4<%: Port%></td>
+				<td><%=iperf_port%><input type="hidden" value="<%=iperf_port%>" id="iperf_port" name="iperf_port"  /></td>
+			</tr>
+			<tr class="title-option">
+				<td style="width: 30%">IPv6<%: Port%></td>
+				<td><%=iperf_port_v6%><input type="hidden" value="<%=iperf_port_v6%>" id="iperf_port_v6" name="iperf_port_v6"  /></td>
+			</tr>			
+<% else --[[ #### SUPPORT_IPERF_PORT_V6 else ### --]] %>				
+			<tr class="title-option">
+				<td style="width: 30%"><%:Port%></td>
+				<td><%=iperf_port%><input type="hidden" value="<%=iperf_port%>" id="iperf_port" name="iperf_port" /></td>
+			</tr>
+<% end --[[ #### SUPPORT_IPERF_PORT_V6 END ### --]] %> 				
+			<tr class="title-option">
+				<td style="width: 30%; vertical-align: top;"><input type="button" myid="button_save_iperf" value="<%:Start%>" class="cbi-button" onclick="update_status('iperf', '', 'diag-rc-output4', 'diag-rc-legend4')" /></td>
+				<td>
+					<fieldset class="cbi-section" style="display:none">
+						<legend id="diag-rc-legend4"><%:Collecting data...%></legend>
+						<span id="diag-rc-output4"></span>
+					</fieldset>
+				</td>
+			</tr>
+		</table>
+		<form action="<%=luci.dispatcher.build_url('admin', 'network')%>/diag_led" method="post">
+		<table style="<%if curtab ~= "led" then print("display:none;") end%>">
+			<tr>
+				<td class="title" colspan="2"><%:LED Control%></td>
+			</tr>
+			<% if uci:get('functionlist','functionlist','SUPPORT_LED_ONLY_STATUS') == '1' then %>
+				<tr class="title-option">
+					<td style="width: 30%"><%:Status%></td>
+					<td><input type="radio" value="1" name="led_status"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="0" name="led_status"/>&nbsp;<%:Disable%></td>
+				</tr>
+			<% else %>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Power%></td>
+				<td><input type="radio" value="0" name="led_power"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_power"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then --[[ #### WEB_GUI_VER feature ### --]] %>
+			<tr class="title-option">
+				<td style="width: 30%"><%:Other%></td>
+				<td><input type="radio" value="0" onclick="set_otherled(0)" name="led_other"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" onclick="set_otherled(1)" name="led_other"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% end --[[ #### WEB_GUI_VER feature ### --]] %>
+<% if uci:get('functionlist','functionlist','SUPPORT_LED_MODULE_NAME') == '1' then --[[ #### SUPPORT_LED_MODULE_NAME START ### --]] %>
+<% if uci:get('system','lan1_led') == 'led' then --[[ #### exist lan1_led config #### --]] %>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:LAN%></td>
+				<td><input type="radio" value="0" name="led_lan_1"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_lan_1"/>&nbsp;<%:Disable%></td>
+				</tr>
+<% end --[[ #### exist lan1_led config end #### --]] %>
+<% else --[[ #### SUPPORT_LED_MODULE_NAME else ### --]] %>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:LAN%></td>
+				<td><input type="radio" value="0" name="led_lan"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_lan"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% end --[[ #### SUPPORT_LED_MODULE_NAME END ### --]] %>
+<% if WLAN24G == '1' then %>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:WLAN%>-2.4GHz</td>
+				<td><input type="radio" value="0" name="led_wlan24"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_wlan24"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% end %>
+<% if WLAN5G == '1' then %>
+<% if WLAN5G_2 == '1' then --[[ #### WLAN5G_2 feature ### --]] %>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:WLAN%>-5GHz - 1</td>
+				<td><input type="radio" value="0" name="led_wlan5"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_wlan5"/>&nbsp;<%:Disable%></td>
+			</tr>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:WLAN%>-5GHz - 2</td>
+				<td><input type="radio" value="0" name="led_wlan5_2"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_wlan5_2"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% else %>
+			<tr></tr>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:WLAN%>-5GHz</td>
+				<td><input type="radio" value="0" name="led_wlan5"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_wlan5"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% end --[[ #### WLAN5G_2 feature ### --]] %>
+<% end %>
+<% if uci:get('functionlist','functionlist','SUPPORT_MESH_SETTING') == "1" then --[[ #### SUPPORT_MESH_SETTING START ### --]] %>
+<% if (uci:get('system','mesh_led') == 'led') or (uci:get_first('system','led5') ~= nil) then --[[ #### exist mesh_led config or led5 config ### --]] %>
+			<tr class="title-option" <% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then %> style="display:none" <% end %> >
+				<td style="width: 30%"><%:Mesh%></td>
+				<td><input type="radio" value="0" name="led_mesh"/>&nbsp;<%:Enable%>&nbsp;<input type="radio" value="1" name="led_mesh"/>&nbsp;<%:Disable%></td>
+			</tr>
+<% end --[[ #### exist mesh_led config or led5 config end #### --]] %>
+<% end --[[ #### SUPPORT_MESH_SETTING END ### --]] %>
+<% end %>
+			<tr class="title-option">
+				<td colspan="2"><div class="cbi-page-actions" style="margin-bottom: 0;"><input class="cbi-button-apply" onclick="ajax_setCsrf();" type="submit" value="<%:Apply%>"/>&nbsp;<span style="font-size:9pt;"><%:Apply saved settings to take effect%></span></div></td>
+			</tr>
+		</table>
+		</form>
+
+		<table style="<%if curtab ~= 'locator' then print('display:none;') end%>">
+			<tr>
+				<td class="title" colspan="5"><%:Device Discovery%></td>
+			</tr>
+			<tr class="title-option" style="background-color: #EEEEEE;">
+				<td><%:Device Name%></td>
+				<td><%:Operation Mode%></td>
+				<td><%:IP Address%></td>
+				<td><%:System MAC Address%></td>
+				<td><%:Firmware Version%></td>
+			</tr>
+			<tbody id="locator_content">
+			<tr class="title-option">
+				<td>&nbsp;</td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+			</tr>
+			</tbody>
+			<tr class="title-option">
+				<td colspan="5"><input onclick="update_device()" class="cbi-button" type="button" value="<%:Scan%>"/>&nbsp;&nbsp;<span id="locator_loading"></span></td>
+			</tr>
+		</table>
+		<br style="clear:both" /><br />
+	</fieldset>
+</div>
+
+<fieldset class="cbi-section" style="display:none">
+	<legend id="diag-rc-legend"><%:Collecting data...%></legend>
+	<span id="diag-rc-output"></span>
+</fieldset>
+
+<script>
+<% if uci:get('functionlist','functionlist','SUPPORT_LED_ONLY_STATUS') == '1' then %>
+	var led={status:"<%=led_status%>"}; //1 = enable, 0 = disable
+	$("input[name='led_status'][value='"+led.status+"']").prop("checked",true);
+<% else %>
+	//0 = enable, 1 = disable
+<% if uci:get('functionlist','functionlist','SUPPORT_LED_MODULE_NAME') == '1' then --[[ #### SUPPORT_LED_MODULE_NAME START ### --]] %>
+	var led={lan_1:"<%=lan1_led%>",power:"<%=power_led%>",wlan24:"<%=wifi0_led%>",wlan5:"<%=wifi1_led%>",mesh:"<%=mesh_led%>",wlan5_2:"<%=wifi2_led%>"};
+	$("input[name='led_lan_1'][value='"+led.lan_1+"']").prop("checked",true);
+<% else --[[ #### SUPPORT_LED_MODULE_NAME else ### --]] %>
+	var led={lan:"<%=led1%>",power:"<%=led2%>",wlan24:"<%=led3%>",wlan5:"<%=led4%>",mesh:"<%=led5%>"};
+	$("input[name='led_lan'][value='"+led.lan+"']").prop("checked",true);
+<% end --[[ #### SUPPORT_LED_MODULE_NAME END ### --]] %>
+	$("input[name='led_power'][value='"+led.power+"']").prop("checked",true);
+	$("input[name='led_wlan24'][value='"+led.wlan24+"']").prop("checked",true);
+	$("input[name='led_wlan5'][value='"+led.wlan5+"']").prop("checked",true);
+	$("input[name='led_mesh'][value='"+led.mesh+"']").prop("checked",true);
+	$("input[name='led_wlan5_2'][value='"+led.wlan5_2+"']").prop("checked",true);
+<% end %>
+<% if uci:get('functionlist','vendorlist','WEB_GUI_VER') ~= nil and uci:get('functionlist','vendorlist','WEB_GUI_VER') > "1" then --[[ #### WEB_GUI_VER feature ### --]] %>
+	if(<% if uci:get('functionlist','functionlist','SUPPORT_LED_MODULE_NAME') == '1' then %> led.lan_1 == 1  <% else %> led.lan == 1 <% end %> || led.wlan24 == 1 || led.wlan5 == 1 || led.mesh == 1 || led.wlan5_2 == 1){
+		$("input[name='led_other'][value='1']").prop("checked",true);
+	}
+	else{
+		$("input[name='led_other'][value='0']").prop("checked",true);
+	}
+<% end --[[ #### WEB_GUI_VER feature ### --]] %>
+</script>
+<%+footer%>

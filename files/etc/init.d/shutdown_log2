@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+
+START=13
+
+boot() {
+	if [ -f /usr/sbin/snlogger ]; then
+		#check reboot flag
+		if [ ! -n "$(ls -A /usr/share/kdump/config*)" ]; then
+			if [ -f /etc/do_reboot ]; then
+				shutdown_time=`cat /etc/do_reboot`
+				snlogger "event.info 1.0" "ap_sys_info_shutdown,reason='normal reboot at $shutdown_time'"
+				rm -rf /etc/do_reboot
+			fi
+		fi
+	fi
+}

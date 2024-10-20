@@ -1,0 +1,59 @@
+#!/bin/sh
+# (C) 2008 openwrt.org
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+boot()
+{
+	isConfigured=$(uci get apcontroller.capwap.enable)
+	if [ "$isConfigured" = "1" ];then
+	        kill -9 $(pgrep -f Fastscan)
+		echo "AP controlled by controller, do fastscan by capwap"
+	else
+		if [ "$1" = "1" ]; then
+		        kill -9 $(pgrep -f Fastscan)
+			kill -9 $(pgrep -f scanning)
+		else
+			fastscan_duration_24G=20 
+			if [ $fastscan_duration_24G -eq 0 ]; then
+			    	dis_24Gwifi=1
+			else
+				dis_24Gwifi=0
+		        fi
+			if [ "$dis_24Gwifi" = "1" ]; then
+				echo 2.4G wifi is disabled, no fastscan
+			else
+				sh  /sbin/Fastscan24G.sh $fastscan_duration_24G &
+		        fi
+		
+			fastscan_duration_5G=20		#$(cat /proc/sys/dev/wifi1/fastscan_duration)
+			if [ $fastscan_duration_5G -eq 0 ]; then
+				dis_5Gwifi=1
+			else
+				dis_5Gwifi=0
+			fi
+			if [ "$dis_5Gwifi" = "1" ]; then
+				echo 5G wifi is disabled, no fastscan
+			else
+			       	sh /sbin/Fastscan5G.sh $fastscan_duration_5G &
+			fi
+		fi
+	fi
+
+}
+
+start()
+{
+	echo start setfastscan
+}
+stop()
+{
+	echo stop setfastscan
+
+}
+
+case "$1" in
+	boot) boot;;
+	start) start;;
+	stop) stop;;
+esac

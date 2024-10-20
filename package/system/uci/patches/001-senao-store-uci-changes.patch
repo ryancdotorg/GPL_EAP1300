@@ -1,0 +1,31 @@
+--- a/libuci.c
++++ b/libuci.c
+@@ -202,6 +202,28 @@ int uci_commit(struct uci_context *ctx,
+ 	p = *package;
+ 	UCI_ASSERT(ctx, p != NULL);
+ 	UCI_ASSERT(ctx, p->backend && p->backend->commit);
++
++	/********** Senao Network **********
++	 * store-uci-changes for email alert
++    ***********************************/
++
++	char szConfig[] = "emailalert.email.enable";
++	struct uci_context *pUctx = uci_alloc_context();
++	struct uci_ptr ptr;
++
++	if ( pUctx &&
++		 UCI_OK == (uci_lookup_ptr(pUctx, &ptr, szConfig, true)) &&
++		 (NULL != ptr.o && NULL != ptr.o->v.string))
++	{
++		if (ptr.flags & UCI_LOOKUP_COMPLETE)
++		{
++			if (1 == strtol(ptr.o->v.string, NULL, 10))
++				system("uci changes >>/tmp/config.changes");
++		}
++	}
++	uci_free_context(pUctx);
++	/********** end of patch **********/
++
+ 	p->backend->commit(ctx, package, overwrite);
+ 	return 0;
+ }

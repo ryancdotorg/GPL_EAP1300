@@ -1,0 +1,14 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -729,7 +729,8 @@ print_scanning_info(int		skfd,
+ 
+   /* Init timeout value -> 250ms between set and first get */
+   tv.tv_sec = 0;
+-  tv.tv_usec = 250000;
++  //tv.tv_usec = 250000;
++  tv.tv_usec = 5000000;
+ 
+   /* Clean up set args */
+   memset(&scanopt, 0, sizeof(scanopt));

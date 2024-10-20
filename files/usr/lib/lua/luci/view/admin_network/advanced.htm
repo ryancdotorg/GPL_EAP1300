@@ -1,0 +1,979 @@
+<% local uci = luci.model.uci.cursor()
+	telnet_enable = uci:get("system","telnet","enable")
+	if uci:get("functionlist","functionlist","SUPPORT_PING_WATCHDOG") == "1" then
+		lan_mask = luci.util.trim(luci.util.exec("ifconfig br-lan | grep \"inet addr\" | awk -F \" \" '{print $4}' | awk -F \":\" '{print $2}'"))
+	end
+%>
+<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+<%+myid%>
+<% end %>
+<%+header%>
+<% local md5_mac = luci.util.split(luci.util.exec("sh /usr/sbin/check_code.sh"), "\n") %>
+<script>
+var JSONDATA_LIGHTTPD = <%=JSONDATA_LIGHTTPD%>
+function snmp_status(s)
+{
+	/* s = 0: general settings
+	   s = 1: snmp v3 settings
+	   s = 2: auth v3 settings
+	   s = 3: private settings */
+
+	var snmp_st = $('#SnmpEnable_enable').prop('checked');
+	var v3_st = $('#snmp_gen_v3_enable').prop('checked');
+	var auth_st = ($('#snmp_v3_auth_protocol').val() != '2')?1:0;
+	var pri_st = ($('#snmp_v3_auth_private_protocol').val() != '1')?1:0;
+
+	switch (s)
+	{
+	default:
+	case 0:
+		if(snmp_st){
+			$('input[name^="snmp_gen_"]').removeAttr('disabled');
+			$('select[name^="snmp_gen_"]').removeAttr('disabled');
+			if(v3_st){
+				$('input[name^="snmp_v3_username"]').removeAttr('disabled');
+				$('select[name^="snmp_v3_auth_protocol"]').removeAttr('disabled');
+				$('input[name^="snmp_v3_engine_id"]').removeAttr('disabled');
+				if(auth_st){
+					$('input[name^="snmp_v3_auth_key"]').removeAttr('disabled');
+					$('select[name^="snmp_v3_auth_private_protocol"]').removeAttr('disabled');
+					if(pri_st)
+						$('input[name^="snmp_v3_auth_private_key"]').removeAttr('disabled');
+					else
+						$('input[name^="snmp_v3_auth_private_key"]').attr('disabled', 'disabled');
+				}
+				else{
+					$('input[name^="snmp_v3_auth_key"]').attr('disabled', 'disabled');
+					$('select[name^="snmp_v3_auth_private_protocol"]').attr('disabled', 'disabled');
+					$('select[name^="snmp_v3_auth_private_protocol"]').val('1');
+					$('input[name^="snmp_v3_auth_private_key"]').attr('disabled', 'disabled');
+				}
+			}
+			else{
+				$('input[name^="snmp_v3"]').attr('disabled', 'disabled');
+				$('select[name^="snmp_v3"]').attr('disabled', 'disabled');
+			}
+		}
+		else{
+			$('input[name^="snmp_"]').attr('disabled', 'disabled');
+			$('select[name^="snmp_"]').attr('disabled', 'disabled');
+		}
+		break;
+	case 1:
+		if(v3_st){
+			$('input[name^="snmp_v3_username"]').removeAttr('disabled');
+			$('select[name^="snmp_v3_auth_protocol"]').removeAttr('disabled');
+			$('input[name^="snmp_v3_engine_id"]').removeAttr('disabled');
+			if(auth_st){
+				$('input[name^="snmp_v3_auth_key"]').removeAttr('disabled');
+				$('select[name^="snmp_v3_auth_private_protocol"]').removeAttr('disabled');
+				if(pri_st)
+					$('input[name^="snmp_v3_auth_private_key"]').removeAttr('disabled');
+			}
+		}
+		else{
+			$('input[name^="snmp_v3"]').attr('disabled', 'disabled');
+			$('select[name^="snmp_v3"]').attr('disabled', 'disabled');
+		}
+		break;
+	case 2:
+		if(auth_st){
+			$('input[name^="snmp_v3_auth_key"]').removeAttr('disabled');
+			$('select[name^="snmp_v3_auth_private_protocol"]').removeAttr('disabled');
+			if(pri_st)
+				$('input[name^="snmp_v3_auth_private_key"]').removeAttr('disabled');
+		}
+		else{
+			$('input[name^="snmp_v3_auth_key"]').attr('disabled', 'disabled');
+			$('select[name^="snmp_v3_auth_private_protocol"]').attr('disabled', 'disabled');
+			$('select[name^="snmp_v3_auth_private_protocol"]').val('1');
+			$('input[name^="snmp_v3_auth_private_key"]').attr('disabled', 'disabled');
+		}
+		break;
+	case 3:
+		if(pri_st)
+			$('input[name^="snmp_v3_auth_private_key"]').removeAttr('disabled');
+		else
+			$('input[name^="snmp_v3_auth_private_key"]').attr('disabled', 'disabled');
+		break;
+	}
+}
+function copyto(){
+<% if uci:get('functionlist','functionlist','SUPPORT_TELNET_SETTING') == '1' then %>
+	if("<%=telnet_enable%>" == "on")
+	{
+		document.getElementsByName("telnetEnable")[0].checked = true;
+	}
+	else
+	{
+		document.getElementsByName("telnetEnable")[1].checked = true;
+	}
+<% end %>
+}
+function https_status(){
+	var ret = $('#httpsEnable_enable').prop('checked');
+	if(ret){
+		$('input[name^="httpsForward"]').removeAttr('disabled');
+	}
+	else{
+		$('input[name^="httpsForward"]').attr('disabled', 'disabled');
+	}
+}
+function email_alert_status(){
+	var ret = $('#email_enable').prop('checked');
+	if(ret){
+		$('input[name^="em_"]').removeAttr('disabled');
+		$('select[name^="em_"]').removeAttr('disabled');
+	}
+	else{
+		$('input[name^="em_"]').attr('disabled', 'disabled');
+		$('select[name^="em_"]').attr('disabled', 'disabled');
+	}
+}
+function ping_watchdog_status(){
+<%
+if uci:get('functionlist','functionlist','SUPPORT_PING_WATCHDOG') == '1' then -----#### SUPPORT_PING_WATCHDOG START ###
+%>
+	var ret = $('#ping_enable').prop('checked');
+	if(ret){
+		$('input[name^="ping_watchdog_"]').removeAttr('disabled');
+		$('select[name^="ping_watchdog_"]').removeAttr('disabled');
+	}
+	else{
+		$('input[name^="ping_watchdog_"]').attr('disabled', 'disabled');
+		$('select[name^="ping_watchdog_"]').attr('disabled', 'disabled');
+	}
+<%
+end -----#### SUPPORT_PING_WATCHDOG END ###
+%>
+}
+function defServPort()
+{
+	var security_mode = parseInt($('#em_security').val(), 10);
+	switch (security_mode)
+	{
+	case 0:
+	default:
+		$('#em_smtp_port').val(25);
+		break;
+	case 1:
+		$('#em_smtp_port').val(465);
+		break;
+	case 2:
+		$('#em_smtp_port').val(587);
+		break;
+	}
+}
+function changeInputType(field)
+{
+	if($('#email_enable').prop('checked')){
+		var pw_value = document.getElementById(field).value;
+		if(document.getElementById(field).type == 'password')
+			$("#"+field+"").replaceWith("<input type=text name="+field+" id="+field+" style='height:27px;'>");
+		else
+			$("#"+field+"").replaceWith("<input type=password name="+field+" id="+field+" style='height:27px;'>");
+		document.getElementById(field).value = pw_value;
+	}
+}
+function init()
+{
+
+<%
+if uci:get('functionlist','functionlist','SUPPORT_ATKK_FW_VERSION') == '1' then -----#### SUPPORT_ATKK_FW_VERSION START ###
+%>
+	document.getElementsByName("ControllerMode")[('<%=uci:get("cwmagent","cwmagent","status")%>'=='1')?0:1].checked=true;
+<%
+end
+%>
+	document.getElementsByName("SnmpEnable")[('<%=uci:get_first("snmpd","system","sysEnable")%>'=="1")?0:1].checked=true;
+<%
+	local sysContact = luci.util.repSpec(tostring(uci:get_first("snmpd","system","sysContact") or ""))
+	local sysLocation = luci.util.repSpec(tostring(uci:get_first("snmpd","system","sysLocation") or ""))
+	local community = luci.util.repSpec(tostring(uci:get_first("snmpd","trap","community") or ""))
+	local userName = luci.util.repSpec(tostring(uci:get_first("snmpd","snmpv3","userName") or ""))
+	local authKey = luci.util.repSpec(tostring(uci:get_first("snmpd","snmpv3","authKey") or ""))
+	local privKey = luci.util.repSpec(tostring(uci:get_first("snmpd","snmpv3","privKey") or ""))
+	local engineID = luci.util.repSpec(tostring(uci:get_first("snmpd","snmpv3","engineID") or ""))
+	local community_public = luci.util.repSpec(tostring(uci:get("snmpd","public","community") or ""))
+	local community_private = luci.util.repSpec(tostring(uci:get("snmpd","private","community") or ""))
+%>
+	var sysContact = repSpec("<%=sysContact%>"),sysLocation = repSpec("<%=sysLocation%>"), community = repSpec("<%=community%>"), userName = repSpec("<%=userName%>"), authKey = repSpec("<%=authKey%>"), privKey = repSpec("<%=privKey%>"), engineID = repSpec("<%=engineID%>");
+	var community_public = repSpec("<%=community_public%>"), community_private =repSpec("<%=community_private%>");
+	$('#snmp_gen_contact').val(sysContact);
+	$('#snmp_gen_loaction').val(sysLocation);
+	$('#snmp_gen_ro').val(community_public);
+	$('#snmp_gen_rw').val(community_private);
+<%
+if uci:get('functionlist','functionlist','SUPPORT_SNMP_GEN_MAIN_PORT') == '1' then -----#### SUPPORT_SNMP_GEN_MAIN_PORT START ###
+%>
+	var snmp_gen_main_port = '<%=uci:get_first("snmpd","agent","address")%>';
+	$('#snmp_gen_main_port').val(snmp_gen_main_port.replace(/\w*\:/,""));
+<%
+end -----#### SUPPORT_SNMP_GEN_MAIN_PORT END ###
+%>
+	$('#snmp_gen_port').val('<%=uci:get_first("snmpd","trap","destPort")%>');
+	$('#snmp_gen_ip').val('<%=uci:get_first("snmpd","trap","destIpAddr")%>');
+	$('#snmp_gen_comm').val(community);
+	document.getElementsByName("snmp_gen_v3")[('<%=uci:get_first("snmpd","snmpv3","snmpv3Enable")%>'=="1")?0:1].checked=true;
+	$('#snmp_v3_username').val(userName);
+	$('#snmp_v3_auth_protocol').val('<%=uci:get_first("snmpd","snmpv3","authProtocol")%>');
+	$('#snmp_v3_auth_key').val(authKey);
+	$('#snmp_v3_auth_private_protocol').val('<%=uci:get_first("snmpd","snmpv3","privProtocol")%>');
+	$('#snmp_v3_auth_private_key').val(privKey);
+	$('#snmp_v3_engine_id').val(engineID);
+
+<%
+	local emailEnable = luci.util.repSpec(tostring(uci:get("emailalert","email","enable") or ""))
+	local emailFrom = luci.util.repSpec(tostring(uci:get("emailalert","email","from") or ""))
+	local emailTo = luci.util.repSpec(tostring(uci:get("emailalert","email","alert_to") or ""))
+	local emailSubject = luci.util.repSpec(tostring(uci:get("emailalert","email","subject") or ""))
+	local emailUser = luci.util.repSpec(tostring(uci:get("emailalert","email","user") or ""))
+	local emailPassword = luci.util.repSpec(tostring(uci:get("emailalert","email","password") or ""))
+	local emailSmtpaddr = luci.util.repSpec(tostring(uci:get("emailalert","email","smtpaddr") or ""))
+	local emailSmtpport = luci.util.repSpec(tostring(uci:get("emailalert","email","smtpport") or ""))
+	local emailSecurity = luci.util.repSpec(tostring(uci:get("emailalert","email","security") or ""))
+
+%>
+	var emailEnable = repSpec("<%=emailEnable%>"), emailFrom = repSpec("<%=emailFrom%>"), emailTo = repSpec("<%=emailTo%>"), emailSubject = repSpec("<%=emailSubject%>"), emailUser = repSpec("<%=emailUser%>"), emailPassword = repSpec("<%=emailPassword%>"), emailSmtpaddr = repSpec("<%=emailSmtpaddr%>"), emailSmtpport = repSpec("<%=emailSmtpport%>"), emailSecurity = repSpec("<%=emailSecurity%>");
+
+	document.getElementsByName("cliEnable")[('<%=uci:get_first("cfg_cli","cli","cli_enable")%>'=="1")?0:1].checked=true;
+	document.getElementsByName("sshEnable")[('<%=uci:get_first("dropbear","dropbear","enable")%>'=="on")?0:1].checked=true;
+	document.getElementsByName("httpsEnable")[(JSONDATA_LIGHTTPD.https.enable=="1")?0:1].checked=true;
+	document.getElementsByName("httpsForward")[(JSONDATA_LIGHTTPD.https.forward=="1")?0:1].checked=true;
+	document.getElementsByName("email_enable")[0].checked=(emailEnable=="1")?true:false;
+	$('#em_from').val(emailFrom);
+	$('#em_to').val(emailTo);
+	if(emailSubject == "")
+		$('#em_subject').val('<%="[Email-Alert][%s][%s] Configuration Changed" % {luci.model.uci.cursor():get("sysProductInfo","model","modelName"),luci.util.exec("setconfig -g 6 | tr a-z A-Z | tr -d ' \n'")}%>');
+	else
+	$('#em_subject').val(emailSubject);
+	$('#em_username').val(emailUser);
+	$('#em_password').val(emailPassword);
+	$('#em_smtp_server').val(emailSmtpaddr);
+	$('#em_smtp_port').val(emailSmtpport);
+	$('#em_security').val(emailSecurity);
+
+	snmp_status();
+	https_status();
+	email_alert_status();
+<%
+if uci:get('functionlist','functionlist','SUPPORT_PING_WATCHDOG') == '1' then -----#### SUPPORT_PING_WATCHDOG START ###
+%>
+	document.getElementsByName("ping_enable")[0].checked=('<%=uci:get("ping-watchdog","ping","enable")%>'=="1")?true:false;
+	$('#ping_watchdog_ip').val('<%=uci:get("ping-watchdog","ping","ip")%>');
+	$('#ping_watchdog_failure_count').val('<%=uci:get("ping-watchdog","ping","failure_count")%>');
+	$('#ping_watchdog_interval').val('<%=uci:get("ping-watchdog","ping","interval")%>');
+	$('#ping_watchdog_delay').val('<%=uci:get("ping-watchdog","ping","delay")%>');
+	ping_watchdog_status();
+<%
+end -----#### SUPPORT_PING_WATCHDOG END ###
+%>
+}
+$(function() {
+	<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+    AddMyid("form", "advanced_idchange");
+    <% end %>
+	init();
+});
+function savechanges(type){
+	type = type || 0;
+	getById('submitType').value = type;
+//  RefreshTemplates();
+
+	if(type != 2)
+	{
+		if($('#SnmpEnable_enable').prop('checked'))
+		{
+			// if(hasSpecialChar($('#snmp_gen_ro').val())){
+			// 	alert(invalid("<%:community name (read only)%>"));
+			// 	setfocus(getByName('snmp_gen_ro'));
+			// 	return false;
+			// }
+			// if(hasSpecialChar($('#snmp_gen_rw').val())){
+			// 	alert(invalid("<%:community name (read write)%>"));
+			// 	setfocus(getByName('snmp_gen_rw'));
+			// 	return false;
+			// }
+			if(!isPattern1($('#snmp_gen_contact').val())){
+				alert("<%=translatef('Contact: %s are invalid characters.','the : and ;')%>");
+				return false;
+			}
+			if(!isPattern1($('#snmp_gen_loaction').val())){
+				alert("<%=translatef('Location: %s are invalid characters.','the : and ;')%>");
+				return false;
+			}            			
+			if(!isPattern1($('#snmp_gen_ro').val())){
+				alert("<%=translatef('Community Name (read only): %s are invalid characters.','the : and ;')%>");
+				return false;
+			}			
+			if(!isPattern1($('#snmp_gen_rw').val())){
+				alert("<%=translatef('Community Name (read write): %s are invalid characters.','the : and ;')%>");
+				return false;
+			}
+<%
+if uci:get('functionlist','functionlist','SUPPORT_SNMP_GEN_MAIN_PORT') == '1' then -----#### SUPPORT_SNMP_GEN_MAIN_PORT START ###
+%>				
+			if(!isNumber($('#snmp_gen_main_port').val()) || !isBetween($('#snmp_gen_main_port').val(), 1, 65535)){
+				alert(invalid("<%:port%>")+" <%:Range%>: [1 - 65535]");
+				setfocus(getByName('snmp_gen_main_port'));
+				return false;
+			}
+<%
+end -----#### SUPPORT_SNMP_GEN_MAIN_PORT END ###
+%> 
+			if(!isNumber($('#snmp_gen_port').val()) || !isBetween($('#snmp_gen_port').val(), 1, 65535)){
+				alert(invalid("<%:port%>")+" <%:Range%>: [1 - 65535]");
+				setfocus(getByName('snmp_gen_port'));
+				return false;
+			}
+			if($('input[name="snmp_gen_ip"]').val()!="" && !isIpaddr($('input[name="snmp_gen_ip"]').val()) && !isDomainName($('input[name="snmp_gen_ip"]').val())){
+				alert(invalid("<%:trap ip address%>"));
+				setfocus(getByName('snmp_gen_ip'));
+				return false;
+			}
+			if(!isPattern1($('#snmp_gen_comm').val())){
+				alert("<%=translatef('Community Name: %s are invalid characters.','the : and ;')%>");
+				return false;
+			}
+			if($('#snmp_gen_v3_enable').prop('checked'))
+			{
+				if(!isBetween($('#snmp_v3_username').val().length, 1, 31)){
+					alert(invalid("<%:SNMP username%>"));
+					setfocus(getByName('snmp_v3_username'));
+					return false;
+				}
+				if(!isPattern1($('#snmp_v3_username').val())){
+					alert("<%=translatef('SNMP username: %s are invalid characters.','the : and ;')%>");
+					return false;
+				}
+				if($('#snmp_v3_auth_protocol').val() != '2')
+				{
+
+					if(!isBetween($('#snmp_v3_auth_key').val().length, 8, 32)){
+						alert(invalid("<%:SNMP authorized key%>"));
+						setfocus(getByName('snmp_v3_auth_key'));
+						return false;
+					}
+					if(!isPattern1($('#snmp_v3_auth_key').val())){
+						alert("<%=translatef('SNMP authorized key: %s are invalid characters.','the : and ;')%>");
+						return false;
+					}
+					if($('#snmp_v3_auth_private_protocol').val() != '1')
+					{
+						if(!isBetween($('#snmp_v3_auth_private_key').val().length, 8, 32)){
+							alert(invalid("<%:SNMP private key%>"));
+							setfocus(getByName('snmp_v3_auth_private_key'));
+							return false;
+						}
+						if(!isPattern1($('#snmp_v3_auth_private_key').val())){
+							alert("<%=translatef('SNMP private key: %s are invalid characters.','the : and ;')%>");
+							return false;
+						}
+					}
+				}
+				if(!isPattern1($('#snmp_v3_engine_id').val())){
+					alert("<%=translatef('SNMP Engine ID: %s are invalid characters.','the : and ;')%>");
+					return false;
+				}
+			}
+		}
+<% if uci:get('functionlist','functionlist','SUPPORT_TELNET_SETTING') == '1' then %>
+		document.getElementsByName("telnet_setting")[0].value  = (document.getElementsByName("telnetEnable")[0].checked == true)?"on":"off";
+<% end %>
+	}
+	if($('#email_enable').prop('checked'))
+	{
+		if(!isEmail($('#em_from').val())){
+			alert(invalid("<%:source mail address%>"));
+			setfocus(getByName('em_from'));
+			return false;
+		}
+		if(!isEmail($('#em_to').val())){
+			alert(invalid("<%:destination mail address%>"));
+			setfocus(getByName('em_to'));
+			return false;
+		}
+		if(!isHostName($('#em_smtp_server').val())  && !isIpaddr($('#em_smtp_server').val())){
+			alert(invalid("<%:SMTP server%>"));
+			setfocus(getByName('em_smtp_server'));
+			return false;
+		}
+		if(!isNumber($('#em_smtp_port').val()) || !isBetween($('#em_smtp_port').val(), 1, 65535)){
+			alert(invalid("<%:SMTP server port%>")+" <%:Range%>: [1 - 65535]");
+			setfocus(getByName('em_smtp_port'));
+			return false;
+		}
+		if($('#em_username').val()==""){
+			alert("<%:The username of email account cannot be empty.%>");
+			setfocus(getByName('em_username'));
+			return false;
+		}
+		if($('#em_password').val()==""){
+			alert("<%:The password of email account cannot be empty.%>");
+			setfocus(getByName('em_password'));
+			return false;
+		}
+	}
+
+	if(document.getElementsByName("email_enable")[0].checked == true)
+		getById('emailStatus').value = "1";
+	else
+		getById('emailStatus').value = "0";
+
+<%
+if uci:get('functionlist','functionlist','SUPPORT_PING_WATCHDOG') == '1' then -----#### SUPPORT_PING_WATCHDOG START ###
+%>
+	if(document.getElementsByName('ping_enable')[0].checked)
+	{
+		// Check ping watchdog ip address.
+		var now_ip=lanip;
+		var now_netmask="<%=lan_mask%>";
+
+		// Check ip, 1. Cannot be empty. 2. Cannot set invalid ip. 3. In the same subnet.
+		if($('#ping_watchdog_ip').val()=="")
+		{
+			setfocus(getByName('ping_watchdog_ip'));
+			$('#ip_info').text("<%:IP address is required.%>");
+			return false;
+		}
+		if(!isIpaddr(getByName('ping_watchdog_ip').value))
+		{
+			setfocus(getByName('ping_watchdog_ip'));
+			$('#ip_info').text("<%:IP address is invalid.%>");
+			return false;
+		}
+		if(!isSameSubnet(getByName('ping_watchdog_ip').value, now_netmask, now_ip))
+		{
+			alert(invalid("<%:IP address! \nIt should be located in the same subnet of current ip%>"));
+			setfocus(getByName('ping_watchdog_ip'));
+			return false;
+		}
+
+		// Check failure count, must over than 3
+		if(!isNumber($('#ping_watchdog_failure_count').val()) || $('#ping_watchdog_failure_count').val() < 3 )
+		{
+			$('#count_info').text("<%:Failure count must more than 3.%>");
+			setfocus(getByName('ping_watchdog_failure_count'));
+			return false;
+		}
+		if(!isNumber($('#ping_watchdog_failure_count').val()) || !isBetween($('#ping_watchdog_failure_count').val(), 3, 100))
+		{
+			alert(invalid("<%:Failure Count to Reboot%>")+" <%:Range%>: [3 - 100]");
+			setfocus(getByName('ping_watchdog_failure_count'));
+			return false;
+		}
+		// Check ping interval,
+		if(!isNumber($('#ping_watchdog_interval').val()) || !isBetween($('#ping_watchdog_interval').val(), 1, 1000))
+		{
+			alert(invalid("<%:Ping Interval%>")+" <%:Range%>: [1 - 1000]");
+			setfocus(getByName('ping_watchdog_interval'));
+			return false;
+		}
+		// Check startup delay, must over than 60
+		if(!isNumber($('#ping_watchdog_delay').val()) || $('#ping_watchdog_delay').val() < 60)
+		{
+			$('#delay_info').text("<%:Startup delay must more than 60.%>");
+			setfocus(getByName('ping_watchdog_delay'));
+			return false;
+		}
+
+		if(!isNumber($('#ping_watchdog_delay').val()) || !isBetween($('#ping_watchdog_delay').val(), 60, 86400))
+		{
+			alert(invalid("<%:Startup Delay%>")+" <%:Range%>: [60 - 86400]");
+			setfocus(getByName('ping_watchdog_delay'));
+			return false;
+		}
+	}
+	if(document.getElementsByName("ping_enable")[0].checked == true)
+		getById('pingStatus').value = "1";
+	else
+		getById('pingStatus').value = "0";
+<%
+end -----#### SUPPORT_PING_WATCHDOG END ###
+%>
+
+<%
+if uci:get('functionlist','functionlist','SUPPORT_SNMP_GEN_MAIN_PORT') == '1' then -----#### SUPPORT_SNMP_GEN_MAIN_PORT START ###
+%>
+	var snmp_gen_main_port = '<%=uci:get_first("snmpd","agent","address")%>';
+	$('#snmp_gen_main_port').val(snmp_gen_main_port.replace(/\:\d*/,":"+$('#snmp_gen_main_port').val()));	
+<%
+end -----#### SUPPORT_SNMP_GEN_MAIN_PORT END ###
+%> 
+	ajax_setCsrf();
+
+	document.forms[document.forms.length-1].submit();
+	return true;
+}
+</script>
+<div id="SSH_Setting_info" class="popbox">
+    <p><%:A secure communication protocol can be enabled to allow secure remote shell access or command execution.%></p>
+</div>
+<div id="HTTPS_Settings_info" class="popbox">
+    <p><%:A secure communication protocol can be enabled to allow secure management web access over a computer network.%></p>
+</div>
+<body onLoad="copyto();">
+<form name="form" action="<%=REQUEST_URI%>" method="post">
+<% if uci:get('functionlist','functionlist','SUPPORT_TELNET_SETTING') == '1' then %>
+	<input type="hidden" name="telnet_setting" value="1">
+<% end %>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_CAPWAP_CONTROL') == '1')  then -----#### SUPPORT_CAPWAP_CONTROL START ###
+%>
+<script type="text/javascript">
+	var connect_status = "<%:Disconnect%>";
+	function refresh_ConnectStatus()
+	{
+		$.ajax({
+			url: "<%=luci.dispatcher.build_url('admin/status/refresh_ConnectStatus')%>",
+			success: function(re) {
+				if(re.length > 30){
+					$('#ConnectStaInfo').text(connect_status);
+				}
+				else{
+					connect_status = re;
+					if ( re == "Disconnect" )
+						re = "<%:Disconnect%>";
+					$('#ConnectStaInfo').text(re);
+				}
+			}
+		});
+	}
+	var host_list={};
+	function getEtcHost()
+	{	
+		$.ajax({
+			url: "<%=luci.dispatcher.build_url('admin/status/getEtcHosts')%>",
+			success: function(re) {
+				host_list = re;
+			}
+		});
+	}
+	function checkEtcHost(host_check)
+	{
+		for(var i in host_list){
+			if(host_check == host_list[i]){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function refresh_controllerSettings()
+	{
+		// $("#ControllerIpHostname").val(CS_Json[0].force_ac);
+		// $("#DiscoveryInterval").val(CS_Json[0].disc_int);
+		// $("#DiscoveryProxyEnable").selectVal(CS_Json[0].disc_proxy);
+		// if(capwapVersion > "1.4") {
+			refresh_ConnectStatus();
+			// getEtcHost();
+			setInterval("refresh_ConnectStatus()",10000);
+		// }
+	}
+
+	function TestAddr()
+	{
+		var checkIPHosetName_val =  $('#checkIPHosetName').val();
+		$.ajax({
+			url: "<%=luci.dispatcher.build_url('admin/status/test_ac')%>",
+			data:"ControllerIpHostname="+checkIPHosetName_val,
+			beforeSend:function(){
+				if ((checkIPHosetName_val != "") && (checkIPHosetName_val != "N/A") && (checkIPHosetName_val != undefined)){
+					if (!isIpaddr(checkIPHosetName_val) && !isDomainName(checkIPHosetName_val)) {
+						alert("<%:Invalid IP or Hostname. Please enter again.%>");
+						return false;
+					}
+				}
+			},
+			success: function(re) {
+				//console.log(re);
+				alert(re);
+			},
+			statusCode: {   
+				201: function(err) {
+					// alert(_ML(g_Lang, DP_T_GET, "session time out"));
+					alert("<%:session time out.%>");
+					window.parent.document.location=window.parent.document.location.href;
+				}
+			}
+		});
+	}
+
+	function on_CtrlSave()
+	{
+		var postData;
+		var checkIPHosetName_val =  $('#checkIPHosetName').val();
+		postData="ControllerIpHostname="+checkIPHosetName_val;
+		$.ajax({
+				url: "<%=luci.dispatcher.build_url('admin/status/CTRLSET')%>",
+				data: postData,
+				beforeSend:function(){
+					var ret_CI=true;
+					var ret_DI=true;
+					if ((checkIPHosetName_val != "") &&(checkIPHosetName_val != "N/A") &&(checkIPHosetName_val != undefined)){
+						if (!isIpaddr(checkIPHosetName_val) && !isDomainName(checkIPHosetName_val)) {
+							alert("<%:Invalid IP or Hostname. Please enter again.%>");
+							ret_CI=false;
+						}
+					}
+					if ((ret_CI==true)&&(ret_DI==true)){
+						$('#loadingIMG').show();
+						return true;	
+					}else{
+						return false;
+					}
+				},
+				success:function(){
+					savechanges(1);
+				},
+				statusCode: {   
+					201: function(err) {
+						window.parent.document.location=window.parent.document.location.href;
+					}
+				}
+	        });
+	}	
+
+	$( document ).ready(function() {
+		getEtcHost();
+		refresh_controllerSettings();
+		$('#test_ac_btn').click(TestAddr);
+	});
+</script>
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:Controller Settings%></td>
+	</tr>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_ATKK_FW_VERSION') == '1' then -----#### SUPPORT_ATKK_FW_VERSION START ###
+%>
+	<tr class="title-option">
+		<td style="width:45%;"><label for="ControllerMode_CWM"><%:Mode%></label></td>
+		<td>
+			<input type="radio" name="ControllerMode" value="1" id="ControllerMode_CWM" checked/>
+			<label for="ControllerMode_CWM"><%:AWC%></label>
+			<input type="radio" name="ControllerMode" value="0" id="ControllerMode_WTP"/>
+			<label for="ControllerMode_WTP"><%:AT-MWSGP%></label>
+		</td>
+	</tr>
+<%
+else -----####  SUPPORT_ATKK_FW_VERSION else #### 
+%>
+	<tr class="title-option">
+		<td style="width:45%;"><label for=""><%:Controller Address(Auto detection if leave empty)%></label></td>
+		<td>
+			<input type="text" id="checkIPHosetName" value="<%=uci:get('apcontroller','capwap','force_ac') or ""%>"/>
+			<input type="button" id="test_ac_btn"  class="cbi-button"  value="<%:Test%>" />
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:45%;"><label for=""><%:Connection Status%></label></td>
+		<td >
+			<div id="ConnectStaInfo"><%:Disconnect%></div>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:45%;"><label for=""><%:Registration Check Code%></label></td>
+		<td>
+			<div id="RegiCheckCodeInfo"><%=md5_mac[1]%></div>
+		</td>
+	</tr>
+<% 
+end -----####  SUPPORT_ATKK_FW_VERSION END #### 
+%>		
+	</table>
+</fieldset>
+<%
+end-----####  SUPPORT_CAPWAP_CONTROL END #### 
+%>
+<fieldset class="cbi-section">
+<table>
+	<tr>
+		<td colspan="2" class="title"><%:SNMP Settings%></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><label for="SnmpEnable_enable"><%:Status%></label></td>
+		<td>
+			<input type="radio" name="SnmpEnable" value="1" id="SnmpEnable_enable" onclick="snmp_status(0)" checked/>
+			<label for="SnmpEnable_enable"><%:Enable%></label>
+			<input type="radio" name="SnmpEnable" value="0" id="SnmpEnable_disable" onclick="snmp_status(0)" />
+			<label for="SnmpEnable_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td><%:Contact%></td>
+		<td><input type="text" name="snmp_gen_contact" id="snmp_gen_contact" style="height:27px;" maxlength="255"></td>
+	</tr>
+	<tr class="title-option">
+		<td><%:Location%></td>
+		<td><input type="text" name="snmp_gen_loaction" id="snmp_gen_loaction" style="height:27px;" maxlength="255"></td>
+	</tr>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_SNMP_GEN_MAIN_PORT') == '1' then -----#### SUPPORT_SNMP_GEN_MAIN_PORT START ###
+%>	
+	<tr class="title-option">
+		<td><%:Port%></td>
+		<td><input type="text" name="snmp_gen_main_port" id="snmp_gen_main_port" style="height:27px;" maxlength="5"></td>
+	</tr>
+<%
+end -----#### SUPPORT_SNMP_GEN_MAIN_PORT END ###
+%> 		
+	<tr class="title-option">
+		<td><%:Community Name (Read Only)%></td>
+		<td><input type="text" name="snmp_gen_ro" id="snmp_gen_ro" style="height:27px;" maxlength="32"></td>
+	</tr>
+	<tr class="title-option">
+		<td><%:Community Name (Read Write)%></td>
+		<td><input type="text" name="snmp_gen_rw" id="snmp_gen_rw" style="height:27px;" maxlength="32"></td>
+	</tr>
+	<tr class="title-option">
+		<td><%:Trap Destination%></td><td></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Port%></td>
+		<td><input type="text" name="snmp_gen_port" id="snmp_gen_port" style="height:27px;" maxlength="5"></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:IP Address%></td>
+		<td><input type="text" name="snmp_gen_ip" id="snmp_gen_ip" style="height:27px;" maxlength="15"></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Community Name%></td>
+		<td><input type="text" name="snmp_gen_comm" id="snmp_gen_comm" style="height:27px;" maxlength="32"></td>
+	</tr>
+	<tr class="title-option">
+		<td><%:SNMPv3 Settings%></td><td></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle" style="width:40%;"><label for="snmp_gen_v3_enable">-&nbsp;<%:Status%></label></td>
+		<td>
+			<input type="radio" name="snmp_gen_v3" value="1" id="snmp_gen_v3_enable" onclick="snmp_status(1)" checked/>
+			<label for="snmp_gen_v3_enable"><%:Enable%></label>
+			<input type="radio" name="snmp_gen_v3" value="0" id="snmp_gen_v3_disable"  onclick="snmp_status(1)" />
+			<label for="snmp_gen_v3_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Username%></td>
+		<td><input type="text" name="snmp_v3_username" id="snmp_v3_username" style="height:27px;" maxlength="31">&nbsp;<%:(1-31 Characters)%></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Authorized Protocol%></td>
+		<td><select name="snmp_v3_auth_protocol" id="snmp_v3_auth_protocol" style="height:27px;" onchange="snmp_status(2)">
+			<option value="0"><%:MD5%></option>
+			<option value="1"><%:SHA%></option>			
+			<option value="2"><%:None%></option>
+			</select>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Authorized Key%></td>
+		<td><input type="text" name="snmp_v3_auth_key" id="snmp_v3_auth_key" style="height:27px;" maxlength="32">&nbsp;<%:(8-32 Characters)%></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Private Protocol%></td>
+		<td><select name="snmp_v3_auth_private_protocol" id="snmp_v3_auth_private_protocol" style="height:27px;" onchange="snmp_status(3)">
+			<option value="0"><%:DES%></option>
+			<option value="1"><%:None%></option>	
+			</select>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Private Key%></td>
+		<td><input type="text" name="snmp_v3_auth_private_key" id="snmp_v3_auth_private_key" style="height:27px;" maxlength="32">&nbsp;<%:(8-32 Characters)%></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Engine ID%></td>
+		<td><input type="text" name="snmp_v3_engine_id" id="snmp_v3_engine_id" style="height:27px;" maxlength="32"></td>
+	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:CLI Setting%></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><label for="cliEnable_enable"><%:Status%></label></td>
+		<td>
+			<input type="radio" name="cliEnable" value="1" id="cliEnable_enable" checked/>
+			<label for="cliEnable_enable"><%:Enable%></label>
+			<input type="radio" name="cliEnable" value="0" id="cliEnable_disable"/>
+			<label for="cliEnable_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	</table>
+</fieldset>
+<% if uci:get('functionlist','functionlist','SUPPORT_TELNET_SETTING') == '1' then %>
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:TELNET Setting%></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><label for="telnetEnable_enable"><%:Status%></label></td>
+		<td>
+			<input type="radio" name="telnetEnable" value="1" id="telnetEnable_enable" checked/>
+			<label for="telnetEnable_enable"><%:Enable%></label>
+			<input type="radio" name="telnetEnable" value="0" id="telnetEnable_disable"/>
+			<label for="telnetEnable_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	</table>
+</fieldset>
+<% end %>
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:SSH Setting%><img class="popper" data-popbox="SSH_Setting_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><label for="sshEnable_enable"><%:Status%></label></td>
+		<td>
+			<input type="radio" name="sshEnable" value="on" id="sshEnable_enable" checked/>
+			<label for="sshEnable_enable"><%:Enable%></label>
+			<input type="radio" name="sshEnable" value="off" id="sshEnable_disable"/>
+			<label for="sshEnable_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:HTTPS Settings%><img class="popper" data-popbox="HTTPS_Settings_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><label for="httpsEnable_enable"><%:Status%></label></td>
+		<td>
+			<input type="radio" name="httpsEnable" value="1" id="httpsEnable_enable" onclick="https_status()" checked/>
+			<label for="httpsEnable_enable"><%:Enable%></label>
+			<input type="radio" name="httpsEnable" value="0" id="httpsEnable_disable" onclick="https_status()"/>
+			<label for="httpsEnable_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><label for="httpsForward_enable"><%:HTTPS Forward%></label></td>
+		<td>
+			<input type="radio" name="httpsForward" value="1" id="httpsForward_enable" checked/>
+			<label for="httpsForward_enable"><%:Enable%></label>
+			<input type="radio" name="httpsForward" value="0" id="httpsForward_disable"/>
+			<label for="httpsForward_disable"><%:Disable%></label>
+		</td>
+	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:Email Alert%></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><%:Status%></td>
+		<td>
+			<input type="checkbox" name="email_enable" id="email_enable" value="1" onclick="email_alert_status()" checked><label>&nbsp;&nbsp;<%:Enable%></label>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:From%></td>
+		<td><input type="text" name="em_from" id="em_from" style="height:27px;"></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:To%></td>
+		<td><input type="text" name="em_to" id="em_to" style="height:27px;"></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Subject%></td>
+		<td><input type="text" name="em_subject" id="em_subject" style="height:27px;"></td>
+	</tr>
+	<tr class="title-option">
+		<td><%:Email Account%></td>
+		<td></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Username%></td>
+		<td><input type="text" name="em_username" id="em_username" style="height:27px;"></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Password%></td>
+		<td><input type="password" name="em_password" id="em_password" style="height:27px;">&nbsp;
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="Reveal/hide password" onclick="changeInputType('em_password')" />
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:SMTP Server%></td>
+		<td>
+		<input type="text" name="em_smtp_server" id="em_smtp_server" style="height:27px;">&nbsp;
+		<%:Port:%><input type="text" name="em_smtp_port" id="em_smtp_port" style="height:27px;width:70px;" maxlength="5">
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Security Mode%></td>
+		<td><select name="em_security" id="em_security" style="height:27px;" onchange="defServPort()">
+			<option value="0"><%:None%></option>
+			<option value="1"><%:SSL/TLS%></option>			
+			<option value="2"><%:STARTTLS%></option>
+			</select>
+			<input type="button" name="em_sendEmail" class="cbi-button" id="sendEmail" value="<%:Send Test Mail%>" onclick="savechanges(2)" style="float:right;">
+		</td>
+	</tr>
+</table>
+</fieldset>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_PING_WATCHDOG') == '1' then -----#### SUPPORT_PING_WATCHDOG START ###
+%>
+<fieldset class="cbi-section">
+	<table>
+	<tr>
+		<td colspan="2" class="title"><%:Ping Watchdog%></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:40%;"><%:Status%></td>
+		<td>
+			<input type="checkbox" name="ping_enable" id="ping_enable" value="1" onclick="ping_watchdog_status()" checked><label>&nbsp;&nbsp;<%:Enable%></label>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:IP Address to Ping%></td>
+		<td>
+			<input type="text" myid="ping_watchdog_ip" name="ping_watchdog_ip" id="ping_watchdog_ip" maxlength="63" style="height:27px;"/>&nbsp;<span style="color:#FF0000;" id=ip_info></span>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle">-&nbsp;<%:Failure Count to Reboot%></td>
+		<td>
+			<input type="text" name="ping_watchdog_failure_count" id="ping_watchdog_failure_count" maxlength="3" style="height:27px;">&nbsp;<span style="color:#FF0000;" id=count_info></span>
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle"><%:Ping Interval%></td>
+		<td><input type="text" value="300" id="ping_watchdog_interval" myid="ping_watchdog_interval" name="ping_watchdog_interval"/ maxlength="4" style="height:27px;">&nbsp;<%:Sec%></td>
+	</tr>
+	<tr class="title-option">
+		<td class="subtitle"><%:Startup Delay%></td>
+		<td><input type="text" value="300" id="ping_watchdog_delay" myid="ping_watchdog_delay" name="ping_watchdog_delay" maxlength="5" style="height:27px;"/>&nbsp;<%:Sec%>&nbsp;<span style="color:#FF0000;" id=delay_info></span></td>
+		<input type="hidden" id="pingStatus" name="pingStatus"/>
+	</tr>
+	</table>
+</fieldset>
+<%
+end -----#### SUPPORT_PING_WATCHDOG END ###
+%>
+<div class="cbi-page-actions">
+	<input type="hidden" id="submitType" name="submitType"/>
+	<input type="hidden" id="emailStatus" name="emailStatus"/>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_CAPWAP_CONTROL') == '1')  then -----#### SUPPORT_CAPWAP_CONTROL START ###
+%>
+	<input class="cbi-button cbi-button-apply" onclick="on_CtrlSave()" type="button" name="cbi.apply" myid="button_save" value="<%:Apply%>">&nbsp;<span class="btn_desc"><%:Apply saved settings to take effect %></span>
+<%else%>
+	<input class="cbi-button cbi-button-apply" onclick="return savechanges(1)" type="submit" name="cbi.apply" myid="button_save" value="<%:Apply%>"&nbsp;<span class="btn_desc"><%:Apply saved settings to take effect %></span>
+<%end%>
+</div>
+</form>
+</body>
+<%+footer%>

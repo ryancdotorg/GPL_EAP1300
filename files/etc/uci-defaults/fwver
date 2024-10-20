@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Copyright (C) 2010 OpenWrt.org
+#
+
+uci set sysProductInfo.model.firmwareVersion="$(grep build /etc/version | awk '{ print $1 }')"
+uci commit sysProductInfo
+
+exit 0

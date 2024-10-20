@@ -1,0 +1,9 @@
+Package: ezCom
+Version: 0.5.6
+Depends: libc
+Source: SENAO/package/ezCom
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 12368
+Description:  EzCom

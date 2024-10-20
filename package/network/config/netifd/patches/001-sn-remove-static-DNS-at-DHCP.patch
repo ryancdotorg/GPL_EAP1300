@@ -1,0 +1,22 @@
+Index: netifd-2013-07-16/interface.c
+===================================================================
+--- netifd-2013-07-16.orig/interface.c	2014-09-18 20:47:13.060401593 +0800
++++ netifd-2013-07-16/interface.c	2014-09-18 20:49:05.464401589 +0800
+@@ -553,6 +553,8 @@
+ 	if ((cur = tb[IFACE_ATTR_PROTO]))
+ 		proto_name = blobmsg_data(cur);
+ 
++	D(INTERFACE, "======================== proto=%s\n",proto_name);
++
+ 	proto_attach_interface(iface, proto_name);
+ 
+ 	iface->autostart = blobmsg_get_bool_default(tb[IFACE_ATTR_AUTO], true);
+@@ -561,7 +563,7 @@
+ 	iface->proto_ip.no_dns =
+ 		!blobmsg_get_bool_default(tb[IFACE_ATTR_PEERDNS], true);
+ 
+-	if ((cur = tb[IFACE_ATTR_DNS]))
++	if ((cur = tb[IFACE_ATTR_DNS]) && (!strcmp(proto_name,"static")))
+ 		interface_add_dns_server_list(&iface->config_ip, cur);
+ 
+ 	if ((cur = tb[IFACE_ATTR_DNS_SEARCH]))

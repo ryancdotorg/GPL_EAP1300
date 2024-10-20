@@ -1,0 +1,23 @@
+{
+	"Header": {
+		"source": "syseye",
+		"type": 99
+	},
+	"Data": {
+		"Response": {
+			"status": 0,
+			"message": "status is ok"
+		},
+		"CFG_RAM": {
+			"Action": [
+				{
+					"js_idx_act_name": "act_linkcheck",
+					"key": 2,
+					"status": 0,
+					"act_name": "act_linkcheck"
+				}
+			]
+		}
+	}
+}
+

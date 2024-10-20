@@ -1,0 +1,8 @@
+#!/bin/sh /etc/rc.common
+
+TP=20
+
+start() {
+	ifconfig eth1 up;
+	ifconfig eth1 192.168.1.1
+}

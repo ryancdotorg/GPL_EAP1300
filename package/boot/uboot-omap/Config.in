@@ -1,0 +1,298 @@
+define Package/uboot-omap-am335x_evm_spiboot/config
+if PACKAGE_uboot-omap-am335x_evm_spiboot
+menu "Senao definitions"
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_RECOVERY_MODE
+    bool "Use recovery mode"
+    default y
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_RECOVERY_MODE_DISABLE_WAN
+    bool "disable wan"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_RECOVERY_MODE
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_NOR2NAND_RECOVERY_MODE
+    bool "Use nor2nand recovery mode"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_NAND2NAND_RECOVERY_MODE
+    bool "nand to nand recovery"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_NOR_HAS_FW2
+    bool "Dual image for nor"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_NORnNAND_HAS_FW2
+    bool "Dual image for norplusnand"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_NAND_HAS_FW2
+    bool "Dual image for nand"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_HAS_OPERATION_SELECTION
+    bool "Operation Selection"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_HAS_RMGMT
+    bool "RMGMT Support"
+    default "n"
+	depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_HAS_RMGMT_DBG
+    bool "RMGMT Debug Support"
+    default "n"
+	depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_HAS_RMGMT
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_RMGMT_LED1
+    string "RMGMT LED 1"
+    default "POWER1_LED"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_HAS_RMGMT
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_RMGMT_LED2
+    string "RMGMT LED 2"
+    default "WLAN_2G_LED"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_HAS_RMGMT
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_GPIO_BUTTON_TESTING
+    bool "Button gpio test"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_GPIO_LED_TESTING
+    bool "LED gpio test"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_WATCHDOG_TESTING
+    bool "WATCHDOG test"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_LED_INIT
+    bool "LED init"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_LED_INIT_ON
+    bool "LED init on"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_INIT_ON_LED1
+    string "Init On LED 1"
+    default "POWER2_LED"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_LED_INIT_ON
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_INIT_ON_LED1_ACTIVE_LOW
+    bool "Init On LED1 Active Low"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_LED_INIT_ON
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_DUAL_I2C_BUS
+    bool "dual i2c bus support"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_I2C_LED_TESTING
+    bool "i2c led moduel test"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_DUAL_I2C_BUS
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_I2C_RTC_TESTING
+    bool "i2c rtc moduel test"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_DUAL_I2C_BUS
+    
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_I2C_TPM_TESTING
+    bool "i2c tpm moduel test"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_DUAL_I2C_BUS
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_ENS620EXT_FIX_CRASH
+    bool "Fix ens620ext crash"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_RECOVERY_MODE
+    
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_PSE_DETECT_MODE
+    bool "pse detect mode feature"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_UBOOTENV_DEFAULT_VALUES_FOR_DDNS_UID
+    bool "U-Boot env default values for EnGenius DDNS & UID"
+    default n
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_CONFIG_UID_ACCOUNT
+    string "uid account"
+    default "00000000000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_UBOOTENV_DEFAULT_VALUES_FOR_DDNS_UID
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_CONFIG_DDNS_PASSWORD
+    string "ddns password"
+    default "000000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_UBOOTENV_DEFAULT_VALUES_FOR_DDNS_UID
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_CONFIG_DDNS_DOMAIN
+    string "ddns domain"
+    default "0000000000000000000000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot-SENAO_UBOOTENV_DEFAULT_VALUES_FOR_DDNS_UID
+
+endmenu
+
+menu "Senao configurations"
+comment ""
+comment "leave it blank for undefined variable"
+comment ""
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-UBOOT_CONFIG_TARGET
+    string "U-Boot config target"
+    default "omap"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_MODEL_NAME
+    string "Senao model name"
+    default "EIG9100"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_UBOOT_VER
+    string "U-Boot Version"
+    default "1.0.0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_CONFIG_IPADDR
+    string "device ip"
+    default "192.168.1.1"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_CONFIG_SERVERIP
+    string "server ip"
+    default "192.168.1.10"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_CONFIG_ETHADDR
+    string "ethernet address"
+    default "00:aa:bb:cc:dd:10"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_SN
+    string "Serial number"
+    default "000000001"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_HW_VER
+    string "Hardware version"
+    default "1.00"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_PRO_ID
+    string "CONFIG_PRO_ID"
+    default "000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_COUNTRY
+    string "Country code"
+    default "000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_DOMAIN
+    string "CONFIG_DOMAIN"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_OP_MODE
+    string "opmode"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_WANADDR
+    string "Wan macaddr"
+    default "00:aa:bb:cc:dd:11"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_WLANADDR
+    string "Wan macaddr"
+    default "00:aa:bb:cc:dd:12"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_HW_ID
+    string "Hardware ID"
+    default "00000000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_DEBUG
+    string "Debug"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_FWADDR
+    string "Firmware macaddr"
+    default "00:aa:bb:cc:dd:14"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_ATHADDR
+    string "ATH macaddr"
+    default "00:aa:bb:cc:dd:13"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_APP_PART
+    string "Apps partition"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_OLED_ON
+    string "OLED_ON"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_DDWRT_SW
+    string "CONFIG_DDWRT_SW"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_SN_EXTRA
+    string "CONFIG_SN_EXTRA"
+    default "00000000000000000000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_LANGUAGE_CODE
+    string "LANGUAGE_CODE"
+    default "00"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_SERVICE_TAG
+    string "CONFIG_SERVICE_TAG"
+    default "000000000000000"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_BUNDLE_AP_MAC
+    string "CONFIG_BUNDLE_AP_MAC"
+    default "00:aa:bb:cc:dd:15"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_PRODUCT_FILENAME
+    string "firmware product name"
+    default ""
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_BOOTARGS
+    string "set console=ttySx,115200n8"
+    default "ttyS0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+config PACKAGE_uboot-omap-am335x_evm_spiboot-MAKEOPTS_SENAO_ENABLE_FAILSAFE
+    string "FAILSAFE_MD5SUM_CHECK"
+    default "0"
+    depends on PACKAGE_uboot-omap-am335x_evm_spiboot
+
+endmenu
+endif
+endef

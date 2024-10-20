@@ -1,0 +1,24 @@
+--- a/networking/ntpd.c
++++ b/networking/ntpd.c
+@@ -768,6 +768,7 @@
+ resolve_peer_hostname(peer_t *p, int loop_on_fail)
+ {
+ 	len_and_sockaddr *lsa;
++	int count=0;
+ 
+  again:
+ 	lsa = host2sockaddr(p->p_hostname, 123);
+@@ -779,6 +780,13 @@
+ //well... in which case, what is a good value for loop_on_fail?
+ 		//if (--loop_on_fail == 0)
+ 		//	xfunc_die();
++		if (count >=5)
++		{
++			free(p->p_lsa);
++			free(p->p_dotted);
++			xfunc_die();
++		}
++		count++;
+ 		sleep(5);
+ 		goto again;
+ 	}

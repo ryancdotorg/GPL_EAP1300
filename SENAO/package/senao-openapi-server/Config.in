@@ -1,0 +1,8 @@
+menu "SENAO Openapi Server related setting"
+depends on PACKAGE_senao-openapi-server
+
+config SENAO_OPENAPI_SERVER_SUPPORT_APP_INTERFACE
+	bool "Support app interface"
+	help
+	  Support app interface.
+endmenu

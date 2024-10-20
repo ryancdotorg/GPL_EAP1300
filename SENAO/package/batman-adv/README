@@ -1,0 +1,66 @@
+===== 1. To add/remove feature, modify the below section in Makefile
+
+ 49 MAKE_BATMAN_ADV_ARGS += \
+ 50     CROSS_COMPILE="$(TARGET_CROSS)" \
+ 51     KERNELPATH="$(LINUX_DIR)" \
+ 52     ARCH="$(LINUX_KARCH)" \
+ 53     PATH="$(TARGET_PATH)" \
+ 54     SUBDIRS="$(PKG_BUILD_DIR)" \
+ 55     PWD="$(PKG_BUILD_DIR)" \
+ 56     LINUX_VERSION="$(LINUX_VERSION)" \
+ 57     CONFIG_BATMAN_ADV_DEBUG=$(if $(CONFIG_KMOD_BATMAN_ADV_DEBUG_LOG),y,n) \
+ 58     CONFIG_BATMAN_ADV_BLA=$(if $(CONFIG_KMOD_BATMAN_ADV_BLA),y,n) \
+ 59     CONFIG_BATMAN_ADV_DAT=$(if $(CONFIG_KMOD_BATMAN_ADV_DAT),y,n) \
+ 60     CONFIG_BATMAN_ADV_NC=$(if $(CONFIG_KMOD_BATMAN_ADV_NC),y,n) \
+ 61     REVISION="" all
+
+ 181 config KMOD_BATMAN_ADV_DEBUG_LOG
+ 182     bool "enable verbose debug logging"
+ 183     depends on PACKAGE_kmod-batman-adv
+ 184     default n
+ 185
+ 186 config KMOD_BATMAN_ADV_BLA
+ 187     bool "enable bridge loop avoidance"
+ 188     depends on PACKAGE_kmod-batman-adv
+ 189     default y
+ 190
+ 191 config KMOD_BATMAN_ADV_DAT
+ 192     bool "enable distributed arp table"
+ 193     depends on PACKAGE_kmod-batman-adv
+ 194     default y
+ 195
+ 196 config KMOD_BATMAN_ADV_NC
+ 197     bool "enable network coding [requires promisc mode support]"
+ 198     depends on PACKAGE_kmod-batman-adv
+ 199     default n
+ 200
+ 201 config KMOD_BATMAN_ADV_BATCTL
+ 202     bool "enable batctl"
+ 203     depends on PACKAGE_kmod-batman-adv
+ 204     default y
+ 205     help
+ 206       batctl is a more intuitive managment utility for B.A.T.M.A.N.-Advanced.
+ 207       It is an easier method for configuring batman-adv and
+ 208       provides some additional tools for debugging as well.
+ 209 endef
+
+=====2. version control
+
+ 168 define Package/kmod-$(PKG_NAME)/override_version
+ 169 choice
+ 170     prompt "overwrite package version"
+ 171     default $(PKG_VERSION)
+ 172     depends on PACKAGE_kmod-$(PKG_NAME)
+ 173
+ 174     config $(PKG_NAME)_2013.4.0
+ 175         bool 2013.4.0
+ 176         default n
+ 177         help
+ 178             $(PKG_NAME)_2013.4.0
+ 179 endchoice
+
+ 211 ifdef CONFIG_$(PKG_NAME)_2013.4.0
+ 212     PKG_VERSION:=2013.4.0
+ 213     BATCTL_VERSION:=2013.4.0
+ 214 endif
+

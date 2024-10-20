@@ -1,0 +1,279 @@
+diff -Nura pjproject-2.7.2.org/pjsip-apps/src/pjsua/pjsua_app.c pjproject-2.7.2/pjsip-apps/src/pjsua/pjsua_app.c
+--- pjproject-2.7.2.org/pjsip-apps/src/pjsua/pjsua_app.c	2018-05-15 15:53:26.294358908 +0800
++++ pjproject-2.7.2/pjsip-apps/src/pjsua/pjsua_app.c	2018-05-16 13:57:39.339727790 +0800
+@@ -19,6 +19,8 @@
+  */
+ #include "pjsua_app.h"
+ 
++#include <netinet/in.h>
++
+ #define THIS_FILE	"pjsua_app.c"
+ 
+ //#define STEREO_DEMO
+@@ -732,6 +734,41 @@
+ 
+ }
+ 
++#define MAX_LORA_BUF_MSG 64
++#define IM_LORA_MSG_PORT 7202
++struct lora_msg
++{
++       unsigned int msg_0;
++       unsigned int msg_1;
++       unsigned int msg_2;
++       unsigned char buf[MAX_LORA_BUF_MSG];
++};
++
++
++int send_data_im_socket(struct lora_msg *msg)
++{
++          int ret;
++  
++          struct sockaddr_in addr;
++   
++          int pj_lora_msg_fd = socket (PF_INET, SOCK_DGRAM, 0);
++          addr.sin_family = AF_INET;
++          addr.sin_port = htons(IM_LORA_MSG_PORT);
++          inet_aton("127.0.0.1", &addr.sin_addr);
++  
++          ret = sendto(pj_lora_msg_fd, msg, sizeof(struct lora_msg), 0, (struct sockaddr *)&addr, sizeof(addr));
++  
++          if(ret <= 0)
++          {
++                  perror("[lora logger ] write msg to pjsip error:");
++                  return -1;
++          }
++  
++          close(pj_lora_msg_fd);
++  
++          printf(" dev [%08x] send lora message to pjsip [%s]succes \n ", msg->msg_0, msg->buf);
++          return 0;
++}
+ 
+ /**
+  * Incoming IM message (i.e. MESSAGE request)!
+@@ -745,6 +782,16 @@
+     PJ_UNUSED_ARG(to);
+     PJ_UNUSED_ARG(contact);
+     PJ_UNUSED_ARG(mime_type);
++	
++	struct lora_msg msg;
++
++	memset(&msg, 0, sizeof(struct lora_msg));
++
++	msg.msg_2 = (int)text->slen;
++	memcpy(&msg.buf, text->ptr, (int)text->slen);
++	
++	
++	send_data_im_socket(&msg);
+ 
+     PJ_LOG(3,(THIS_FILE,"MESSAGE from %.*s: %.*s (%.*s)",
+ 	      (int)from->slen, from->ptr,
+diff -Nura pjproject-2.7.2.org/pjsip-apps/src/pjsua/pjsua_app_legacy.c pjproject-2.7.2/pjsip-apps/src/pjsua/pjsua_app_legacy.c
+--- pjproject-2.7.2.org/pjsip-apps/src/pjsua/pjsua_app_legacy.c	2018-05-15 15:53:26.290359010 +0800
++++ pjproject-2.7.2/pjsip-apps/src/pjsua/pjsua_app_legacy.c	2018-05-16 10:30:00.801511219 +0800
+@@ -20,7 +20,9 @@
+ 
+ #include <pjsua-lib/pjsua.h>
+ #include "pjsua_app_common.h"
+-
++#include <sys/types.h>          /* See NOTES */
++#include <sys/socket.h>
++#include <netinet/in.h>
+ #define THIS_FILE	"pjsua_app_legacy.c"
+ 
+ 
+@@ -1688,7 +1690,134 @@
+     }
+ }
+ 
++/*   LORA DOME CODE */
++
++
++
++int lora_sock_fd = -1;
++#define MAX_LORA_BUF_MSG 64
++#define LORA_MSG_PORT 7200
++struct lora_msg
++{
++	unsigned int msg_0;
++	unsigned int msg_1;
++	unsigned int msg_2;
++	unsigned char buf[MAX_LORA_BUF_MSG];
++};
++
++static void send_lora_as_instant_message(char *loratext)
++{
++    //char *uri = NULL;
++	char uri[64] = {"sip:12@10.42.0.10"};
++    /* i is for call index to send message, if any */
++    int i = -1;
++    input_result result;
++    char buf[128];
++    char text[128];
++    pj_str_t tmp;
++    
++	tmp = pj_str(loratext);
++#if 0
++		pj_str_t tmp_uri = pj_str(uri);
++		pjsua_im_typing(current_acc, &tmp_uri, PJ_TRUE, NULL);
++#else
++	    pj_str_t tmp_uri = pj_str(uri);
++	    pjsua_im_typing(current_acc, &tmp_uri, PJ_FALSE, NULL);
++#endif
++
++#if 0
++	pjsua_call_send_im(i, NULL, &tmp, NULL, NULL);
++#else
++      pjsua_im_send(current_acc, &tmp_uri, NULL, &tmp, NULL, NULL);
++#endif
++    
++}
++
++static void add_lora_default_account(pjsua_transport_config *rtp_cfg)
++{
++    char id[80] = {"sip:10@10.42.0.1"}, registrar[80] = {"sip:10@10.42.0.1"}, realm[80] = {"*"}, uname[80] = {"10"}, passwd[30] = {"abc123"};
++    pjsua_acc_config acc_cfg;
++    pj_status_t status;
++#if  0
++    if (!simple_input("Your SIP URL:", id, sizeof(id)))
++	return;
++    if (!simple_input("URL of the registrar:", registrar, sizeof(registrar)))
++	return;
++    if (!simple_input("Auth Realm:", realm, sizeof(realm)))
++	return;
++    if (!simple_input("Auth Username:", uname, sizeof(uname)))
++	return;
++    if (!simple_input("Auth Password:", passwd, sizeof(passwd)))
++	return;
++#endif
++    pjsua_acc_config_default(&acc_cfg);
++    acc_cfg.id = pj_str(id);
++    acc_cfg.reg_uri = pj_str(registrar);
++    acc_cfg.cred_count = 1;
++    acc_cfg.cred_info[0].scheme = pj_str("Digest");
++    acc_cfg.cred_info[0].realm = pj_str(realm);
++    acc_cfg.cred_info[0].username = pj_str(uname);
++    acc_cfg.cred_info[0].data_type = 0;
++    acc_cfg.cred_info[0].data = pj_str(passwd);
++
++    acc_cfg.rtp_cfg = *rtp_cfg;
++    app_config_init_video(&acc_cfg);
++
++    status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
++    if (status != PJ_SUCCESS) {
++	pjsua_perror(THIS_FILE, "Error adding new account", status);
++    }
++}
++
++int lora_sock_open(void)
++{
++	struct sockaddr_in addr;
++	int sipRxSocketFd;
++
++        sipRxSocketFd = socket(AF_INET, SOCK_DGRAM, 0);
++
++	bzero(&addr, sizeof(addr));
++        addr.sin_family = AF_INET;
++        addr.sin_port = htons(LORA_MSG_PORT);
++        inet_aton("127.0.0.1", &addr.sin_addr);
++        if(bind(sipRxSocketFd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)))
++        {
++        	close(sipRxSocketFd);
++                perror("sipRxSocketFd error = \n");
++                sipRxSocketFd = -1;
++        }
++        return sipRxSocketFd;
++
++
++}
++int read_lora_sock_msg(int socketfd, struct lora_msg *msg, int msg_size)
++{
++	struct timeval read_timeout;
++	struct sockaddr_in addr;
++	char buffer[256];
++	int addr_len = sizeof(struct sockaddr_in);
++	int len = 0;
++
++	read_timeout.tv_sec = 1;
++	read_timeout.tv_usec = 0;
++	setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
++
++	bzero(buffer, sizeof(buffer));
++        len = recvfrom(socketfd, msg, sizeof(struct lora_msg), 0,
++		(struct sockaddr *)&addr ,&addr_len);
++
++	if(len > 0)
++	{
++        	printf("Received a string from client %s, string is: %s\n",
+ 
++                inet_ntoa(addr.sin_addr), buffer);
++	}
++	else
++	{
++//		printf("read time out \n");
++	}
++	return len;
++}
+ /*
+  * Main "user interface" loop.
+  */
+@@ -1696,9 +1825,41 @@
+ {
+     char menuin[80];
+     char buf[128];
+-
++	struct lora_msg rx_m;
+     keystroke_help();
+ 
++
++
++	lora_sock_fd = lora_sock_open();
++
++	if(lora_sock_fd <= 0)
++	{
++		printf("OPEN lora rx socket error!! \n");
++	    	goto on_exit;
++	}
++
++	printf("------------- lora_sock_fd [%d] -------------\n", lora_sock_fd);
++
++	//lora_sock_init(lora_sock_fd, LORA_MSG_PORT);
++
++
++	printf("[PJSIP] run lora message demo 2018-0515-1 .......\n");
++	add_lora_default_account(&app_config.rtp_cfg);
++	while(1)	
++	{
++		if(read_lora_sock_msg(lora_sock_fd, &rx_m, sizeof(struct lora_msg)) > 0)
++		{
++			printf(" -------- pjsip received lora new mwg --------- \n");
++			printf(" device address [%08x]  \n", rx_m.msg_0);
++			printf(" message ceq    [%d]  \n", rx_m.msg_1);
++			printf(" message length [%d]  \n", rx_m.msg_2);
++			printf(" [%s] \n", rx_m.buf);
++			printf(" -------------------------------------  --------- \n");
++			send_lora_as_instant_message(rx_m.buf);
++		}
++
++	}
++#if 0	
+     for (;;) {
+ 
+ 	printf(">>> ");
+@@ -1941,13 +2102,14 @@
+ 
+ 	default:
+ 	    if (menuin[0] != '\n' && menuin[0] != '\r') {
++		printf("############################ Richard test  ################### \n");
+ 		printf("Invalid input %s", menuin);
+ 	    }
+ 	    keystroke_help();
+ 	    break;
+ 	}
+     }
+-
++#endif
+ on_exit:
+     ;
+ }

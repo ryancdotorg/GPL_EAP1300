@@ -1,0 +1,40 @@
+Index: dropbear-2019.78/svr-chansession.c
+===================================================================
+--- dropbear-2019.78.orig/svr-chansession.c
++++ dropbear-2019.78/svr-chansession.c
+@@ -703,6 +703,35 @@ static int sessioncommand(struct Channel
+ 		svr_pubkey_set_forced_command(chansess);
+ 	}
+ 
++	/* take public key option 'command' into account */
++	svr_pubkey_set_forced_command(chansess);
++
++	if(access("/bin/login_root.sh", 0 ) == 0 )
++	{
++		// if file exist... Support dropbear multiple account function
++		if(strcmp(ses.authstate.pw_name, "root")==0)
++		{
++			if(NULL == chansess->cmd || 10 > strlen(chansess->cmd))
++			{
++				chansess->cmd = m_strdup("/bin/login_root.sh");
++			}
++		}
++		else
++		{
++			if(NULL == chansess->cmd || 10 > strlen(chansess->cmd))
++			{
++				chansess->cmd = m_strdup("/bin/login_admin.sh");
++			}
++		}
++	}
++	else
++	{
++		//old method
++		if(NULL == chansess->cmd || 10 > strlen(chansess->cmd))
++		{
++			chansess->cmd = m_strdup("/bin/login_ssh.sh");
++		}
++	}
+ 
+ #if LOG_COMMANDS
+ 	if (chansess->cmd) {

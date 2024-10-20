@@ -1,0 +1,28 @@
+Index: procd-2015-10-29.1/service/instance.c
+===================================================================
+--- procd-2015-10-29.1.orig/service/instance.c
++++ procd-2015-10-29.1/service/instance.c
+@@ -909,14 +909,23 @@ instance_init(struct service_instance *i
+ void instance_dump(struct blob_buf *b, struct service_instance *in, int verbose)
+ {
+ 	void *i;
++	long runtime;
++	struct timespec tp;
+ 
+ 	if (!in->valid)
+ 		return;
+ 
+ 	i = blobmsg_open_table(b, in->name);
+ 	blobmsg_add_u8(b, "running", in->proc.pending);
++
+ 	if (in->proc.pending)
++	{
++		clock_gettime(CLOCK_MONOTONIC, &tp);
++		runtime = tp.tv_sec - in->start.tv_sec;
++		blobmsg_add_u64(b, "runtime", runtime);
+ 		blobmsg_add_u32(b, "pid", in->proc.pid);
++	}
++
+ 	blobmsg_add_blob(b, in->command);
+ 
+ 	if (!avl_is_empty(&in->errors.avl)) {

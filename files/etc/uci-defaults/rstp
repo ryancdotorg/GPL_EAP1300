@@ -1,0 +1,13 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+        del ucitrack.@rstp[-1]
+        del_list ucitrack.@network[0].affects=rstp
+        add ucitrack rstp
+        set ucitrack.@rstp[0].init=rstp
+        add_list ucitrack.@network[0].affects=rstp
+        commit ucitrack
+EOF
+
+exit 0
+

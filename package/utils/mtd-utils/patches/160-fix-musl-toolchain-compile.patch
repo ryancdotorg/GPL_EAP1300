@@ -1,0 +1,111 @@
+Index: mtd-utils-1.4.5/include/mtd/mtd-user.h
+===================================================================
+--- mtd-utils-1.4.5.orig/include/mtd/mtd-user.h
++++ mtd-utils-1.4.5/include/mtd/mtd-user.h
+@@ -25,6 +25,12 @@
+ /* This file is blessed for inclusion by userspace */
+ #include <mtd/mtd-abi.h>
+ 
++#if TOOLCHAIN_MUSL
++#ifndef loff_t
++#define loff_t off_t
++#endif
++#endif
++
+ typedef struct mtd_info_user mtd_info_t;
+ typedef struct erase_info_user erase_info_t;
+ typedef struct region_info_user region_info_t;
+Index: mtd-utils-1.4.5/lib/libfec.c
+===================================================================
+--- mtd-utils-1.4.5.orig/lib/libfec.c
++++ mtd-utils-1.4.5/lib/libfec.c
+@@ -45,6 +45,9 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#if TOOLCHAIN_MUSL
++#include <sys/types.h>
++#endif
+ 
+ /*
+  * stuff used for testing purposes only
+Index: mtd-utils-1.4.5/mkfs.ubifs/hashtable/hashtable_itr.c
+===================================================================
+--- mtd-utils-1.4.5.orig/mkfs.ubifs/hashtable/hashtable_itr.c
++++ mtd-utils-1.4.5/mkfs.ubifs/hashtable/hashtable_itr.c
+@@ -34,6 +34,7 @@ hashtable_iterator(struct hashtable *h)
+     return itr;
+ }
+ 
++#if !TOOLCHAIN_MUSL
+ /*****************************************************************************/
+ /* key      - return the key of the (key,value) pair at the current position */
+ /* value    - return the value of the (key,value) pair at the current position */
+@@ -45,6 +46,7 @@ hashtable_iterator_key(struct hashtable_
+ void *
+ hashtable_iterator_value(struct hashtable_itr *i)
+ { return i->e->v; }
++#endif
+ 
+ /*****************************************************************************/
+ /* advance - advance the iterator to the next element
+Index: mtd-utils-1.4.5/mkfs.ubifs/hashtable/hashtable_itr.h
+===================================================================
+--- mtd-utils-1.4.5.orig/mkfs.ubifs/hashtable/hashtable_itr.h
++++ mtd-utils-1.4.5/mkfs.ubifs/hashtable/hashtable_itr.h
+@@ -28,7 +28,11 @@ hashtable_iterator(struct hashtable *h);
+ /* hashtable_iterator_key
+  * - return the value of the (key,value) pair at the current position */
+ 
++#if TOOLCHAIN_MUSL
++static inline void *
++#else
+ extern inline void *
++#endif
+ hashtable_iterator_key(struct hashtable_itr *i)
+ {
+     return i->e->k;
+@@ -37,7 +41,11 @@ hashtable_iterator_key(struct hashtable_
+ /*****************************************************************************/
+ /* value - return the value of the (key,value) pair at the current position */
+ 
++#if TOOLCHAIN_MUSL
++static inline void *
++#else
+ extern inline void *
++#endif
+ hashtable_iterator_value(struct hashtable_itr *i)
+ {
+     return i->e->v;
+Index: mtd-utils-1.4.5/recv_image.c
+===================================================================
+--- mtd-utils-1.4.5.orig/recv_image.c
++++ mtd-utils-1.4.5/recv_image.c
+@@ -4,7 +4,11 @@
+ #define _BSD_SOURCE	/* struct ip_mreq */
+ 
+ #include <errno.h>
++#if TOOLCHAIN_MUSL
++#ifdef __GLIBC__
+ #include <error.h>
++#endif
++#endif
+ #include <stdio.h>
+ #include <netdb.h>
+ #include <stdlib.h>
+Index: mtd-utils-1.4.5/serve_image.c
+===================================================================
+--- mtd-utils-1.4.5.orig/serve_image.c
++++ mtd-utils-1.4.5/serve_image.c
+@@ -3,7 +3,11 @@
+ 
+ #include <time.h>
+ #include <errno.h>  	
++#if TOOLCHAIN_MUSL
++#ifdef __GLIBC__
+ #include <error.h> 	
++#endif
++#endif
+ #include <netdb.h> 	
+ #include <stdio.h> 	
+ #include <stdlib.h> 	

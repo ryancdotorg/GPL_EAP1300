@@ -1,0 +1,50 @@
+{
+    "CFG_RAM": {
+        "wireless": {
+            "clients": []
+        },
+        "EZMCloud": {
+            "wireless": {
+                "clients": []
+            }
+        },
+        "WebScoket": {
+            "wireless": {
+                "clients": []
+            }
+        },
+        "Action": [
+            {
+                "key": 3,
+                "status": 1,
+                "act_name": "act_linkcheck",
+                "Connectivity": [
+                    {
+                        "protocol": "phylink",
+                        "status": 1
+                    },
+                    {
+                        "protocol": "arpdup",
+                        "status": 1
+                    },
+                    {
+                        "protocol": "icmp",
+                        "status": 1
+                    },
+                    {
+                        "protocol": "dns",
+                        "status": 304
+                    },
+                    {
+                        "protocol": "http",
+                        "status": 304
+                    },
+                    {
+                        "protocol": "https",
+                        "status": 304
+                    }
+                ]
+            }
+        ]
+    }
+}

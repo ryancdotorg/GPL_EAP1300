@@ -1,0 +1,14 @@
+Index: netifd-2013-07-16/proto.c
+===================================================================
+--- netifd-2013-07-16.orig/proto.c
++++ netifd-2013-07-16/proto.c
+@@ -245,6 +245,9 @@ parse_gateway_option(struct interface *i
+ 	const char *str = blobmsg_data(attr);
+ 	int af = v6 ? AF_INET6 : AF_INET;
+ 
++        if (!strcmp(str, ""))
++		    str = v6 ? "::" : "0.0.0.0";
++
+ 	route = calloc(1, sizeof(*route));
+ 	if (!inet_pton(af, str, &route->nexthop)) {
+ 		interface_add_error(iface, "proto", "INVALID_GATEWAY", &str, 1);

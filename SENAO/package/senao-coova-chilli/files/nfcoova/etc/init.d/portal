@@ -1,0 +1,1427 @@
+#!/bin/sh /etc/rc.common
+START=99
+STOP=89
+. /etc/functions.sh
+. /etc/sn-udhcpc-libs.sh
+. /etc/chilli/chilli-libs.sh
+. /etc/chilli/fbwifi-libs.sh
+
+chilli_dir=/etc/chilli
+
+EXTRA_COMMANDS="boost_reload update_cert boost_restart"
+
+is_boost_reload=0
+[ -f "$chilli_dir/config" ]   && . $chilli_dir/config
+#CHILLI=/tmp/etc/chilli
+#DHCPIF=br-guest
+
+chilli_limit=$(uci -q get functionlist.vendorlist.PORTAL_LIMIT_NUM)
+
+is_guestvlanEnable=$(uci -q get network.sys.GuestVLANEnable)
+if [ "$is_guestvlanEnable" = "1" ]
+then
+	guestvlanID=$(uci -q get network.sys.GuestVLANID)
+fi
+
+REAL_WANIF=br-lan
+
+addconfig() {
+	[ -n "$*" ] && cat <<EOF >> $chilli_guest_dir/config
+$*
+EOF
+}
+
+addconfig2() {
+	[ -n "$*" ] && cat <<EOF >> $chilli_guest_dir/chilli.conf
+$*
+EOF
+}
+
+iptoint() {
+	ret=$(echo $1 | awk 'BEGIN{RS="."} {s=or(lshift(s,8),$1)} END {printf("%f",s)}')
+	echo "${ret%.*}"
+}
+
+config_dhcpIFIP() {
+	local dhcpif=$1
+	local section_name=$(get_section_name $dhcpif)
+	local index=$(get_profile_index $dhcpif)
+	local custom_ip_pool=0
+	dhcpIFIP=""
+	brguestMask=""
+
+	local config_file="${CHILLI}_pre/$dhcpif/config"
+	if [ $is_boost_reload -eq 1 -a -f "$config_file" ]
+	then
+		dhcpIFIP=$(get_config_value $config_file HS_UAMLISTEN)
+		brguestMask=$(get_config_value $config_file HS_NETMASK)
+	fi
+
+	if [ "$dhcpIFIP" = "" -o "$brguestMask" = "" ]
+	then
+		local custom_dhcpIFIP=`uci -q get network.${real_dhcpif#br-}.ipaddr`
+		local custom_brguestMask=`uci -q get network.${real_dhcpif#br-}.netmask`
+
+		if [ "$bridgemode" = "0" -a -n "$custom_dhcpIFIP" -a -n "$custom_brguestMask" ]
+		then
+			custom_ip_pool=1
+		else
+			custom_ip_pool=0
+		fi
+
+		if [ $custom_ip_pool -eq 1 ]
+		then
+			# custom nat ip pool
+			dhcpIFIP=$custom_dhcpIFIP
+			brguestMask=$custom_brguestMask
+		else
+			# default value
+			dhcpIFIP="172.$((15+$index)).1.1"
+			if [ ${chilli_limit:-8} -lt 8 ]; then
+				brguestMask="255.255.255.0"
+			else
+				brguestMask="255.255.0.0"
+			fi
+
+			if [ $is_boost_reload -eq 1 -a -f "/tmp/etc/chilli/$config_name/chilli_status" ]
+			then
+				. /tmp/etc/chilli/$config_name/chilli_status
+			fi
+
+			if [ "${status_tuntap:+skip_dev=$status_tuntap} is_ip_conflict $dhcpIFIP $brguestMask)" = "1" ]
+			then
+				# echo "CP profile $index ip conflict, change to 10.$((10+$index)).1.1" > /dev/console
+				dhcpIFIP="10.$((10+$index)).1.1"
+			fi
+		fi
+	fi
+
+	brguestNetwork=$(ipcalc NETWORK $dhcpIFIP $brguestMask)
+}
+
+get_ethernet_profile() {
+	local mode=$1
+
+	if [ "$mode" = "NAT" ]
+	then
+		local check_ip_assign=1
+		local check_portal=1
+	elif [ "$mode" = "Bridge" ]
+	then
+		local check_ip_assign=0
+		local check_portal=1
+	elif [ "$mode" = "Disable" ]
+	then
+		local check_ip_assign=0
+		local check_portal=0
+	elif [ "$mode" = "NAT_only" ]
+    then
+		local check_ip_assign=1
+		local check_portal=0
+	fi
+
+	if [ "$support_ssid_profile" = "1" ]
+	then
+		local section=$(foreach ethprofile profile enable 1)
+		if [ -n "$section" ];then
+			for name in $section
+			do
+				local is_portal_en=$(uci -q get portal.$name.enable)
+				local is_nat_mode=$(uci -q get ethprofile.$name.client_ip_assignment)
+				# NAT or Bridge
+				if [ $check_portal -eq 1 -a "$is_portal_en" = "1" ]
+				then
+					if [ "$check_ip_assign" = "$is_nat_mode" ]
+					then
+						local ret=$(get_section_id $name)
+						echo port$ret
+					fi
+				# NAT_only
+				elif [ $check_portal -eq 0 -a "$is_nat_mode" = "1" ]
+				then
+					local ret=$(get_section_id $name)
+					echo port$ret
+				fi
+			done
+		fi
+	fi
+}
+
+# Disable, NAT, Bridge
+get_gnmode_profile() {
+	local mode=$1
+	local section_name=$(foreach wireless wifi-iface guest_network $mode)
+	if [ -n "$section_name" ];then
+		for name in $section_name
+		do
+			if [ "$(uci -q get wireless.$name.disabled)" != "1" ]
+			then
+				local ret=$(get_section_id $name)
+				echo ssid$ret
+			fi
+		done
+	fi
+
+	get_ethernet_profile $mode
+}
+
+# Disable, NAT, Bridge
+get_gnmode_if() {
+	local section_name=$(foreach wireless wifi-iface guest_network $1)
+	if [ -n "$section_name" ];then
+		for name in $section_name
+		do
+			[ "$(uci -q get wireless.$name.disabled)" != "1" ] && \
+				echo $(uci -q get wireless.$name.ifname)
+		done
+	fi
+}
+
+aws_ip_crontab()
+{
+	if [ "$aws_cloudfront_crontab" = "1" ]
+	then
+		test -x $aws_ip_check || return
+		case "$1" in
+			start)
+				( crontab -l 2>/dev/null | grep -v "$aws_ip_check"; echo "4 4 * * 4 $aws_ip_check" ) | crontab -
+				;;
+			stop)
+				rm -rf /tmp/aws-sync-token.txt
+				crontab -l 2>/dev/null | grep -v "$aws_ip_check" | crontab -
+				;;
+		esac
+	fi
+}
+
+brlanIP=$(ifget ip $REAL_WANIF)
+brlanMask=$(ifget mask $REAL_WANIF)
+brlanNetwork=$(ipcalc NETWORK $brlanIP $brlanMask)
+dhcpgateway=$(route -n | grep 'UG[ \t]' | awk '{print $2}')
+
+wanIP=$brlanIP
+wanNetwork=$brlanNetwork
+wanMask=$brlanMask
+wanGateway=`route -n | grep 'UG[ \t]' | awk '{print $2}'`
+
+gnmode_en_profile=$(get_gnmode_profile Enable)
+gnmode_nat_profile=$(get_gnmode_profile NAT)
+gnmode_bridge_profile=$(get_gnmode_profile Bridge)
+gnmode_nat_only_profile=$(get_gnmode_profile NAT_only)
+
+acIP=$(uci -q get apcontroller.capwap.ac)
+acIP=${acIP##*=}
+acIP=${acIP%%:*}
+force_acIP=$(uci -q get apcontroller.capwap.force_ac)
+force_acIP=${force_acIP##*=}
+force_acIP=${force_acIP%%:*}
+acIP=${acIP:-$force_acIP}
+acIP=${acIP:-192.168.0.239}
+
+ezmcloud=$(test -f /etc/config/ezmcloud && echo 1 || echo 0)
+if [ $ezmcloud -eq 0 ];then
+	captived=$(uci -q get apcontroller.capwap.enable)
+else
+	# cloud always captived.
+	captived=1
+fi
+
+config_load portal
+config_get portal_en general enable
+config_get general_portal_radius_port general radiusPort
+config_get general_portal_radius_secret general radiusSecret
+config_get general_portal_acc_enable general accountingEnable
+config_get general_portal_acc_port general accountingPort
+config_get general_portal_acc_secret general accountingSecret
+config_get general_portal_acc_interval general accountingInterval
+config_get general_portal_session_enable general sessionTimeoutEnable
+config_get general_portal_session_timeout general sessionTimeout
+config_get general_portal_idle_enable general idleTimeoutEnable
+config_get general_portal_idle_timeout general idleTimeout
+config_get general_portal_gone_enable general goneTimeoutEnable
+config_get general_portal_gone_timeout general goneTimeout
+config_get general_portal_format general uamformat "sn.captivePortal.login"
+config_get general_portal_localauth general localAuth "sn.captivePortal.auth"
+config_get general_portal_port general port
+config_get general_portal_extern_server general externalServer
+config_get general_portal_https_enable general httpsEnable
+config_get general_portal_https_login_enable general httpsLoginEnable
+config_get general_portal_redirect general userurl
+config_get general_portal_wallgarden general walledGardenEnable
+config_get general_portal_wallgarden_page general walledGardenPages
+config_get general_portal_type general loginType
+config_get general_portal_auth general authType
+config_get general_portal_vlantag general vlantag 0
+config_get general_portal_networkId general networkId
+
+config_get general_portal_nasid_enable general nasid_enable 0
+config_get general_portal_nasid general nasid $(ifget macnc $REAL_WANIF)
+config_get general_portal_nasip_enable general nasip_enable 0
+config_get general_portal_nasip general nasip "0.0.0.0"
+config_get general_portal_nasport_enable general nasport_enable 0
+config_get general_portal_nasport general nasport 0
+
+config_get general_portal_oauth general oauth 0
+config_get general_portal_uamSecret general uamSecret "magicSnSecret"
+config_get general_portal_redir_ssl general redirSSL $([ $ezmcloud -eq 0 ] && echo 0 || echo 1)
+config_get general_portal_nfcoova general nfcoova 1
+# config_get general_portal_client_isolation general clientIsolation 0
+# config_get general_portal_access_lan general accessLAN 1
+
+config_get general_portal_config_interval general configInterval 3600
+# for facebook wifi
+config_get general_portal_vendor_id general vendor_id
+config_get general_portal_gateway_id general gateway_id
+config_get general_portal_gateway_secret general gateway_secret
+
+###
+#   WISPr RADIUS Attribute support
+#
+config_get general_portal_uamservice general uamservice
+config_get general_portal_provider general provider "EnGenius"
+config_get general_portal_loc_name general loc_name "My HotSpot"
+config_get general_portal_loc_isocc general loc_isocc
+config_get general_portal_loc_cc general loc_cc
+config_get general_portal_loc_ac general loc_ac
+config_get general_portal_loc_network general loc_network "HotSpot"
+
+config_get general_portal_coa_enable general coaEnable 0
+
+config_get general_portal_uamaliasname general uamaliasname "captive-portal"
+config_get general_portal_dns_domain general dns_domain "engenius.ai"
+
+config_get general_portal_ssl_key_file general ssl_key_file '/etc/ezmcloud/chilli-key.pem'
+config_get general_portal_ssl_cert_file general ssl_cert_file '/etc/ezmcloud/chilli-cert.pem'
+config_get general_portal_ssl_key_pass general ssl_key_pass
+
+if [ -n "$gnmode_en_profile" ];then
+	echo CP Enable profile: $gnmode_en_profile > /dev/console
+	uci set dhcp.guest.ignore=0
+else
+	uci set dhcp.guest.ignore=1
+fi
+uci commit dhcp
+
+if [ -n "$gnmode_nat_profile" ];then
+	for profile in $gnmode_nat_profile;do
+		if [ "$portal_ifaces" = "${portal_ifaces/$profile/}" ];then
+			portal_ifaces=${portal_ifaces:+$portal_ifaces }$profile
+			nat_profiles=${nat_profiles:+$nat_profiles }$profile
+		# else
+		# 	echo br-$bf already exist
+		fi
+	done
+fi
+
+if [ -n "$gnmode_bridge_profile" ];then
+	for profile in $gnmode_bridge_profile;do
+		if [ "$portal_ifaces" = "${portal_ifaces/$profile/}" ];then
+			portal_ifaces=${portal_ifaces:+$portal_ifaces }$profile
+			bridge_profiles=${bridge_profiles:+$bridge_profiles }$profile
+		# else
+		# 	echo br-$bf already exist
+		fi
+	done
+fi
+
+if [ -n "$gnmode_nat_only_profile" ];then
+	for profile in $gnmode_nat_only_profile;do
+		if [ "$nat_only_profiles" = "${nat_only_profiles/$profile/}" ];then
+			nat_only_profiles=${nat_only_profiles:+$nat_only_profiles }$profile
+		# else
+		# 	echo br-$bf already exist
+		fi
+	done
+fi
+
+rem_ip_rules()
+{
+	# remove/flush all 12x tables
+	for tablenum in `cat /etc/iproute2/rt_tables |grep "12[0-3][0-8]"$'\t' | cut -f 1`
+	do
+		# remove all vlan's ip rule and route
+		ip_rule_del_pref $tablenum
+	done
+	# br-vlanguest
+	ip_rule_del_pref 1119
+}
+
+update_cert_link()
+{
+	local profile_name=$1
+	local config_name="br-$profile_name"
+	local section_name=$(get_section_name $profile_name)
+	config_get portal_type $section_name loginType $general_portal_type
+
+	# fbwifi
+	if [ "$portal_type" = "108" ]
+	then
+		local fbwifi_ssl_dir=$fbwifi_tmp_dir/$config_name/$fbwifi_ssl_path
+		local portal_ssl_key_file="$fbwifi_ssl_dir/fbwifi-$profile_name-key.pem"
+		local portal_ssl_cert_file="$fbwifi_ssl_dir/fbwifi-$profile_name-cert.pem"
+	else
+		config_get portal_ssl_key_file $section_name ssl_key_file $general_portal_ssl_key_file
+		config_get portal_ssl_cert_file $section_name ssl_cert_file $general_portal_ssl_cert_file
+	fi
+	local default_ssl_key_file="/etc/chilli/chilli-key.pem"
+	local default_ssl_cert_file="/etc/chilli/chilli-cert.pem"
+	local ssl_key_link="/var/run/chilli/ssl/$profile_name-key.pem"
+	local ssl_cert_link="/var/run/chilli/ssl/$profile_name-cert.pem"
+	local ssl_key_file=""
+	local ssl_cert_file=""
+	local isok=1
+
+
+	if [ -f "$portal_ssl_key_file" ]
+	then
+		ssl_key_file=$portal_ssl_key_file
+	elif [ -f "$default_ssl_key_file" ]
+	then
+		ssl_key_file=$default_ssl_key_file
+	fi
+
+	if [ -n "$ssl_key_file" ]
+	then
+		ln -sf $ssl_key_file $ssl_key_link
+	else
+		isok=0
+	fi
+
+	if [ -f "$portal_ssl_cert_file" ]
+	then
+		ssl_cert_file=$portal_ssl_cert_file
+	elif [ -f "$default_ssl_cert_file" ]
+	then
+		ssl_cert_file=$default_ssl_cert_file
+	fi
+
+	if [ -n "$ssl_cert_file" ]
+	then
+		ln -sf $ssl_cert_file $ssl_cert_link
+	else
+		isok=0
+	fi
+	echo "$isok"
+}
+
+update_cert()
+{
+	for i in ssid1 ssid2 ssid3 ssid4 ssid5 ssid6 ssid7 ssid8 port3
+	do
+		if [ "$(update_cert_link $i)" != "1" ]
+		then
+			echo "update $i-cert error!" > /dev/console
+		fi
+	done
+}
+
+gen_ssid_config()
+{
+	local config_name=$1
+	local section_name=$(get_section_name $config_name)
+
+	config_get portal_radius $section_name radiusServer
+	config_get portal_radius2 $section_name radiusServer2
+	config_get portal_radius_port $section_name radiusPort $general_portal_radius_port
+	config_get portal_radius_port2 $section_name radiusPort2 $portal_radius_port
+	config_get portal_radius_secret $section_name radiusSecret $general_portal_radius_secret
+	config_get portal_radius_secret2 $section_name radiusSecret2 $portal_radius_secret
+	config_get portal_acc_enable $section_name accountingEnable $general_portal_acc_enable
+	config_get portal_acc_server $section_name accountingServer
+	config_get portal_acc_server2 $section_name accountingServer2
+	config_get portal_acc_port $section_name accountingPort $general_portal_acc_port
+	config_get portal_acc_port2 $section_name accountingPort2 $portal_acc_port
+	config_get portal_acc_secret $section_name accountingSecret $general_portal_acc_secret
+	config_get portal_acc_secret2 $section_name accountingSecret2 $portal_acc_secret
+	config_get portal_acc_interval $section_name accountingInterval $general_portal_acc_interval
+	config_get portal_session_enable $section_name sessionTimeoutEnable $general_portal_session_enable
+	config_get portal_session_timeout $section_name sessionTimeout $general_portal_session_timeout
+	config_get portal_idle_enable $section_name idleTimeoutEnable $general_portal_idle_enable
+	config_get portal_idle_timeout $section_name idleTimeout $general_portal_idle_timeout
+	config_get portal_gone_enable $section_name goneTimeoutEnable $general_portal_gone_enable
+	config_get portal_gone_timeout $section_name goneTimeout $general_portal_gone_timeout
+	config_get portal_format $section_name uamformat $general_portal_format
+	config_get portal_localauth $section_name localAuth $general_portal_localauth
+	config_get portal_port $section_name port $general_portal_port
+	config_get portal_extern_server $section_name externalServer $general_portal_extern_server
+	config_get portal_https_enable $section_name httpsEnable $general_portal_https_enable
+	config_get portal_https_login_enable $section_name httpsLoginEnable $general_portal_https_login_enable
+	config_get portal_redirect $section_name userurl $general_portal_redirect
+	config_get portal_wallgarden $section_name walledGardenEnable $general_portal_wallgarden
+	config_get portal_wallgarden_page $section_name walledGardenPages $general_portal_wallgarden_page
+	config_get portal_type $section_name loginType $general_portal_type
+	config_get portal_auth $section_name authType $general_portal_auth
+	config_get portal_vlantag $section_name vlantag $general_portal_vlantag
+	config_get portal_networkId $section_name networkId $general_portal_networkId
+	# For NAT mode
+	config_get portal_customdns_enable $section_name customdnsEnable 0
+	config_get portal_dns_server1 $section_name dnsServer1
+	config_get portal_dns_server2 $section_name dnsServer2
+
+
+	# whitelist
+	config_get portal_whitelist_enable $section_name whitelistEnable
+	config_get portal_whitelist_mac $section_name whitelistMAC
+
+	config_get portal_guest_sync_enable $section_name guest_sync 1
+	config_get portal_disconnect_logout_enable $section_name disconnect_logout 0
+
+	config_get portal_nasid_enable $section_name nasid_enable $general_portal_nasid_enable
+	config_get portal_nasid $section_name nasid $general_portal_nasid
+	config_get portal_nasip_enable $section_name nasip_enable $general_portal_nasip_enable
+	config_get portal_nasip $section_name nasip $general_portal_nasip
+	config_get portal_nasport_enable $section_name nasport_enable $general_portal_nasport_enable
+	config_get portal_nasport $section_name nasport $general_portal_nasport
+
+	config_get portal_oauth $section_name oauth $general_portal_oauth
+	config_get portal_uamSecret $section_name uamSecret $general_portal_uamSecret
+	config_get portal_redir_ssl $section_name redirSSL $general_portal_redir_ssl
+	# config_get portal_client_isolation $section_name clientIsolation $general_portal_client_isolation
+	# config_get portal_access_lan $section_name accessLAN $general_portal_access_lan
+	config_get portal_tun_mtu $section_name tunMTU $general_portal_tun_mtu
+	###
+	#   WISPr RADIUS Attribute support
+	#
+	config_get portal_uamservice $section_name uamservice $general_portal_uamservice
+	config_get portal_provider $section_name provider "$general_portal_provider"
+	config_get portal_loc_name $section_name loc_name "$general_portal_loc_name"
+	config_get portal_loc_isocc $section_name loc_isocc $general_portal_loc_isocc
+	config_get portal_loc_cc $section_name loc_cc $general_portal_loc_cc
+	config_get portal_loc_ac $section_name loc_ac $general_portal_loc_ac
+	config_get portal_loc_network $section_name loc_network "$general_portal_loc_network"
+
+	config_get portal_coa_enable $section_name coaEnable $general_portal_coa_enable
+	config_get portal_coa_port $section_name coaPort
+
+	config_get portal_uamaliasname $section_name uamaliasname $general_portal_uamaliasname
+	config_get portal_dns_domain $section_name dns_domain $general_portal_dns_domain
+	config_get portal_ssl_key_file $section_name ssl_key_file $general_portal_ssl_key_file
+	config_get portal_ssl_cert_file $section_name ssl_cert_file $general_portal_ssl_cert_file
+	config_get portal_ssl_key_pass $section_name ssl_key_pass $general_portal_ssl_key_pass
+
+	config_get portal_config_interval $section_name config_interval $general_portal_config_interval
+	# for facebook wifi
+	config_get portal_vendor_id $section_name vendor_id $general_portal_vendor_id
+	config_get portal_gateway_id $section_name gateway_id $general_portal_gateway_id
+	config_get portal_gateway_secret $section_name gateway_secret $general_portal_gateway_secret
+
+	# WISPR
+	addconfig ${portal_uamservice:+HS_UAMSERVICE=$portal_uamservice}
+	addconfig ${portal_provider:+HS_PROVIDER=\"$portal_provider\"}
+	addconfig ${portal_loc_name:+HS_LOC_NAME=\"$portal_loc_name\"}
+	#   WISPr settings (to form a proper WISPr-Location-Id)	addconfig 'HS_LOC_ISOCC='
+	addconfig ${portal_loc_isocc:+HS_LOC_ISOCC=$portal_loc_isocc}
+	addconfig ${portal_loc_cc:+HS_LOC_CC=$portal_loc_cc}
+	addconfig ${portal_loc_ac:+HS_LOC_AC=$portal_loc_ac}
+	addconfig ${portal_loc_network:+HS_LOC_NETWORK=\"$portal_loc_network\"}
+	#
+	## End WISPr
+
+	config_get portal_macauth $section_name macauth 0
+
+	local uam_type=$(get_uam_type $portal_type)
+
+	if [ "$portal_port" = "0" -o "$portal_port" = "" ]
+	then
+		ac_address=$acIP
+	else
+		ac_address=$acIP:$portal_port
+	fi
+
+	if [ "${portal_localauth:0:4}" = "http" ]; then
+		local uamAAAUrl=$portal_localauth
+		uamAAAUrl_domain=${uamAAAUrl#*://}
+		uamAAAUrl_domain=${uamAAAUrl_domain%%/*}
+	else
+		local uamAAAUrl=http://$ac_address/cgi-bin/$portal_localauth
+	fi
+
+
+	local uamurl_domain=""
+	if [ "${portal_format:0:4}" = "http" ]; then
+		local uamurl=${portal_format#*://}
+		uamurl_host=${uamurl%%/*}
+	else
+		local uamurl=$ac_address"/cgi-bin/"$portal_format
+		uamurl_host=$acIP
+	fi
+
+	local uamformat_url=""
+	if [ "$portal_type" != "108" ]
+	then
+	# cloud or third-party
+	if [ $uam_type -eq 2 -o $uam_type -eq 3 ];then
+		uamformat_url=$portal_format
+	else # ezmaster
+		if [ "$portal_https_enable" = "1" ]; then
+			local uam_http_scheme="https"
+		else
+			local uam_http_scheme="http"
+		fi
+		uamformat_url="$uam_http_scheme://$uamurl"
+	fi
+	fi
+
+	config_interval=$portal_config_interval
+	# EZM
+	#   0: Splash & go
+	#   1: ezMaster Authentication
+	#   2: RADIUS Server
+	#   3: Third-party Authentication
+	#   4: Social Login
+
+	# Cloud
+	# 100: click-through
+	# 101: engenius_radius
+	# 102: hot-spot
+	# 103: custom_radius
+	# 104: 3rd_party
+	# 105: social_login
+	# 106: AD auth (join domain)
+	# 107: LDAP auth
+	# 108: Facebook wifi
+
+
+	addconfig "HS_LOGIN_TYPE="$portal_type
+
+	case $portal_type in
+		108)
+			addconfig "HS_RADIUS=localhost"
+			addconfig "HS_RADIUS2=localhost"
+			addconfig "HS_UAMALLOWPOST=on"
+			fbwifi_init $config_name
+			if [ $? -ne 0 ]
+			then
+				echo CP fbwifi: FIXME init failure, skip fbwifi init $config_name > /dev/console
+				rm -rf $chilli_guest_dir
+				continue
+			fi
+			fbwifi_include_urls_config $config_name
+			uamformat_url="${fbwifi_captive_portal_url:-$(fbwifi_get_login_page $config_name)}"
+			# fbwifi force use https
+			portal_https_enable=1
+			# force enable
+			portal_https_login_enable=1
+			config_interval=$fbwifi_polling_interval
+			# force overwirte
+			portal_session_enable=0
+			portal_idle_enable=0
+			if [ $bridgemode -eq 0 ]
+			then
+				# FIXME: nat unauth client need redir_ssl to support https query
+				portal_redir_ssl=1
+			fi
+			;;
+		0|1|100|105)
+			addconfig "HS_AAA=http"
+			# 18120,18121 reserved for freeradius inner-tunnel
+			local radconf_authport=$((18122+2*($profile_index-1)))
+			local radconf_accport=$(($radconf_authport+1))
+			addconfig "HS_RADCONF_AUTHPORT="$radconf_authport
+			addconfig "HS_RADCONF_ACCTPORT="$radconf_accport
+			addconfig "HS_RADAUTH="$radconf_authport
+			addconfig "HS_RADACCT="$radconf_accport
+			addconfig "HS_UAMAAAURL="$uamAAAUrl
+			;;
+		106|107)
+			addconfig "HS_RAD_PROTO=pap"
+			addconfig "HS_RADIUS=127.0.0.1"
+			addconfig "HS_RADAUTH=1812"
+			addconfig "HS_RADSECRET=testing123"
+			;;
+		2|3|101|102|103|104)
+			if [ "$portal_auth" = "1" ]; then
+				addconfig "HS_RAD_PROTO=pap"
+			fi
+			addconfig "HS_RADIUS="$portal_radius
+			addconfig "HS_RADIUS2="${portal_radius2:-$portal_radius}
+			addconfig "HS_RADAUTH="$portal_radius_port
+			addconfig "HS_RADAUTH2="$portal_radius_port2
+			if [ "$portal_acc_enable" = "1" ]; then
+				addconfig "HS_RADIUS_ACCT="${portal_acc_server:-$portal_radius}
+				addconfig "HS_RADIUS_ACCT2="${portal_acc_server2:-$portal_acc_server}
+				addconfig "HS_RADACCTSECRET="${portal_acc_secret:-$portal_radius_secret}
+				addconfig "HS_RADACCTSECRET2="$portal_acc_secret2
+				addconfig "HS_RADACCT="$portal_acc_port
+				addconfig "HS_RADACCT2="$portal_acc_port2
+				addconfig "HS_ACCTUPDATE=on"
+				addconfig "HS_DEFINTERIMINTERVAL="$portal_acc_interval
+			fi
+			addconfig "HS_RADSECRET="$portal_radius_secret
+			addconfig "HS_RADSECRET2="$portal_radius_secret2
+			;;
+		4|300)
+			if [ $portal_type -ge 300 -a $portal_type -lt 400 ]
+			then
+				# default uamsecret for third-party
+				if [ -z "$portal_uamSecret" ]
+				then
+					portal_uamSecret="uCAnotPass"
+				fi
+			fi
+			portal_oauth=1
+			if [ "$portal_auth" = "1" ]; then
+				addconfig "HS_RAD_PROTO=pap"
+			fi
+			addconfig "HS_RADIUS=localhost"
+			addconfig "HS_RADIUS2=localhost"
+			aws_cloudfront_crontab=0
+			addconfig "HS_AWS_CLOUDFRONT=1"
+			;;
+	esac
+
+	if [ "$portal_type" = "108" ]
+	then
+		addconfig "HS_UAMURLISSTR=on"
+		addconfig "HS_UAMHOMEPAGE=\"$uamformat_url\""
+	else
+		addconfig "HS_UAMHOMEPAGE=http://"\\\$HS_UAMLISTEN:\\\$HS_UAMPORT/prelogin
+	fi
+	addconfig "HS_UAMFORMAT=\"$uamformat_url\""
+
+	addconfig "HS_CONFIG_INTERVAL="$config_interval
+
+	if [ $uam_type -eq 2 ]; then
+		local portal_whitelist_file_path="/etc/ezmcloud/config/chilli-$section_name.allowlist"
+	else
+		local portal_whitelist_file_path="/etc/chilli/whitelist/$section_name.allowlist"
+	fi
+
+	if [ "$portal_whitelist_enable" = "1" ]
+	then
+		ln -sf $portal_whitelist_file_path /var/run/chilli/whitelist/$section_name.maclist
+		if [ -n "$portal_whitelist_mac" ]
+		then
+			addconfig 'HS_MACALLOW='$portal_whitelist_mac
+		fi
+	else
+		rm /var/run/chilli/whitelist/$section_name.maclist
+	fi
+
+	addconfig 'HS_MACALLOW_FILE='/var/run/chilli/whitelist/$section_name.maclist
+
+	# addconfig 'HS_CLIENT_ISO='$portal_client_isolation
+
+	# local wireless_l2isolation=$(get_wireless_option $section_name l2_isolatior 1)
+	# if [ ${wireless_l2isolation:-0} -eq 1 ]
+	# then
+	# 	client_access_lan=0
+	# else
+	# 	client_access_lan=$portal_access_lan
+	# fi
+
+	# addconfig 'HS_ACCESS_LAN='$client_access_lan
+
+	# fix some uam site mtu error, default 1412
+	# if bridgemode enabled, tun mtu will auto sync with wan interface, this value will no effective.
+	if [ -n "$portal_tun_mtu" ]
+	then
+		addconfig 'HS_TUNMTU='$portal_tun_mtu
+	fi
+
+
+	if [ "$is_ethernet" = "1" ]
+	then
+		if [ "$(uci get ethprofile.$section_name.vlan_enable)" = "1" ]
+		then
+			portal_vlantag=$(uci get ethprofile.$section_name.vlan_id)
+		else
+			portal_vlantag=0
+		fi
+	else
+		### START sync wireless vlan_id
+		local wireless_isolation=$(get_wireless_option $section_name isolation 1)
+		if [ ${wireless_isolation:-0} -eq 1 ]
+		then
+			local wireless_vlan_id=$(get_wireless_option _$section_name vlan_id $portal_vlantag)
+			if [ "${wireless_vlan_id:-0}" != "$portal_vlantag" ]
+			then
+				echo CP Sync wireless vlan_id:$wireless_vlan_id to portal vlantag:$portal_vlantag  > /dev/console
+				portal_vlantag=$wireless_vlan_id
+			fi
+		else
+			portal_vlantag=0
+		fi
+		### END sync wireless vlan_id
+	fi
+	uci set portal.$section_name.vlantag=$portal_vlantag
+	uci commit portal
+
+	# support vlan tag, prepare interface before chilli up
+    local eth_vlanif=$(get_vlan_wan_ifname $portal_vlantag)
+	local mesh_off=$(uci -q  get mesh.wifi.disabled)
+	WANIF=$REAL_WANIF
+	echo CP profile:${config_name} Mode:$([ $bridgemode -eq 1 ] && echo Bridge || echo NAT) Vlan:$portal_vlantag > /dev/console
+
+	if [ "${portal_vlantag:-0}" != "0" ]
+	then
+		addconfig "HS_VLAN="$portal_vlantag
+		addconfig 'HS_IEEE8021Q=on'
+	fi
+
+	local vlan_mode=$(get_vlan_mode ${portal_vlantag:-0})
+	local vlanbridge=$(get_vlan_wan_bridge ${portal_vlantag:-0})
+
+	if [ "$vlanbridge" != "br-lan" ]
+	then
+		# check again
+		eth_brname=$(get_bridge_name $eth_vlanif)
+		if [ -n "$eth_brname" ]
+		then
+			vlanbridge=$eth_brname
+			WANIF=$vlanbridge
+		else
+			echo CP: VLAN interface ERROR!! FIXME!! > /dev/console
+		fi
+	fi
+	addconfig 'HS_WANIF='$WANIF
+
+	local essid=$(get_wireless_option _$section_name ssid)
+	addconfig 'HS_RADIUS_CALLED_STATION_ID='$(echo -n "$(ifget machypen $REAL_WANIF):$essid" | openssl enc -base64 -e -A)
+	# addconfig "HS_SSID=`echo $essid| sed 's/[^a-zA-Z0-9]/_/g'`"
+
+	# TODO: xt_coova not support vlan feature
+	# FIXME: it will let NAT mode SSID can ping each other...
+	lsmod |grep xt_coova 2>/dev/null && {
+		if [ "$general_portal_nfcoova" = "1" ]
+		then
+			addconfig 'HS_KNAME=coova-'$config_name
+			support_nfcoova=1
+		fi
+	}
+
+	if [ "$is_ethernet" = "0" -a $(get_cpu_num) -gt 1 -a -f /proc/sys/net/core/rps_sock_flow_entries ]
+	then
+		local cpumask=$(get_cpu_mask)
+		local rps_flowentries=`cat /proc/sys/net/core/rps_sock_flow_entries`
+		if [ "$rps_flowentries" = "0" ]
+		then
+			rps_flowentries=65536
+			echo $rps_flowentries > /proc/sys/net/core/rps_sock_flow_entries
+		fi
+		if [ "$bridgemode" = "1" ]
+		then
+			local bridge_name=$WANIF
+		else
+			local bridge_name=${real_dhcpif}
+		fi
+		local rps_queue=`find /sys/class/net/$bridge_name/queues/ -name "rx-*"`
+		local rps_queuenum=`echo "$rpsqueue"|wc -l`
+		local rps_flowcnt=`echo $(($rps_flowentries/${rps_queuenum:-1}))`
+		for rxqueue in `find /sys/class/net/$bridge_name/queues/ -name "rx-*"`
+		do
+			echo $cpumask > $rxqueue/rps_cpus
+			echo $rps_flowcnt > $rxqueue/rps_flow_cnt
+		done
+
+		# if /proc/qrfs not exist, enable kernel rps/rfs here.
+		if [ ! -d "/proc/qrfs" ]
+		then
+			for rxqueue in `find /sys/class/net/$WANIF/queues/ -name "rx-*"`
+			do
+				echo $cpumask > $rxqueue/rps_cpus
+				echo $rps_flowcnt > $rxqueue/rps_flow_cnt
+			done
+		fi
+	fi
+
+	config_dhcpIFIP $config_name
+
+	if [ "$bridgemode" = "1" ]; then
+		addconfig "HS_BRIDGEMODE=on"
+		# addconfig "HS_DHCPGATEWAY="$dhcpgateway
+		addconfig "HS_NETWORK="$wanNetwork
+		addconfig "HS_NETMASK="$wanMask
+		addconfig "HS_DHCPLISTEN="$dhcpgateway
+		if [ $uam_type -eq 1 ]; then
+			addconfig "HS_EZMASTERIP="$acIP
+		fi
+	else
+		addconfig "HS_NETWORK="$brguestNetwork
+		addconfig "HS_NETMASK="$brguestMask
+		# addconfig "HS_DHCPSTART="$gueststart
+		# addconfig "HS_DHCPEND="$guestend
+		addconfig "HS_NATIPBYMAC=on"
+	fi
+	addconfig "HS_UAMLISTEN="$dhcpIFIP
+	# local dns enable will add DNAT iptable rule
+	addconfig "HS_LOCAL_DNS=on"
+	if [ "$bridgemode" = "1" -a "$support_nfcoova" = "1" ];then
+		local dnsserver=$(ubus call network.interface.lan status | jq -r '.["dns-server"]')
+		local dnsserver1=$(echo $dnsserver | jq -r .[0])
+		local dnsserver2=$(echo $dnsserver | jq -r .[1])
+		# if dns null, use src/conf/defaults.in
+		# use isip check to avoid router send ipv6 DNS ip, it will cause chilli cannot run up.
+		[ $(isip $dnsserver1) -eq 1 ] && addconfig "HS_DNS1="$dnsserver1
+		[ $(isip $dnsserver2) -eq 1 ] && addconfig "HS_DNS2="$dnsserver2
+	else
+		if [ "$portal_customdns_enable" = "1" ] && [ "$portal_dns_server1" != "" -o "$portal_dns_server2" != "" ]; then
+			addconfig "HS_CUSTOMDNS=on"
+			addconfig "HS_DNS1="${portal_dns_server1:-$portal_dns_server2}
+			addconfig "HS_DNS2="${portal_dns_server2:-$portal_dns_server1}
+		else
+			addconfig "HS_DNS1="$dhcpIFIP
+			addconfig "HS_DNS2="$dhcpIFIP
+		fi
+	fi
+	addconfig "HS_UAMSERVER="\$HS_UAMLISTEN
+
+	# NAS three brothers
+	if [ "$portal_nasid_enable" = "1" ]
+	then
+		addconfig "HS_NASID="$portal_nasid
+	else
+		addconfig "HS_NASID="$(ifget macnc $REAL_WANIF)
+	fi
+
+	if [ "$portal_nasip_enable" = "1" ]
+	then
+		addconfig "HS_NASIP="$portal_nasip
+	else
+		addconfig "HS_NASIP="$wanIP
+	fi
+
+	if [ "$portal_nasport_enable" = "1" ]
+	then
+		addconfig "HS_NASPORT="$portal_nasport
+	fi
+
+	if [ $uam_type -eq 2 ]; then
+		uam_secret=$(printf `uci -q get ezmcloud.ezmcloud.secret` |tail -c 5)
+	else
+		uam_secret=$portal_uamSecret
+	fi
+	addconfig "HS_UAMSECRET="$uam_secret
+
+	if [ ${portal_coa_enable:-0} -eq 1 ]
+	then
+		addconfig 'HS_COAPORT='${portal_coa_port:-$((37990+$profile_index-1))}
+	fi
+
+	if [ "$portal_session_enable" = "1" ]; then
+		addconfig "HS_DEFSESSIONTIMEOUT="$portal_session_timeout
+		if [ $portal_session_timeout -gt 31536000 ]
+		then
+			# Protect.
+			# HS_LEASE cannot greater than about 2147483589s~=68y,
+			# it will cause dhcp release when client connnect to SSID each time
+			# so, use 31536000s=1y
+			addconfig "HS_LEASE=31536000"
+		else
+			addconfig "HS_LEASE="$portal_session_timeout
+		fi
+	else
+		if [ ${chilli_limit:-8} -lt 8 ]; then
+			# 5hr
+			addconfig "HS_LEASE=18000"
+		else
+			addconfig "HS_LEASE=86400"
+		fi
+	fi
+	if [ "$portal_idle_enable" = "1" ]; then
+		addconfig "HS_DEFIDLETIMEOUT="$portal_idle_timeout
+	fi
+	if [ "$portal_gone_enable" = "1" ]; then
+		addconfig "HS_DEFGONETIMEOUT="$portal_gone_timeout
+	fi
+
+
+	if [ "$portal_macauth" = "1" ]; then
+		addconfig "HS_MACAUTH=on"
+		addconfig "HS_MACAUTHMODE=radius"
+	else
+		addconfig "HS_MACAUTHMODE=local"
+	fi
+
+	# default 60
+	addconfig "HS_UAMDOMAIN_TTL=45"
+
+	addconfig "HS_MACUP="$chilli_dir/macup.sh
+	addconfig "HS_MACDOWN="$chilli_dir/macdown.sh
+	addconfig "HS_CONUP="$chilli_dir/connup.sh
+	addconfig "HS_CONDOWN="$chilli_dir/conndown.sh
+
+	# cloud team will return this value to us.
+	# if [ "$portal_redirect" != "" ]; then
+	# 	addconfig "FORM_userurl="$portal_redirect
+	# fi
+
+	if [ "$portal_networkId" != "" ]; then
+		addconfig "HS_NETWORKID="$portal_networkId
+	fi
+
+	addconfig "HS_SSIDID="$profile_index
+	if [ $uam_type -eq 2 ]
+	then
+		if [ "$is_ethernet" = "1" ]
+		then
+			local section_type="port"
+		else
+			local section_type="ap"
+		fi
+		local ssidProfileId=$(foreach cloud_mapping $section_type dut_config_index $section_id 2>/dev/null)
+		if [ "$ssidProfileId" != "" ]; then
+			addconfig "HS_SSIDPROFILEID="$ssidProfileId
+		fi
+	fi
+	addconfig "HS_MODELNAME="$(uci -q get sysProductInfo.model.modelName)
+	fwversion=$(grep build /etc/version | awk '{ print $1 }')
+	addconfig "HS_FWVERSION="${fwversion%.*}
+	addconfig "HS_APMAC="$(ifget machypen $REAL_WANIF)
+	addconfig 'HS_WANIP='$wanIP
+	addconfig 'HS_WANNETWORK='$wanNetwork
+	addconfig 'HS_WANMASK='$wanMask
+	addconfig 'HS_WANGATEWAY='$wanGateway
+
+	# all mode support guest_syncd roaming
+	if [ "$portal_guest_sync_enable" = "1" ]; then
+		addconfig "HS_GUEST_SYNC=on"
+	fi
+
+	if [ "$portal_disconnect_logout_enable" = "1" ]; then
+		addconfig "HS_DISCONNECT_LOGOUT=on"
+	fi
+
+	if [ "$portal_redir_ssl" = "1" ]; then
+		addconfig 'HS_REDIRSSL=on'
+	fi
+
+	if [ "$portal_type" != "108" ]
+	then
+		addconfig 'HS_SSLKEYPASS_HC=on'
+	fi
+
+	local ssl_key_link="/var/run/chilli/ssl/$profile_name-key.pem"
+	local ssl_cert_link="/var/run/chilli/ssl/$profile_name-cert.pem"
+	if [ "$portal_redir_ssl" = "1" -o "$portal_https_login_enable" = "1" ]; then
+
+		# even sslkeyfile not encryption, add sslkeypass is ok.
+		[ -n "$portal_ssl_key_pass" ] && addconfig "HS_SSLKEYPASS='$portal_ssl_key_pass'"
+
+		if [ "$(update_cert_link $profile_name)" = "1" ]
+		then
+			addconfig "HS_SSLKEYFILE='$ssl_key_link'"
+			addconfig "HS_SSLCERTFILE='$ssl_cert_link'"
+		fi
+	fi
+
+	if [ "$portal_https_login_enable" = "1" ]
+	then
+		addconfig "HS_UAMUISSL=on"
+		addconfig 'HS_UAMALIASIP='$dhcpIFIP
+
+		if [ "$portal_type" != "108" ]
+		then
+			local cert_common_name=`openssl x509 -noout -subject -nameopt multiline -in $ssl_cert_link |awk '/commonName/{print$3}'`
+			local aliasname=${cert_common_name%%.*}
+			local dnsdomain=${cert_common_name#*.}
+		fi
+
+		if [ -n "$cert_common_name" -a "$aliasname" != "$cert_common_name" ]
+		then
+			addconfig 'HS_UAMALIASNAME='$aliasname
+			addconfig 'HS_DNS_DOMAIN='$dnsdomain
+		else
+			addconfig 'HS_UAMALIASNAME='$portal_uamaliasname
+			addconfig 'HS_DNS_DOMAIN='$portal_dns_domain
+		fi
+		addconfig 'HS_DNSPARANOIA=on'
+	fi
+
+
+	# start add uamallow, uamdomains and uamblockdomains
+
+	local uamdomains=""
+	local uamallow=""
+	if [ "$portal_wallgarden" = "1" ]; then
+		old_IFS=$IFS
+		IFS=","
+		export IFS
+		for word in ${portal_wallgarden_page//\*/}; do
+			if [ $(isip ${word%/*}) -eq 1 ]; then
+				uamallow="$word${uamallow:+,}${uamallow}"
+			else
+				uamdomains="$word${uamdomains:+,}${uamdomains}"
+			fi
+		done
+		IFS=$old_IFS
+	fi
+
+	# fbwifi wallgarden
+	if [ "$portal_type" = "108" ]
+	then
+		uamdomains=".digicert.com,.akamaihd.net,www.facebook.com${uamdomains:+,}$uamdomains"
+	fi
+
+    # always allow let's encryption for cloud modle
+	local cert_walledgarden=""
+	if [ $ezmcloud -eq 1 ]
+	then
+		if [ "$portal_https_login_enable" = "1" -o "$portal_redir_ssl" = "1" ]
+		then
+			if [ "$portal_type" != "108" ]
+			then
+				cert_walledgarden="letsencrypt.org,lencr.org"
+			fi
+		fi
+	fi
+
+	if [ -n "$cert_walledgarden" ]
+	then
+		uamallow="${cert_walledgarden}${uamallow:+,}${uamallow}"
+		uamdomains="${cert_walledgarden}${uamdomains:+,}${uamdomains}"
+	fi
+
+	if [ "$portal_extern_server" != "" ]; then
+		unit=${portal_extern_server#http*://}
+		uamallow=${unit%%/*}${uamallow:+,}$uamallow
+		uamdomains="${unit%%/*}${uamdomains:+,}${uamdomains}"
+	fi
+
+	if [ "$uamAAAUrl_domain" != "" ]; then
+		uamallow=${uamAAAUrl_domain}${uamallow:+,}$uamallow
+		# add cloud page (http://jo2r3p2ve7.execute-api.us-west-2.amazonaws.com/) to uamdomains
+		if [ $ezmcloud -eq 1 ];then
+			uamdomains=${uamAAAUrl_domain}${uamdomains:+,}$uamdomains
+		fi
+	fi
+
+	if [ "$uamurl_host" != "" ]; then
+		if [ $(isip $uamurl_host) -eq 1 ]
+		then
+			uamallow=${uamurl_host}${uamallow:+,}$uamallow
+		else
+			# add cloud page (http://jo2r3p2ve7.execute-api.us-west-2.amazonaws.com/) to uamdomains
+			uamdomains=${uamurl_host}${uamdomains:+,}$uamdomains
+		fi
+	fi
+
+	if [ "$portal_oauth" = "1" ]; then
+		addconfig "HS_OAUTH=on"
+		# oauth_allow_domains=".akamaihd.net,.facebook.com,.facebook.net,.fbcdn.net,.google.com,.googleapis.com,.googleusercontent.com,.gstatic.com"
+		# uamdomains="${oauth_allow_domains}${uamdomains:+,}${uamdomains}"
+	fi
+
+	if [ "$bridgemode" = "1" ]; then
+		addconfig "HS_UAMALLOW="\$HS_DHCPGATEWAY${uamallow:+,}$uamallow
+	else
+		addconfig "HS_UAMALLOW="$uamallow
+	fi
+
+	# ios: hostpot-detect -> netcts.cdn-apple.com,  but after login, it will lock on query netcts.cdn-apple.com
+	uamdomains=$uamdomains${uamdomains:+,}netcts.cdn-apple.com
+	addconfig "HS_UAMDOMAINS=$uamdomains"
+
+	# ios:     http://captive.apple.com/hotspot-detect.html
+	# android: http://connectivitycheck.gstatic.com/generate_204
+	# firefox: http://detectportal.firefox.com/success.txt
+
+	local uamblockdomains=""
+	# max number = 16
+	for blockdomain in clients1.google.com clients3.google.com connectivitycheck.gstatic.com connectivitycheck.android.com www.google.com captive.apple.com detectportal.firefox.com www.msftconnecttest.com
+	do
+		local matched=0
+		for allowdomain in ${uamdomains//,/ } ${uamallow//,/ }
+		do
+			if [ "$allowdomain" = "$blockdomain" ]
+			then
+				matched=1
+				break
+			fi
+		done
+		if [ $matched -eq 0 ]
+		then
+			uamblockdomains=$blockdomain${uamblockdomains:+,}$uamblockdomains
+		fi
+	done
+	addconfig "HS_UAMBLOCKDOMAINS="$uamblockdomains
+
+	# end add uamallow and uamdomains
+}
+
+boost_reload()
+{
+    is_boost_reload=1
+    gen_chilli_config
+    /etc/init.d/chilli radconfig
+    /etc/init.d/chilli reload
+}
+
+boost_restart()
+{
+    local restart_config=$1
+    if [ -z "$restart_config" ]
+    then
+        echo "CP boost_restart must specific the br-ssidx" > /dev/console
+    else
+        is_boost_reload=1
+        local fbwifi_top_dir=$fbwifi_tmp_dir/$config_name/
+        test -d $fbwifi_top_dir && rm -rf $fbwifi_top_dir
+        gen_chilli_config $restart_config
+        dochilli restart $restart_config
+    fi
+}
+
+gen_chilli_config()
+{
+    local restart_config=$1
+    rm -rf $chilli_status_file
+    rm -rf $chilli_reload_file
+    if [ "$is_boost_reload" != "1" ]
+    then
+        rm -rf ${CHILLI}_pre
+        mv $CHILLI ${CHILLI}_pre
+    fi
+    for profile_name in natmode $nat_profiles bridgemode $bridge_profiles
+    do
+        if [ "$profile_name" = "natmode" ]
+        then
+            # initial nat mode variable
+            bridgemode=0
+            continue
+        elif [ "$profile_name" = "bridgemode" ]
+        then
+            bridgemode=1
+            continue
+        fi
+
+        CONFIG_NAME=br-$profile_name
+
+        if [ "$is_boost_reload" = "1" ]
+        then
+            if [ "$CONFIG_NAME" != "$restart_config" ]
+            then
+                continue
+            else
+                echo CP re-generate $CONFIG_NAME for boost_reload > /dev/console
+            fi
+        fi
+
+        chilli_guest_dir=$CHILLI/$CONFIG_NAME
+        rm -rf $chilli_guest_dir
+
+        section_id=$(get_section_id $CONFIG_NAME)
+        is_ethernet=$(is_ethernet_port $CONFIG_NAME)
+
+        if [ "$is_ethernet" = "1" ]
+        then
+            real_dhcpif=br-nat${section_id}p
+        else
+            ssid_num=$(get_ssid_num $CONFIG_NAME)
+            if [ $ssid_num -gt ${chilli_limit:-8} ]
+            then
+                echo CP chilli reached the limit, skip SSID $ssid_num > /dev/console
+                continue
+            fi
+            real_dhcpif=br-nat${section_id}
+        fi
+        profile_index=$(get_profile_index $CONFIG_NAME)
+
+        if [ "$bridgemode" = "0" ]
+        then
+            uci set dhcp.${real_dhcpif#br-}.ignore=1
+            uci commit dhcp
+            # chilli start will restart dnsmasq
+        fi
+
+        mkdir -p $chilli_guest_dir
+
+        # to fix NAT mode.
+        addconfig 'HS_LANIF='${real_dhcpif}
+        addconfig 'HS_CONFIG_NAME='$CONFIG_NAME
+
+        # cp $chilli_dir/$(basename ${c%/*})/* $chilli_guest_dir/
+        # addconfig 'HS_LANIF='$ifname
+        addconfig 'HS_UAMPORT=3990'
+        addconfig 'HS_UAMUIPORT=4990'
+
+        addconfig 'HS_MODE=hotspot'
+        addconfig 'HS_TYPE=chillispot'
+
+        addconfig 'HS_WWWDIR=/etc/chilli/www'
+        addconfig 'HS_WWWBIN=/etc/chilli/wwwsh'
+
+        addconfig2 'include /tmp/etc/chilli/'$CONFIG_NAME'/main.conf'
+        addconfig2 'include /tmp/etc/chilli/'$CONFIG_NAME'/hs.conf'
+        addconfig2 'include /tmp/etc/chilli/'$CONFIG_NAME'/local.conf'
+        addconfig2 'ipup=/etc/chilli/up.sh'
+        addconfig2 'ipdown=/etc/chilli/down.sh'
+
+
+        [ -f "$chilli_guest_dir/config" ] && . $chilli_guest_dir/config
+
+        gen_ssid_config $CONFIG_NAME
+        echo $CONFIG_NAME >> $chilli_reload_file
+    done
+}
+
+start()
+{
+if [ -n "$guestvlanID" ]
+then
+	echo VLAN ID:${guestvlanID}
+fi
+# echo CP NAT    profile: $gnmode_nat_profile > /dev/console
+# echo CP Bridge profile: $gnmode_bridge_profile > /dev/console
+echo "CP ifaces: [NAT] $nat_profiles" > /dev/console
+echo "CP ifaces: [Bridge] $bridge_profiles" > /dev/console
+echo "CP ifaces: [NAT_only] $nat_only_profiles" > /dev/console
+
+# echo CP captived: $captived > /dev/console
+# echo CP portalEn: $portal_en > /dev/console
+
+
+is_dnamasq_restart=0
+for nat_only_if in $nat_only_profiles
+do
+    nat_only_id=$(get_section_id $nat_only_if)
+    if [ "$(is_ethernet_port $nat_only_if)" = "1" ]
+    then
+        uci set dhcp.nat${nat_only_id}p.ignore=0
+    else
+        uci set dhcp.nat${nat_only_id}.ignore=0
+    fi
+    is_dnamasq_restart=1
+    uci commit dhcp
+done
+
+
+if [ "$is_dnamasq_restart" = "1" ]
+then
+    if [ -f "/usr/sbin/dnsmasq_restart" ]
+    then
+        /usr/sbin/dnsmasq_restart portal &
+    else
+        /etc/init.d/dnsmasq restart
+    fi
+fi
+
+if [ "${captived:-0}" = "1" ]; then
+	if [ $ezmcloud -eq 0 ]
+	then
+		if [ -z "$acIP" ];then
+			echo "CP No acIP or force acIP, skip this reload to speed up" > /dev/console
+			return 0
+		fi
+	fi
+	if [ -z "$wanIP" ];then
+		echo "CP No lanIP, skip this reload to speed up" > /dev/console
+		return 0
+	fi
+	if [ -z "$dhcpgateway" ];then
+		echo "CP No Gateway, skip this reload to speed up" > /dev/console
+		return 0
+	fi
+fi
+
+for ipttable in `ls $chilli_ipt_restore_default_dir`
+do
+	local iptpath=$chilli_ipt_restore_default_dir/$ipttable
+	ipt4_restore 3 $iptpath
+done
+
+for ipttable in `ls $chilli_ipt6_restore_default_dir`
+do
+	local iptpath=$chilli_ipt6_restore_default_dir/$ipttable
+	ipt6_restore 3 $iptpath
+done
+
+# TODO: move all config_get general_xxx to HERE.
+# if auto detect, SENAO environment must set mss 1442 to fix mtu issue...so revert to 1500
+#AUTO_MTU=`/usr/sbin/mtucheck.sh`
+AUTO_MTU=1500
+config_get general_portal_tun_mtu general tunMTU ${AUTO_MTU:-1412}
+
+echo $brlanIP > /var/run/udhcpc-$REAL_WANIF.ip
+
+if [ "$captived" = "1" ] && [ "$portal_en" = "1" ] && [ -n "$portal_ifaces" ];then
+	gen_chilli_config
+
+	local is_traiband=`uci -q get wireless.wifi4 && echo 1 || echo`
+	for brssid_name in `ls /tmp/etc/chilli |grep ssid`
+	do
+		local wifi_ssid_num=$(get_ssid_num $brssid_name)
+		# wifi-schedule will restore beacon
+		echo "CP beacon off ssid$wifi_ssid_num" > /dev/console
+		wifi-control.sh beacon off $wifi_ssid_num
+		for wifi_radio in 0 1 ${is_traiband:+4}
+		do
+			if [ $wifi_ssid_num -gt 1 ]
+			then
+				local wifi_ifname="ath${wifi_radio}"$((${wifi_ssid_num}-1))
+			else
+				local wifi_ifname="ath${wifi_radio}"
+			fi
+			[ -d /sys/class/net/$wifi_ifname/ ] && all_wifi_ifname=${all_wifi_ifname:+$all_wifi_ifname }$wifi_ifname
+			# it will kick all clients
+		done
+	done
+
+	dochilli start
+fi
+
+	aws_ip_crontab start
+
+	# reset ndpi rule to upper
+	test -f /etc/init.d/ndpi && /etc/init.d/ndpi rule_reload
+	test -f /etc/l2_block/l2_block-re.init && /etc/l2_block/l2_block-re.init
+
+	# move to ipup.sh
+	# ( sleep 8 && /etc/init.d/dnsmasq restart ) &
+	# ECW120 must restart guestsyncd to avoid network reload cause guestsyncd cannot receive broadcast packet from br-lan
+}
+
+stop()
+{
+	/etc/init.d/guestsyncd stop
+	rm -f /var/run/chilli_token_*
+	rm -f /var/run/chilli.*.cfg.bin
+	rm -f /var/run/chilli/query_timeout
+	rm -f /var/run/chilli/ssl/*.pem
+
+	chilli_retry_crontab rem
+	rm -rf $fbwifi_tmp_dir
+
+	dochilli stop
+	# avoid chilli crash, not kill chilli_proxy
+	killall chilli_proxy
+	rm -rf /tmp/etc/chilli/
+	aws_ip_crontab stop
+	rem_ip_rules
+	# restart/reload qrfs to flush /proc/qrfs/rules
+	test -x /etc/init.d/qrfs && /etc/init.d/qrfs reload
+
+	if [ $is_support_syskey -eq 1 ]
+	then
+		/etc/init.d/syskey setValue "bridge_nf_call_iptable" "portal" "0"
+	else
+		echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+	fi
+
+	rm -f /var/run/chilli/ipt-del-rule.sh
+	for ipttable in `ls $chilli_ipt_restore_default_dir`
+	do
+		local iptpath=$chilli_ipt_restore_default_dir/$ipttable
+		cat $iptpath |grep "^-" |grep -v "^-F" |sed "s/-I\|-A/iptables -t $ipttable -D/" >> /var/run/chilli/ipt-del-rule.sh
+	done
+	for ipttable in `ls $chilli_ipt6_restore_default_dir`
+	do
+		local iptpath=$chilli_ipt6_restore_default_dir/$ipttable
+		cat $iptpath |grep "^-" |grep -v "^-F" |sed "s/-I\|-A/ip6tables -t $ipttable -D/" >> /var/run/chilli/ipt-del-rule.sh
+	done
+	sh /var/run/chilli/ipt-del-rule.sh
+
+	for i in `iptables -t raw -L SN_LOGGING -nv --line-numbers | grep tun | awk '{print $1}' | sort -nr`
+	do
+		iptables -t raw -D SN_LOGGING $i
+	done
+}
+
+
+boot()
+{
+	mkdir -p /var/run/chilli/
+	mkdir -p /var/run/chilli/whitelist/
+	mkdir -p /var/run/chilli/ssl/
+	start
+}

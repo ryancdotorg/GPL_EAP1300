@@ -1,0 +1,158 @@
+#!/bin/sh /etc/rc.common
+START=99
+STOP=89
+
+. /etc/functions.sh
+. /etc/chilli/chilli-libs.sh
+. /etc/sn-udhcpc-libs.sh
+
+
+start() {
+
+    local configfile=""
+    local wanif="br-lan"
+    local udhcpc_list=""
+
+    ### check captive-portal NAT mode WANIF
+    for i in `ls /tmp/etc/chilli/ 2>/dev/null`
+    do
+        configfile="$configfile /tmp/etc/chilli/$i/config"
+    done
+
+    for i in $configfile
+    do
+        wanif=$(get_config_value $i HS_WANIF)
+        if [ "$wanif" != "br-lan" ]
+        then
+            test -f /var/run/udhcpc-$udhcpc_if.pid || udhcpc_list=$(get_uniq_sort_string $udhcpc_list $wanif)
+        fi
+    done
+
+    ### check guest vlan
+    local is_guestvlan_en=$(uci -q get network.sys.GuestVLANEnable)
+    if [ "${is_guestvlan_en:-0}" = "1" ]
+    then
+        local guestvlantag=$(uci -q get network.sys.GuestVLANID)
+        add_to_udhcpc_list $guestvlantag
+    fi
+    ###
+
+
+    ### check nat_only vlan
+    local gnmode_natonly_profile=$(get_gnmode_profile NAT_only)
+    if [ -n "$gnmode_natonly_profile" ];then
+        local natonly_profiles=""
+        for profile in $gnmode_natonly_profile;do
+            if [ "$natonly_profiles" = "${natonly_profiles/$profile/}" ];then
+                natonly_profiles=${natonly_profiles:+$natonly_profiles }$profile
+            fi
+        done
+    fi
+
+    for natonly_profile in $natonly_profiles
+    do
+        local is_natonly_vlan_en=$(get_wireless_option ssid_$(get_section_id $natonly_profile) isolation 1)
+
+        if [ "${is_natonly_vlan_en:-0}" = "1" ]
+        then
+            local natonlyvlantag=$(get_wireless_option _ssid_$(get_section_id $natonly_profile) vlan_id 0)
+        else
+            local natonlyvlantag=0
+        fi
+        add_to_udhcpc_list $natonlyvlantag
+    done
+    ###
+
+    ### ethernet profile nat_only mode vlan check
+    ethprofile=$(get_ethernet_profile NAT_only)
+    for profile in $ethprofile
+    do
+        local ethprofile_section="port_$(get_section_id $profile)"
+        local is_ethprofile_vlan_en=$(uci get ethprofile.$ethprofile_section.vlan_enable)
+        if [ ${is_ethprofile_vlan_en:-0} -eq 1 ]
+        then
+            local ethprofile_vlan=$(uci get ethprofile.$ethprofile_section.vlan_id)
+        else
+            local ethprofile_vlan=0
+        fi
+        add_to_udhcpc_list $ethprofile_vlan
+    done
+    ###
+
+    ### check ldap_if vlan
+    local ldap_if=$(get_ldap_if)
+
+    for ldap_ifname in $ldap_if
+    do
+        local is_ldap_ssid_vlan_en=$(get_wireless_option ssid_$(get_ssid_num $ldap_ifname) isolation 1)
+        if [ ${is_ldap_ssid_vlan_en:-0} -eq 1 ]
+        then
+            local ldapifvlantag=$(get_wireless_option _ssid_$(get_ssid_num $ldap_ifname) vlan_id 0)
+        else
+            local ldapifvlantag=0
+        fi
+        add_to_udhcpc_list $ldapifvlantag
+    done
+    ###
+
+    ### check banned msg vlan
+    local banned_msg_if=$(get_banned_msg_if)
+
+    for banned_msg_ifname in $banned_msg_if
+    do
+        local is_banned_msg_ssid_vlan_en=$(get_wireless_option ssid_$(get_ssid_num $banned_msg_ifname) isolation 1)
+        if [ ${is_banned_msg_ssid_vlan_en:-0} -eq 1 ]
+        then
+            local bannedmsgifvlantag=$(get_wireless_option _ssid_$(get_ssid_num $banned_msg_ifname) vlan_id 0)
+        else
+            local bannedmsgifvlantag=0
+        fi
+        add_to_udhcpc_list $bannedmsgifvlantag
+    done
+    ###
+
+
+    if [ -n "$udhcpc_list" ]
+    then
+        echo "sn-udhcpc: udhcpc iface $udhcpc_list" > /dev/console
+        for i in $udhcpc_list
+        do
+            udhcpc -p /var/run/udhcpc-$i.pid -s /etc/sn-udhcpc.sh -f -t 0 -i $i &
+        done
+    fi
+}
+
+stop() {
+    killall -q sn-udhcpc.sh
+    pidfiles="
+    /var/run/udhcpc-br-99.pid
+    /var/run/udhcpc-br-ssid*.pid
+    /var/run/udhcpc-br-vlanguest.pid
+    /var/run/udhcpc-br-vlan*.pid"
+    for list in $pidfiles
+    do
+        if [ -f "$list" ]
+        then
+            pid=`cat $list`
+            kill -usr2 $pid
+            kill $pid
+            echo "sn-udhcpc: killed $pid [$list]" > /dev/console
+        fi
+    done
+
+    for undo_file in `ls /var/run/udhcpc-br-*-undo.sh 2>/dev/null`
+    do
+        sh $undo_file
+    done
+    rm -f /var/run/udhcpc-br-*-undo.sh
+    rm -f /var/run/udhcpc-br-ssid*.pid
+    rm -f /var/run/udhcpc-br-vlanguest.pid
+    rm -f /var/run/udhcpc-br-vlan*.pid
+    rm -f /var/run/udhcpc-*.ip
+}
+
+
+reload() {
+    stop
+    start
+}

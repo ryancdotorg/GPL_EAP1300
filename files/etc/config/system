@@ -1,0 +1,84 @@
+config system
+	option hostname	EAP1300
+	option timezone	'UTC0'
+	option SystemName 'EAP1300'
+	option LogLevel '9'
+	option syslog_enable '1'
+	option remotelog_enable '0'
+	option zonename 'Gambia, Liberia, Morocco'
+	option zone_auto_detect '0'
+	option zonenumber '20'
+	option log_ip '0.0.0.0'
+
+config timeserver ntp
+	list server	pool.ntp.org
+	option enable_server 1
+
+config telnet 'telnet'
+	option enable 'on'
+
+config led 'power_led'
+	option name 'Power'
+	option sysfs 'power_led1'
+	option default '0'
+	option trigger 'none'
+	option brightness '1'
+
+config led 'lan1_led'
+	option name 'LAN1'
+	option sysfs 'lan_led1'
+	option trigger 'netdev'
+	option default '0'
+    option dev 'eth1'
+    option mode 'link tx rx'
+
+#config led 'lan2_led'
+#	option name 'LAN2'
+#	option sysfs 'lan2_led'
+#	option trigger 'none'
+#	option default '0'
+
+config led 'wifi0_led'
+	option name 'WIFI0'
+	option sysfs 'wlan_2g_led'
+	option default '0'
+	option trigger 'netdev'
+	option brightness '1'
+	option dev 'wifi0'
+	option mode 'link tx'
+
+config led 'wifi1_led'
+	option name 'WIFI1'
+	option sysfs 'wlan_5g_led'
+	option default '0'
+	option trigger 'netdev'
+	option brightness '1' 
+	option dev 'wifi1'
+	option mode 'link tx'
+
+config led 'mesh_led'
+	option name 'MESH'
+	option sysfs 'mesh_led'
+	option default '0'
+
+config button 'reset_pressed'
+	option button 'reset'
+	option action 'pressed'
+	option time '0'
+	option handler '/usr/sbin/reset_led.sh 10 &'
+
+config button 'reset_released'
+	option button 'reset'
+	option action 'released'
+	option least '10'
+	option handler 'sh /etc/button_reset_default.sh'
+
+config button 'reboot'
+	option button 'reset'
+	option action 'released'
+	option min '1'
+	option max '5'
+	option handler 'reboot && echo reboot system >> /dev/console'
+
+config 'factory' 'factory'
+	option init '0'

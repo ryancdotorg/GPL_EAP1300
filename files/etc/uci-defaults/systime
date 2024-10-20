@@ -1,0 +1,18 @@
+#!/bin/sh
+
+/etc/init.d/sysntpd disable
+
+uci -q batch <<-EOF >/dev/null
+	del ucitrack.@systime[-1]
+	del_list ucitrack.@system[-1].affects=systime
+	del_list ucitrack.@ntpclient[-1].affects=systime
+	add ucitrack systime
+	set ucitrack.@systime[0].init=systime
+	add_list ucitrack.@systime[0].affects=wifi_schedule
+	add_list ucitrack.@system[0].affects=systime
+	add_list ucitrack.@ntpclient[0].affects=systime
+	commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

@@ -1,0 +1,3 @@
+/usr/lib/lua/luci/view/wsplc/dview_js.htm
+/usr/lib/lua/luci/model/cbi/wsplc/wsplc.lua
+/usr/lib/lua/luci/controller/wsplc.lua

@@ -1,0 +1,11 @@
+Package: libpcre
+Version: 8.38-2
+Depends: libc
+Source: qca/feeds/packages/libs/pcre
+License: BSD-3-Clause
+LicenseFiles: LICENCE
+Section: libs
+Maintainer: Thomas Heil <heil@terminal-consulting.de>
+Architecture: ipq40xx
+Installed-Size: 80533
+Description:  A Perl Compatible Regular Expression library

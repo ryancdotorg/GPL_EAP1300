@@ -1,0 +1,9 @@
+Package: senao-traffic-control
+Version: 2.1-1-g189e082
+Depends: libc, tc, kmod-ifb
+Source: SENAO/package/senao-traffic-control
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 7725
+Description:  Senao Network Traffic Control

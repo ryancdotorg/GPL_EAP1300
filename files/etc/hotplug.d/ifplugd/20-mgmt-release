@@ -1,0 +1,6 @@
+#!/bin/sh
+TEMP_PRE_IP_FILE="/tmp/pre_ip"
+
+[ $ACTION == "down" ] && {
+    rm $TEMP_PRE_IP_FILE
+}

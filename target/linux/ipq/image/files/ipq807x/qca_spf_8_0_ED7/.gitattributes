@@ -1,0 +1,11 @@
+rpm.mbn filter=lfs diff=lfs merge=lfs -text
+sbl1_emmc.mbn filter=lfs diff=lfs merge=lfs -text
+sbl1_flashless.mbn filter=lfs diff=lfs merge=lfs -text
+sbl1_nand.mbn filter=lfs diff=lfs merge=lfs -text
+sbl1_nor.mbn filter=lfs diff=lfs merge=lfs -text
+wifi_fw_ubi.img filter=lfs diff=lfs merge=lfs -text
+partition_tool filter=lfs diff=lfs merge=lfs -text
+devcfg_nosmmu.mbn filter=lfs diff=lfs merge=lfs -text
+tz.mbn filter=lfs diff=lfs merge=lfs -text
+wifi_fw_squashfs.img filter=lfs diff=lfs merge=lfs -text
+bootconfig_tool filter=lfs diff=lfs merge=lfs -text

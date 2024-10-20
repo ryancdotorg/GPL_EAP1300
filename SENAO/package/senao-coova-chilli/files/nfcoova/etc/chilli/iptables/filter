@@ -1,0 +1,8 @@
+*filter
+:portal_fw_filter - [0:0]
+:portal_in_filter - [0:0]
+-F portal_fw_filter
+-F portal_in_filter
+-I FORWARD -j portal_fw_filter
+-I INPUT -j portal_in_filter
+COMMIT

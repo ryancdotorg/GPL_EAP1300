@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=10
+STOP=98
+
+start() {
+	/usr/shc/boot start
+}
+
+stop() {
+	/usr/shc/boot stop
+}

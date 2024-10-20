@@ -1,0 +1,373 @@
+<%
+local meshData = luci.util.trim(luci.util.exec("cat /tmp/alfred_64 |tr -d '\n'"))
+local mesh67Data = luci.util.trim(luci.util.exec("cat /tmp/alfred_67 |tr -d '\n'"))
+%>
+<html align="center">
+<meta charset="utf-8">
+<style>
+
+.node {
+  font: 300 11px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  fill: #bbb;
+}
+
+.node:hover {
+  fill: #000;
+}
+
+.link {
+  stroke: steelblue;
+  stroke-opacity: .4;
+  fill: none;
+  pointer-events: none;
+  stroke-dasharray:3;  
+}
+
+.node:hover,
+.node--source,
+.node--target {
+  font-weight: 700;
+}
+
+.node--source {
+  fill: #2ca02c;
+}
+
+.node--target {
+  fill: #1b489c;
+}
+
+.link--source,
+.link--target {
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+
+.link--source {
+  stroke: #2ca02c;
+  stroke-dasharray:0;
+}
+
+.link--target {
+  stroke: #2ca02c;
+  stroke-dasharray:0;
+}
+
+</style>
+<script src="<%=media%>/jquery-1.10.1.min.js"></script>
+<script src="<%=media%>/d3.v3.min.js"></script>
+<body onload="copyto();" align="center"> 
+<script>
+
+var diameter = 350,
+    radius = diameter / 2,
+    innerRadius = radius - 120;
+
+var cluster = d3.layout.cluster()
+    .size([360, innerRadius])
+    .sort(null)
+    .value(function(d) { return d.size; });
+
+var bundle = d3.layout.bundle();
+
+var line = d3.svg.line.radial()
+    .interpolate("bundle")
+    .tension(.85)
+    .radius(function(d) { return d.y; })
+    .angle(function(d) { return d.x / 180 * Math.PI; });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", diameter)
+    .attr("height", diameter)
+    .attr("align", "center")
+  .append("g")
+    .attr("transform", "translate(" + radius + "," + radius + ")");
+
+var link = svg.append("g").selectAll(".link"),
+    node = svg.append("g").selectAll(".node");
+
+var topology=[
+/*{"name": "Linko_701", "size":3938, "imports":["Linko_705", "Linko_sales", "Linko_RD_blk1", "Linko_8F"]},
+{"name": "Linko_705", "size":3938, "imports":["Linko_701", "Linko_sales", "Linko_RD_blk1"]},
+{"name": "Linko_RD_blk1", "size":3938, "imports":["Linko_705", "Linko_sales", "Linko_701"]},
+{"name": "Linko_sales", "size":3938, "imports":["Linko_705", "Linko_701", "Linko_RD_blk1", "Linko_8F"]},
+{"name": "Linko_8F", "size":3938, "imports":["Linko_sales", "Linko_701" , "Linko_RD_blk1", "Linko_8F"]},
+{"name": "Linko_8F3", "size":3938, "imports":["Linko_sales", "Linko_701" , "Linko_RD_blk1", "Linko_8F"]},
+{"name": "Linko_8F4", "size":3938, "imports":["Linko_sales", "Linko_701" , "Linko_RD_blk1", "Linko_8F", "Linko_RD_blk1"]}*/
+/*{"name": "8a:dc:96:42:9c:4f", "size":"3938", "imports":["02:22:44:66:66:ab"]},
+{"name": "02:22:44:66:66:ab", "size":"3938", "imports":["8a:dc:96:42:9c:4f"]}
+*/
+];
+
+/*
+  {"name": "EMR3000_9B85", "size":"3938", "imports":["8a:dc:96:42:9c:4d", "EMR3000_66AB"]},
+  {"name": "02:22:44:66:66:ab", "size":"3938", "imports":[]},
+  {"name": "8a:dc:96:42:9c:4d", "size":"3938", "imports":["02:22:44:66:66:ab"]}
+  */
+var topologylist;
+/*'{ "GetMeshDeviceNeighborsResult": "OK", "MeshDeviceNeighbors": [ { "MeshDeviceMAC": "8a:dc:96:42:9c:4f", "MeshLinkInformation": [ { "MAC": "02:22:44:66:66:ab", "TQ": 69 }, { "MAC": "02:22:44:66:66:a1", "TQ": 69 }] }, { "MeshDeviceMAC": "02:22:44:66:66:ab", "MeshLinkInformation": [ { "MAC": "8a:dc:96:42:9c:4f", "TQ": 93 } , { "MAC": "02:22:44:66:66:a3", "TQ": 69 }] }]}';
+*/
+
+var alfred='<%=meshData%>';
+/*'{ "8a:dc:96:42:9c:4f", "{\"DeviceType\":\"Router\",\"DeviceName\":\"EMR3000_9B85\",\"ModelName\":\"EMR3000\",\"IPAddress\":\"169.254.7.197\",\"LANIPAddress\":\"192.168.0.1\",\"UID\":\"1bd647a\"}" },{ "02:22:44:66:66:ab", "{\"DeviceType\":\"AP\",\"DeviceName\":\"EMR3000_66AB\",\"ModelName\":\"EMR3000\",\"IPAddress\":\"169.254.7.199\",\"LANIPAddress\":\"192.168.0.100\",\"UID\":\"0999954\"}" },'*/
+
+function getTopologyList(result)
+{
+  if(result!="")
+  {
+    result=result.replace(/\\/g, '');
+    result=result.replace(/u0022/g, '"');
+    result=result.replace(/},{/g, '},\n{');
+    var meshlist = result;
+    meshdata = meshlist.split("\n");
+    var meshNameList=[];
+    for(i=0;i<meshdata.length;i++)
+    {
+            jsonlist=meshdata[i].substring(24,meshdata[i].length-4);
+            obj = JSON.parse(jsonlist);
+            meshNameList.push({mac:meshdata[i].substring(3,20), name:obj.DeviceName})
+            //alert(obj.DeviceName)
+    }
+  }
+
+  var data67 = '<%=mesh67Data%>';
+  var tmpStr;
+  var node_mac=[];
+  var link_mac=[];
+  var mesh_mac=[];
+  var DeviceName=[];
+    /*$.ajax({
+    async: false,
+        type : "GET",
+        url:url,
+        dataType:"json",
+        error:function(){
+        },
+        success:function(str){
+          
+        }
+    });*/
+
+  if(data67!="")
+  {
+        data67=data67.replace(/\\/g, '');
+        data67=data67.replace(/u0022/g, '"');
+        data67=data67.replace(/]" },/g, ']" },\n');
+        tmpStr = data67;
+  }
+
+  tmpStr = tmpStr.split("\n");
+
+  for(var i=0;i<tmpStr.length-1;i++)
+  {
+    node_mac[i] = tmpStr[i].substring(3,20);
+    
+    for(var j=0;j<meshNameList.length;j++)
+    {
+        if(meshNameList[j].mac==node_mac[i])
+        {
+          DeviceName.push(meshNameList[j].name);
+        }
+    }
+
+//alert(tmpStr[i].substring(24,tmpStr[i].length-4));
+    /*if(tmpStr[i].substring(24,tmpStr[i].length-4)!="[]")
+    {
+      obj=JSON.parse(tmpStr[i].substring(24,tmpStr[i].length-4));
+    }*/
+    obj=JSON.parse(tmpStr[i].substring(24,tmpStr[i].length-4));
+    link_mac[i] = [];
+    var tmp=[];
+    var add;
+    var count_1=0;
+
+    for(var k=0;k<obj.length;k++)
+    {      
+        link_mac[i][k]=obj[k].mac;
+        // alert(obj[k].mac)
+        for(var l=0;l<meshNameList.length;l++)
+        {
+          if(link_mac[i][k]==meshNameList[l].mac)
+          {
+            link_mac[i][k]=meshNameList[l].name;
+          }
+          // alert(i+" "+k+" "+link_mac[i][k])
+        }
+    }
+  }
+  
+  var count=0;
+  
+  for(var i=0;i<link_mac.length;i++)
+  {
+    mesh_mac[i] = [];
+    
+    for(var j=0;j<link_mac[i].length;j++)
+    {
+      if(checkHasNode(link_mac[i][j], DeviceName)==1)
+      {
+        // alert(count_1+""+count)
+        mesh_mac[i][count]=link_mac[i][j];
+        //alert(i+" "+j+link_mac[i][j]);
+        count++;
+      }
+    }
+    count=0;
+  }
+  
+
+  var MeshDeviceNeighborsList=[];  
+
+  for(var i=0; i < DeviceName.length;i++)
+  {
+    //alert(node_mac[i])
+    tmp[i]='{"name": "'+DeviceName[i]+'", "size":"3938", "imports":['
+    
+    var checkStr=0;
+
+    for(var j=0;j<mesh_mac[i].length;j++)
+    {      
+        if(j==mesh_mac[i].length-1)
+        {          
+          tmp[i] = tmp[i]+'"'+mesh_mac[i][j]+'"]}'
+          checkStr=1;
+        }
+        else
+        {
+          tmp[i] = tmp[i]+'"'+mesh_mac[i][j]+'", '
+          checkStr=1; 
+        }        
+    }
+    if(checkStr!=0)
+      topology.push(tmp[i]);
+  }
+
+  if(topology!="")
+  {
+    for(var i=0; i < topology.length;i++)
+    {
+      //alert(topology[i])
+      MeshDeviceNeighborsList.push(JSON.parse(topology[i]));
+    }
+  }  
+
+  return MeshDeviceNeighborsList;
+}
+
+function checkHasNode(node, DeviceName)
+{
+  //var Obj = JSON.parse(topologylist);
+  
+  for(var i=0;i < DeviceName.length;i++)
+  {
+    if(node==DeviceName[i])
+    {
+      return 1;    
+    }
+  }
+  return 0;
+}
+
+//d3.json("readme-flare-imports.json", function(error, classes) {
+function copyto()
+{
+  if(getTopologyList(alfred)!="")
+  {
+    var nodes = cluster.nodes(packageHierarchy(getTopologyList(alfred))),
+      links = packageImports(nodes);
+
+    link = link
+        .data(bundle(links))
+      .enter().append("path")
+        .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
+        .attr("class", "link")
+        .attr("d", line);
+
+    node = node
+        .data(nodes.filter(function(n) { return !n.children; }))
+      .enter().append("text")
+        .attr("class", "node")
+        .attr("dy", ".31em")
+        .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + (d.y + 8) + ",0)" + (d.x < 180 ? "" : "rotate(180)"); })
+        .style("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+        .text(function(d) { return d.key; })
+        .on("mouseover", mouseovered)
+        .on("mouseout", mouseouted);
+  }
+}    
+//});
+
+function mouseovered(d) {
+  node
+      .each(function(n) { n.target = n.source = false; });
+
+  link
+      .classed("link--target", function(l) { if (l.target === d) return l.source.source = true; })
+      .classed("link--source", function(l) { if (l.source === d) return l.target.target = true; })
+    .filter(function(l) { return l.target === d || l.source === d; })
+      .each(function() { this.parentNode.appendChild(this); });
+
+  node
+      .classed("node--target", function(n) { return n.target; })
+      .classed("node--source", function(n) { return n.source; });
+}
+
+function mouseouted(d) {
+  link
+      .classed("link--target", false)
+      .classed("link--source", false);
+
+  node
+      .classed("node--target", false)
+      .classed("node--source", false);
+}
+
+d3.select(self.frameElement).style("height", diameter + "px");
+
+// Lazily construct the package hierarchy from class names.
+function packageHierarchy(classes) {
+  var map = {};
+
+  function find(name, data) {
+    var node = map[name], i;
+    if (!node) {
+      node = map[name] = data || {name: name, children: []};
+      if (name.length) {
+        node.parent = find(name.substring(0, i = name.lastIndexOf(".")));
+        node.parent.children.push(node);
+        node.key = name.substring(i + 1);
+      }
+    }
+    return node;
+  }
+
+  classes.forEach(function(d) {
+    find(d.name, d);
+  });
+
+  return map[""];
+}
+
+// Return a list of imports for the given array of nodes.
+function packageImports(nodes) {
+  var map = {},
+      imports = [];
+
+  // Compute a map from name to node.
+  nodes.forEach(function(d) {
+    map[d.name] = d;
+  });
+
+  // For each import, construct a link from the source to target node.
+  nodes.forEach(function(d) {
+    if (d.imports) d.imports.forEach(function(i) {
+      imports.push({source: map[d.name], target: map[i]});
+    });
+  });
+
+  return imports;
+}
+
+</script>
+</body>
+</html>

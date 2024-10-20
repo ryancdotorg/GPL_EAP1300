@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+
+START=98
+
+SPEEDTEST_RESULT="/tmp/speedtest_result"
+
+start() {
+	[ "Online" == "$(checkInternet.sh)" ] && {
+		[ "client" == "$(uci get mesh.wifi.role)" ] && exit
+		/sbin/speedtest-master -f 1 -d 10 > $SPEEDTEST_RESULT &
+	} || {
+		echo "no internet" > $SPEEDTEST_RESULT
+	}
+}
+

@@ -1,0 +1,1721 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2008 Steven Barth <steven@midlink.org>
+Copyright 2008-2011 Jo-Philipp Wich <xm@subsignal.org>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+-%>
+
+<%
+	require "luci.fs"
+	require "luci.tools.status"
+	local uci = require "luci.model.uci".cursor()
+	local ntm = require "luci.model.network".init()
+	local has_ipv4 = luci.fs.access("/proc/net/ipv4_route")
+	local has_ipv6 = luci.fs.access("/proc/net/ipv6_route")
+	local disable_ipv6_GUI = uci:get("functionlist","functionlist","SUPPORT_IPV6_DISABLED") or "0"
+	local has_dhcp = luci.fs.access("/etc/config/dhcp")
+	local lan_type
+	if uci:get("functionlist","functionlist","SUPPORT_IPV6_SETTING_INDEPENDENT") == "1" then
+		lan_type = uci:get("network", "lan", "ipv6_proto")
+	else	
+		lan_type = uci:get("network", "lan", "proto")
+	end
+	local has_wifi = luci.fs.stat("/etc/config/wireless")
+	      has_wifi = has_wifi and has_wifi.size > 0
+	local only_eth1_for_lan = uci:get('functionlist','functionlist','SUPPORT_ONLY_ETH1_STATISTICS_FOR_LAN')
+	if luci.http.formvalue("status") == "1" then
+		local wan = ntm:get_wannet()
+		local wan6 = ntm:get_wan6net()
+	
+--		local _, _, memtotal, memcached, membuffers, memfree = luci.sys.sysinfo()
+--	
+--		local conn_count = tonumber((
+--			luci.sys.exec("wc -l /proc/net/nf_conntrack") or
+--			luci.sys.exec("wc -l /proc/net/ip_conntrack") or
+--			""):match("%d+")) or 0
+--	
+--		local conn_max = tonumber((
+--			luci.sys.exec("sysctl net.nf_conntrack_max") or
+--			luci.sys.exec("sysctl net.ipv4.netfilter.ip_conntrack_max") or
+--			""):match("%d+")) or 4096
+
+			local rv = {
+--				uptime     = luci.sys.uptime(),
+--				localtime  = os.date(),
+--				loadavg    = { luci.sys.loadavg() },
+--				memtotal   = memtotal,
+--				memcached  = memcached,
+--				membuffers = membuffers,
+--				memfree    = memfree,
+--				connmax = conn_max,
+--				conncount = conn_count,
+--				leases = luci.tools.status.dhcp_leases(),
+--				leases6 = luci.tools.status.dhcp6_leases(),
+				wifinets = luci.tools.status.wifi_networks()
+			}
+	
+			if wan then
+				rv.wan = {
+					ipaddr = wan:ipaddr(),
+					gwaddr = wan:gwaddr(),
+					netmask = wan:netmask(),
+					dns = wan:dnsaddrs(),
+					expires = wan:expires(),
+					uptime = wan:uptime(),
+					proto = wan:proto(),
+					ifname = wan:ifname(),
+					link = wan:adminlink(),
+				}
+			end
+	
+--			if wan6 then
+--				rv.wan6 = {
+--					ip6addr = wan6:ip6addr(),
+--					gw6addr = wan6:gw6addr(),
+--					dns     = wan6:dns6addrs(),
+--					uptime  = wan6:uptime(),
+--					ifname  = wan6:ifname(),
+--					link    = wan6:adminlink()
+--				}
+--			end
+
+		luci.http.prepare_content("application/json")
+		luci.http.write_json(rv)
+
+		return
+	end
+
+	if luci.http.formvalue("status") == "2" then
+
+		local _, _, memtotal, memcached, membuffers, memfree = luci.sys.sysinfo()
+
+			local rv = {
+				uptime     = luci.sys.uptime(),
+				localtime  = os.date(),
+				memtotal   = memtotal,
+				memcached  = memcached,
+				membuffers = membuffers,
+				memfree    = memfree,
+			}
+		
+		if luci.http.formvalue("ipv6") == "1" then
+
+			local conf, dnsaddrs
+			conf = "/tmp/resolv.conf.auto"
+			rv.ipv6 = { addr = {}, gwaddr = {}, dnsaddrs = {} }
+			rv.ipv6.addr = luci.util.trim(luci.util.exec([[ip -6 addr show br-lan | grep 'scope global' | sed -n '1p' | sed 's/^.*inet6 //g' | sed 's/\/.*$//g']]))
+			rv.ipv6.gwaddr = luci.util.trim(luci.util.exec([[ip -6 route show default | grep 'br-lan' | sed -n '1p' | sed 's/^.*via //g' | sed 's/ .*$//g']]))
+	
+			dnsaddrs = luci.util.exec([[cat %s | grep -E '^nameserver.*:' | grep -wv '::1' | cut -d ' ' -f 2]] % conf)
+			rv.ipv6.dnsaddrs = luci.util.split(luci.util.trim(dnsaddrs), "\n")
+	
+		end
+
+		luci.http.prepare_content("application/json")
+		luci.http.write_json(rv)
+
+		return
+	end
+
+	if luci.http.formvalue("status") == "3" then
+
+		local rv = luci.tools.status.wifi_networks_actived_channels()
+		
+		luci.http.prepare_content("application/json")
+		luci.http.write_json(rv)
+
+		return
+	end
+
+	local system, model = luci.sys.sysinfo()
+	local WLANVLANEnable = uci:get("network", "sys", "WLANVLANEnable")
+	local managementVlanId = uci:get("network", "sys", "ManagementVLANID") or 0
+	local ManagementVLANID_MAX_VALUE = tonumber(uci:get("functionlist", "vendorlist", "ManagementVLANID_MAX_VALUE") or 4094)
+	local uti = luci.util
+	local lan_ip = uti.trim(uti.exec("ifconfig br-lan | grep \"inet addr\" | awk -F \" \" '{print $2}' | awk -F \":\" '{print $2}'"))
+	local lan_mask = uti.trim(uti.exec("ifconfig br-lan | grep \"inet addr\" | awk -F \" \" '{print $4}' | awk -F \":\" '{print $2}'"))
+	local ipv6_linklocal = uti.split(uti.trim(uti.exec("ifconfig br-lan | grep inet6 | grep Link | awk '{print $3}'")), "/")[1] or "N/A"
+	if ipv6_linklocal == "" then
+		ipv6_linklocal = "N/A"
+	end	
+
+	local laninfo = uci:get_all("network", "lan")
+	local firmwareVersion = luci.util.trim(luci.util.exec("cat /etc/version | grep Firmware | awk '{print $4}'"))
+	local capwap_firmwareVersion = luci.util.trim(luci.util.exec("cat /etc/version_capwap")) or "?"
+    local SystemName = luci.util.repSpec(tostring(uci:get_first("system", "system", "SystemName") or "?"))
+	local lacpinfo
+	if uci:get("functionlist","functionlist","SUPPORT_ETHERNET_BONDING") == "1" then
+		lacpinfo = uci:get_all("network", "lacp")
+    end
+    local serial_number = luci.util.trim(luci.util.exec("setconfig -g 19"))
+    local bundle_number = luci.util.trim(luci.util.exec("setconfig -g 39")) or ""
+    if serial_number == "" or serial_number == "00000000000000000000" then
+    	serial_number = luci.util.trim(luci.util.exec("setconfig -g 0"))
+		if bundle_number == "000000001" or bundle_number == "000000002" then
+			local bundle = string.sub(bundle_number,-1)
+			bundle = "-"..bundle
+			serial_number = serial_number..bundle
+		end
+    end
+
+	local network_action = require "luci.controller.admin.network"
+	local bandwidth_24g = network_action.get_sta_htmode_24g()
+	local bandwidth_5g = network_action.get_sta_htmode_5g()
+	local bandwidth_5g_2 = network_action.get_sta_htmode_5g_2()
+-%>
+
+<%+header%>
+
+<script type="text/javascript">//<![CDATA[
+	var firmwareVersion = '<%=firmwareVersion or "?"%>';
+	var wan_stp = '<%=laninfo["stp"] or "0"%>';
+	var _status = {"0":"<%:Disable%>", "1":"<%:Enable%>"};
+	var _short_timeout = {"1":"<%:Short%>", "0":"<%:Long%>"};
+	var wan6_linklocal = "<%=laninfo['ip6LinkLocalEn']%>";
+	var preChannels = [] ;
+	<% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == "1" then %>
+	var opmodeArr = [];
+	<% end %>
+	function progressbar(v, m)
+	{
+		var vn = parseInt(v) || 0;
+		var mn = parseInt(m) || 100;
+		var pc = Math.floor((100 / mn) * vn);
+
+		return String.format(
+			'<div style="width:200px; position:relative; border:1px solid #999999">' +
+				'<div style="background-color:#CCCCCC; width:%d%%; height:15px">' +
+					'<div style="position:absolute; left:0; top:0; text-align:center; width:100%%; color:#000000">' +
+						'<small>%s / %s (%d%%)</small>' +
+					'</div>' +
+				'</div>' +
+			'</div>', pc, v, m, pc
+		);
+	}
+
+<%
+if uci:get('functionlist','functionlist','SUPPORT_SAVE_MEMORY') == '1' then -----#### SUPPORT_SAVE_MEMORY START ###
+%>	
+        XHR.get('<%=REQUEST_URI%>', { status: 2, ipv6 :1 }, function(x, info)
+<%
+else -----#### SUPPORT_SAVE_MEMORY ELSE ###
+%>
+        XHR.poll(5, '<%=REQUEST_URI%>', { status: 2, ipv6 :1 }, function(x, info)
+<%
+end -----#### SUPPORT_SAVE_MEMORY END ###
+%>
+		{
+			if(x.responseText && info)
+			{
+				<% if has_ipv6 and  disable_ipv6_GUI == "0" then %>
+					if("<%=lan_type%>" == "dhcp" || wan6_linklocal == "1")
+					{
+						$('#ipv6_ipaddr').html((info.ipv6.addr != "") ? info.ipv6.addr : "N/A");
+<%
+if uci:get('functionlist','functionlist','SUPPORT_IPV6_LINKLOCAL_COMMON') == '1' then -----#### SUPPORT_IPV6_LINKLOCAL_COMMON START ###
+%>	
+						$('#ipv6_gwaddr').html(((info.ipv6.gwaddr != "")&&((wan6_linklocal == "0") || ("<%=lan_type%>" == "dhcp"))) ? info.ipv6.gwaddr : "N/A");
+<%
+else -----#### SUPPORT_IPV6_LINKLOCAL_COMMON ELSE ###
+%>
+						$('#ipv6_gwaddr').html(((info.ipv6.gwaddr != "")) ? info.ipv6.gwaddr : "N/A");
+<%
+end -----#### SUPPORT_IPV6_LINKLOCAL_COMMON END ###
+%>
+						$('#ipv6_dns').html(info.ipv6.dnsaddrs[0] || 'N/A');
+						$('#ipv6_dns2').html(info.ipv6.dnsaddrs[1] || 'N/A');
+					}
+				<% end %>
+				var e;
+				if(e = document.getElementById('localtime'))
+					e.innerHTML = info.localtime;
+				if(e = document.getElementById('uptime'))
+					e.innerHTML = String.format('%t', info.uptime);
+//				if(e = document.getElementById('loadavg'))
+//					e.innerHTML = String.format('%.02f, %.02f, %.02f',
+//							info.loadavg[0], info.loadavg[1], info.loadavg[2]);
+				if(e = document.getElementById('memtotal'))
+					e.innerHTML = progressbar(
+									(info.memfree + info.membuffers + info.memcached) + " <%:kB%>",
+									info.memtotal + " <%:kB%>"
+					);
+				if(e = document.getElementById('memfree'))
+					e.innerHTML = progressbar(
+									info.memfree + " <%:kB%>", info.memtotal + " <%:kB%>"
+					);
+				if(e = document.getElementById('memcache'))
+					e.innerHTML = progressbar(
+									info.memcached + " <%:kB%>", info.memtotal + " <%:kB%>"
+					);
+				if(e = document.getElementById('membuff'))
+					e.innerHTML = progressbar(
+									info.membuffers + " <%:kB%>", info.memtotal + " <%:kB%>"
+					);
+//				if(e = document.getElementById('conns'))
+//					e.innerHTML = progressbar(info.conncount, info.connmax);
+			}
+		}
+	);
+function renew_ifaces_status(){
+	XHR.get('<%=REQUEST_URI%>', { status: 1 },
+		function(x, info){
+			<% if has_ipv6 and  disable_ipv6_GUI == "0" then %>
+				if("<%=lan_type%>" == "static" && wan6_linklocal == "0")
+				{
+					$('#ipv6_ipaddr').html('<%=luci.util.split(laninfo["ip6addr"] or "", "/")[1]%>');
+					$('#ipv6_gwaddr').html('<%=laninfo["ip6gw"] or "N/A"%>');
+					$('#ipv6_dns').html('<%=laninfo["dns"] and luci.util.split(laninfo["dns"], " ")[3] or "N/A"%>');
+					$('#ipv6_dns2').html('<%=laninfo["dns"] and luci.util.split(laninfo["dns"], " ")[4] or "N/A"%>');
+				}
+			<% end %>
+			<% if has_dhcp then %>
+			var ls = document.getElementById('lease_status_table');
+			if (ls)
+			{
+				/* clear all rows */
+				while( ls.rows.length > 1 )
+					ls.rows[0].parentNode.deleteRow(1);
+
+				for( var i = 0; i < info.leases.length; i++ )
+				{
+					var timestr;
+
+					if (info.leases[i].expires <= 0)
+						timestr = '<em><%:expired%></em>';
+					else
+						timestr = String.format('%t', info.leases[i].expires);
+
+					var tr = ls.rows[0].parentNode.insertRow(-1);
+						tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
+
+					tr.insertCell(-1).innerHTML = info.leases[i].hostname ? info.leases[i].hostname : '?';
+					tr.insertCell(-1).innerHTML = info.leases[i].ipaddr;
+					tr.insertCell(-1).innerHTML = info.leases[i].macaddr;
+					tr.insertCell(-1).innerHTML = timestr;
+				}
+
+				if( ls.rows.length == 1 )
+				{
+					var tr = ls.rows[0].parentNode.insertRow(-1);
+						tr.className = 'cbi-section-table-row';
+
+					var td = tr.insertCell(-1);
+						td.colSpan = 4;
+						td.innerHTML = '<em><br /><%:There are no active leases.%></em>';
+				}
+			}
+
+			var ls6 = document.getElementById('lease6_status_table');
+			if (ls6 && info.leases6)
+			{
+				ls6.parentNode.style.display = 'block';
+
+				/* clear all rows */
+				while( ls6.rows.length > 1 )
+					ls6.rows[0].parentNode.deleteRow(1);
+
+				for( var i = 0; i < info.leases6.length; i++ )
+				{
+					var timestr;
+
+					if (info.leases6[i].expires <= 0)
+						timestr = '<em><%:expired%></em>';
+					else
+						timestr = String.format('%t', info.leases6[i].expires);
+
+					var tr = ls6.rows[0].parentNode.insertRow(-1);
+						tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
+
+					tr.insertCell(-1).innerHTML = info.leases6[i].hostname ? info.leases6[i].hostname : '?';
+					tr.insertCell(-1).innerHTML = info.leases6[i].ip6addr;
+					tr.insertCell(-1).innerHTML = info.leases6[i].duid;
+					tr.insertCell(-1).innerHTML = timestr;
+				}
+
+				if( ls6.rows.length == 1 )
+				{
+					var tr = ls6.rows[0].parentNode.insertRow(-1);
+						tr.className = 'cbi-section-table-row';
+
+					var td = tr.insertCell(-1);
+						td.colSpan = 4;
+						td.innerHTML = '<em><br /><%:There are no active leases.%></em>';
+				}
+			}
+			<% end %>
+
+			<% if has_wifi then %>
+			var assoclist = [ ];
+			<% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == "1" then %>
+				opmodeArr = [];
+			<% end %>
+
+			var ws = document.getElementById('wifi_status_table');
+			if (ws)
+			{
+				var myidTable = {0:"24",1:"5",2:"5_1"};
+				var wsbody = ws.rows.length > 0 ?ws.rows[0].parentNode:ws;
+
+				while (ws.rows.length > 0)
+					wsbody.deleteRow(0);
+
+				var tr, td, s='', dev, t_idx=0, i, net, show_profile;
+				for (var didx = 0; didx < info.wifinets.length; didx++)
+				{
+					dev = info.wifinets[didx];
+
+					if ( dev.opmode.match("mon") )
+						continue;
+
+					<% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == "1" then %>
+						opmodeArr[didx]=dev.opmode;
+					<% end %>
+
+					if (dev.device != "<%=filterRadio%>")
+					{
+						tr = wsbody.insertRow(-1);
+
+						s = (didx == 0)?"2.4":"5";
+						bandSelect = (didx == 0)?"2.4":"5";
+						td = tr.insertCell(-1);
+						td.colSpan="2";
+						td.className="title";
+<% if WLAN5G_2 == '1' then --[[ #### WLAN5G_2 feature ### --]] %>
+						td.innerHTML = "<%:Wireless LAN Information%> - "+s+"GHz "+((didx == 1) ? " - 1" :(didx == 2) ? " - 2" : "")+"";
+<% else %>
+						td.innerHTML = "<%:Wireless LAN Information%> - "+s+"GHz";
+<% end --[[ #### WLAN5G_2 feature ### --]] %>
+						for(i =0;i<dev.networks.length;i++)
+						{
+							if(dev.networks[i].ifname == "enjet1" && opmodeArr[1] == "wds_ap")
+							{
+								dev.networks[i].nmode = "wds_ap"
+							}
+						<% if uci:get('functionlist','functionlist','SUPPORT_SENAOWRT_GUI_FORMAT') == '1' then %> 
+							if(dev.networks[i].signal != "0")
+						<% else %>	
+							if(dev.opmode == dev.networks[i].nmode)
+						<% end %>
+							{
+								if(dev.networks[i].bssid != "00:00:00:00:00:00")
+								{
+									if (dev.opmode=="sta_ap")
+									{
+										if (dev.networks[i].mode=="Client")
+										{
+											t_idx = i;
+											break;
+										}
+									}
+									else
+									{
+										t_idx = i;
+										break;
+									}
+								}
+							}
+						}
+						net = dev.networks[t_idx];
+
+						tr = wsbody.insertRow(-1);
+						tr.className = "title-option";
+						td = tr.insertCell(-1);
+						td.width     = "40%";
+						td.setAttribute("myid", "title_wifi"+myidTable[didx]+"_opmode_text");
+						td.innerHTML = "<%:Operation Mode%>";
+						td = tr.insertCell(-1);
+						td.setAttribute("myid", "wifi"+myidTable[didx]+"_opmode_text");
+						<% if uci:get('functionlist','functionlist','SUPPORT_REPEATER_CUSTOM_DEFINE') == "1" then %>
+						td.innerHTML = ("Repeater" == showOpmode(dev.opmode)) ? functionlist['SUPPORT_REPEATER_CUSTOM_STRING'] : showOpmode(dev.opmode);
+						<% else %>
+						td.innerHTML = showOpmode(dev.opmode);
+						<% end %>
+
+						var showBW = 0;
+
+						tr = wsbody.insertRow(-1);
+						tr.className = "title-option";
+						td = tr.insertCell(-1);
+						td.width     = "40%";
+						td.setAttribute("myid", "title_wifi"+myidTable[didx]+"_band_text");
+						td.innerHTML = "<%:Wireless Mode%>";
+						td = tr.insertCell(-1);
+						td.setAttribute("myid", "wifi"+myidTable[didx]+"_band_text");
+						if ( dev.opmode == "wds_sta" || dev.opmode == "sta_ap")
+						{
+							td.innerHTML = showStaHWMode(net.hwmode);
+							if(!(net.hwmode  == "802.11g" || net.hwmode == "802.11b" || net.hwmode == "only" || net.hwmode == "802.11a"))
+							{
+								showBW = 1;
+							}
+						}
+						else
+						{
+							td.innerHTML = showWMode(dev.hwmode);
+							if(!(dev.hwmode  == "11bg" || dev.hwmode == "11b" || dev.hwmode == "11g" || dev.hwmode == "11a"))
+							{
+								showBW = 1;
+							}
+						}
+
+						if (showBW)
+						{
+							tr = wsbody.insertRow(-1);
+							tr.className = "title-option";
+							td = tr.insertCell(-1);
+							td.width = "40%";
+							td.innerHTML = "<%:Channel Bandwidth%>";
+							td.setAttribute("myid", "title_wifi"+myidTable[didx]+"_htmode_text");
+							td = tr.insertCell(-1);
+							td.setAttribute("myid", "wifi"+myidTable[didx]+"_htmode_text");
+							td.innerHTML = showBandwidth(dev.htmode);
+							if(dev.device == "wifi0")
+							{
+							<% if (bandwidth_24g ~= "") then%>
+								td.innerHTML = showBandwidth("HT<%=bandwidth_24g%>");
+							<% end %>
+							}
+							else if(dev.device == "wifi1")
+							{
+							<% if (bandwidth_5g ~= "") then%>
+								td.innerHTML = showBandwidth("HT<%=bandwidth_5g%>");
+							<% end %>
+							}
+							else if(dev.device == "wifi2")
+							{
+							<% if (bandwidth_5g_2 ~= "") then%>
+								td.innerHTML = showBandwidth("HT<%=bandwidth_5g_2%>");
+							<% end %>
+							}
+						}
+
+						tr = wsbody.insertRow(-1);
+						tr.className = "title-option";
+						td = tr.insertCell(-1);
+						td.width     = "40%";
+						td.setAttribute("myid", "title_wifi"+myidTable[didx]+"_channel_text");
+						td.innerHTML = "<%:Channel%>";
+						td = tr.insertCell(-1);
+						td.setAttribute("myid", "wifi"+myidTable[didx]+"_channel_text");	
+						td.innerHTML = (net.frequency)? net.frequency+" GHz(<%:Channel%> "+net.channel+")" : "N/A";
+
+						<%
+						if uci:get('functionlist','functionlist','SUPPORT_WLAN_OUTDOOR_DISTANCE') == '1' then -----#### SUPPORT_WLAN_OUTDOOR_DISTANCE START ###
+							if uci:get('sysProductInfo','model','outdoor') == '1' then
+						%>
+						tr = wsbody.insertRow(-1);
+						tr.className = "title-option";
+						td = tr.insertCell(-1);
+						td.width     = "40%";
+						td.setAttribute("myid", "title_wifi"+myidTable[didx]+"_distance_text");
+						td.innerHTML = "<%:Distance%>";
+						td = tr.insertCell(-1);
+						td.setAttribute("myid", "wifi"+myidTable[didx]+"_distance_text");
+
+						switch(didx)
+						{
+							case 0:
+								td.innerHTML = "<%=tonumber(uci:get('wireless', 'wifi0', 'distance'))%> M";
+								break;
+							case 1:
+								td.innerHTML = "<%=tonumber(uci:get('wireless', 'wifi1', 'distance'))%> M";
+								break;
+							<% if WLAN5G_2=='1' then --[[ #### WLAN5G_2 feature ### --]] %>
+							case 2:
+								td.innerHTML = "<%=tonumber(uci:get('wireless', 'wifi2', 'distance'))%> M";
+								break;
+							<% end --[[ #### WLAN5G_2 feature ### --]] %>
+							default:
+								td.innerHTML = "";
+								break;
+						}
+						<%
+							end
+						end-----####  SUPPORT_WLAN_OUTDOOR_DISTANCE END ####
+						%>
+
+						tr = wsbody.insertRow(-1);
+						td = tr.insertCell(-1);
+						td.colSpan="2";
+
+						show_profile = ((dev.opmode == "ap" || dev.opmode == "wds_ap")?"":" style='display:none;'");
+						<% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == "1" then %>
+							show_profile = ' style="display:none;"';
+						<% end %>
+						s = "<table"+show_profile+"><tr style='background-color: #EEEEEE;'><td myid=\"title_wifi"+myidTable[didx]+"_Profile_text\"><%:Profile%></td><td myid=\"title_wifi"+myidTable[didx]+"_ssid_text\"><%:SSID%></td><td myid=\"title_wifi"+myidTable[didx]+"_securitymode_text\"><%:Security%></td><td myid=\"title_wifi"+myidTable[didx]+"_vlan_id_text\">VID</td><td myid=\"title_wifi"+myidTable[didx]+"_8021q_text\">802.1Q</td></tr>";
+						var network_length = dev.networks.length;
+
+						for (var sidx = 1, nidx = 0; nidx < dev.networks.length; nidx++)
+						{
+							net = dev.networks[nidx];
+							<% if uci:get('functionlist','functionlist','SUPPORT_GUEST_NETWORK_SETTING') ~= '1' then --[[ #### SUPPORT_GUEST_NETWORK_SETTING START ### --]] %>
+								var networkname = net.networkname;
+								if (networkname.match(/guest/g))
+									break;
+							<% end %>
+							var ssid = SpecHTML(net.ssid);
+
+							if(dev.opmode != net.nmode)
+								if(!(dev.opmode=="wds_ap" && net.networkname.match(/guest/g)))
+									continue;
+							if(!net.ssid || net.nawds == "1") continue;
+							s += '<tr><td style="width:10%" myid="wifi'+myidTable[didx]+'_Profile'+(sidx)+'_text">#'+(sidx)+"</td>";
+							if(sidx==dev.networks.length)
+							{
+								s += '<td style="width:45%" myid="wifi'+myidTable[didx]+'_ssid9_text">'+ssid+'</td>';
+								s += '<td style="width:25%" myid="wifi'+myidTable[didx]+'_securitymode9_text">'+showEncryption(net.encryption_option)+'</td>';
+							}
+							else
+							{
+								s += '<td style="width:45%" myid="wifi'+myidTable[didx]+'_ssid'+(sidx)+'_text">'+ssid+'</td>';
+								s += '<td style="width:25%" myid="wifi'+myidTable[didx]+'_securitymode'+(sidx)+'_text">'+showEncryption(net.encryption_option)+'</td>';
+							}
+							s += "<td myid='wifi"+myidTable[didx]+"_vlan_id"+(sidx)+"_text'>"+(net.vlan_id || "")+"</td>";
+							if(sidx != 9)
+							{
+								s += "<td myid='wifi"+myidTable[didx]+"_8021q"+(sidx)+"_text'>"+((net.isolation=="1")?"<%:Enable%>":"<%:Disable%>")+"</td>";
+							}
+							sidx++;
+						}
+						s += '</tr></table>';
+
+						td.innerHTML = s;
+						if(didx == 0)
+						{
+							tr = wsbody.insertRow(-1);
+							td = tr.insertCell(-1);
+							td.colSpan="2";
+							td.innerHTML = "&nbsp;";
+						}
+					}
+				}
+			}
+
+			var ac = document.getElementById('wifi_assoc_table');
+			if (ac)
+			{
+				/* clear all rows */
+				while( ac.rows.length > 1 )
+					ac.rows[0].parentNode.deleteRow(1);
+
+				assoclist.sort(function(a, b) {
+					return (a.name == b.name)
+						? (a.bssid < b.bssid)
+						: (a.name  > b.name )
+					;
+				});
+
+				for( var i = 0; i < assoclist.length; i++ )
+				{
+					var tr = ac.rows[0].parentNode.insertRow(-1);
+						tr.className = 'cbi-section-table-row cbi-rowstyle-' + (1 + (i % 2));
+
+					var icon;
+					var q = (-1 * (assoclist[i].noise - assoclist[i].signal)) / 5;
+					if (q < 1)
+						icon = "<%=resource%>/icons/signal-0.png";
+					else if (q < 2)
+						icon = "<%=resource%>/icons/signal-0-25.png";
+					else if (q < 3)
+						icon = "<%=resource%>/icons/signal-25-50.png";
+					else if (q < 4)
+						icon = "<%=resource%>/icons/signal-50-75.png";
+					else
+						icon = "<%=resource%>/icons/signal-75-100.png";
+
+					tr.insertCell(-1).innerHTML = String.format(
+						'<img src="%s" title="<%:Signal%>: %d <%:dBm%> / <%:Noise%>: %d <%:dBm%>" />',
+						icon, assoclist[i].signal, assoclist[i].noise
+					);
+
+					tr.insertCell(-1).innerHTML = assoclist[i].bssid;
+
+					tr.insertCell(-1).innerHTML = String.format(
+						'<a href="%s">%s</a>',
+							assoclist[i].link,
+							'%h'.format(assoclist[i].name).nobr()
+					);
+
+					tr.insertCell(-1).innerHTML = String.format('%d <%:dBm%>', assoclist[i].signal).nobr();
+					tr.insertCell(-1).innerHTML = String.format('%d <%:dBm%>', assoclist[i].noise).nobr();
+
+					tr.insertCell(-1).innerHTML = (assoclist[i].rx_mcs > -1)
+						? String.format('%.1f <%:Mbit/s%>, MCS %d, %d<%:MHz%>', assoclist[i].rx_rate / 1000, assoclist[i].rx_mcs, assoclist[i].rx_40mhz ? 40 : 20).nobr()
+						: String.format('%.1f <%:Mbit/s%>', assoclist[i].rx_rate / 1000).nobr()
+					;
+
+					tr.insertCell(-1).innerHTML = (assoclist[i].tx_mcs > -1)
+						? String.format('%.1f <%:Mbit/s%>, MCS %d, %d<%:MHz%>', assoclist[i].tx_rate / 1000, assoclist[i].tx_mcs, assoclist[i].tx_40mhz ? 40 : 20).nobr()
+						: String.format('%.1f <%:Mbit/s%>', assoclist[i].tx_rate / 1000).nobr()
+					;
+				}
+
+				if (ac.rows.length == 1)
+				{
+					var tr = ac.rows[0].parentNode.insertRow(-1);
+						tr.className = 'cbi-section-table-row';
+
+					var td = tr.insertCell(-1);
+						td.colSpan = 7;
+						td.innerHTML = '<br /><em><%:No information available%></em>';
+				}
+			}
+			<% end %>
+		}
+	);
+}
+
+// add poll to moniter channel every 10s, if channel changed, renew ifaces status.
+<%
+if uci:get('functionlist','functionlist','SUPPORT_SAVE_MEMORY') == '1' then -----#### SUPPORT_SAVE_MEMORY ###
+%>	
+    XHR.get('<%=REQUEST_URI%>', { status: 3 },
+<%
+else -----#### SUPPORT_SAVE_MEMORY ELSE ###
+%>
+    XHR.poll(10,'<%=REQUEST_URI%>', { status: 3 },
+<%
+end -----#### SUPPORT_SAVE_MEMORY END ###
+%>
+		function(x, info){
+			var i = 0;
+			if ( preChannels.length == 0 )
+				preChannels = info;
+			else
+			{
+				for ( i = 0 ; i < preChannels.length ; i++ )
+				{
+					if ( preChannels[i] != info[i] )
+					{
+						renew_ifaces_status();
+						break;
+					}
+				}
+			}
+		}
+	);
+$( document ).ready(function() {
+    setTimeout("renew_ifaces_status()", 2000);
+});
+//]]></script>
+<div id="STP_info" class="popbox">
+    <p><%:A network protocol can be enabled to prevent network loops or the incurred broadcast radiation in your LAN network.%></p>
+</div>
+
+<style>
+	.subtitle {
+		padding-left: 35px;
+	}
+
+	.one-long-line {
+		max-width:50px;
+		white-space:nowrap;
+		overflow:hidden;
+		text-overflow:ellipsis;
+   	}
+
+	.one-long-line:hover{
+		color:grey;
+		overflow:visible;
+		position: relative;
+	}
+
+	.one-long-line:hover span{
+		font-weight: bold;
+		color: black;
+		background-color:white;
+		display: inline-block;
+		height: 100%;
+	}
+
+</style>
+<fieldset class="cbi-section">
+	<table width="100%" cellspacing="10" id="dev_info">
+		<tr>
+			<td colspan="2" class="title"><%:Device Information%></td>
+		</tr>
+		<tr class="title-option"><td width="40%" myid="title_Device_Name_text"><%:Device Name%></td><td myid="Device_Name_text"><script>var SystemName = repSpecHTML("<%=SystemName%>");document.write(SystemName);</script></td></tr>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_DISPLAY_SERIAL_NUMBER') == '1' then -----#### SUPPORT_DISPLAY_SERIAL_NUMBER START ###
+%>
+		<tr class="title-option"><td width="40%" myid="title_Device_Serial_Number_text"><%:Serial Number%></td><td myid="Device_Serial_Number_text"><%=serial_number%></td></tr>
+<%
+end-----####  SUPPORT_DISPLAY_SERIAL_NUMBER END ####
+%>
+		<tr class="title-option">
+			<td colspan="2"><%:MAC Address%></td>
+		</tr>
+<% if uci:get('sysProductInfo','model','modelName') ~= 'EMD11' then --[[ #### HIDE_LAN_PORT START ### --]]%>
+<% if uci:get('functionlist','functionlist','SUPPORT_DUAL_LAN_PORT') == '1' then --[[ #### SUPPORT_DUAL_LAN_PORT START ### --]] %>
+<%
+local lan1_mac
+local lan2_mac
+
+if uci:get('sysProductInfo','model','outdoor') == '1' then
+	lan1_mac=ntm:get_mac("eth1")
+	lan2_mac=ntm:get_mac("eth0")
+if uci:get('functionlist','functionlist','SUPPORT_ENGENIUS_DUAL_LAN_PORT') == '1' then
+	lan1_mac=ntm:get_mac("eth0")
+	lan2_mac=ntm:get_mac("eth1")
+end
+end
+
+if uci:get('sysProductInfo','model','outdoor') == '0' then
+	lan1_mac=ntm:get_mac("eth0")
+	lan2_mac=ntm:get_mac("eth1")
+if uci:get('functionlist','functionlist','SUPPORT_DUAL_LAN_PORT_INVERSE') == '1' then
+	lan1_mac=ntm:get_mac("eth1")
+	lan2_mac=ntm:get_mac("eth0")
+end
+end
+
+%>
+		<tr class="title-option">
+			<td class="subtitle" myid="title_lan_mac_text">- <%:LAN1%></td>
+			<td id="mac_lan1" myid="lan1_mac_text"><%=lan1_mac%></td>
+		</tr>
+		<tr class="title-option">
+			<td class="subtitle" myid="title_lan_mac_text">- <%:LAN2%></td>
+			<td id="mac_lan2" myid="lan2_mac_text"><%=lan2_mac%></td>
+		</tr>
+<% else --[[ #### SUPPORT_DUAL_LAN_PORT ELSE ### --]] %>
+		<tr class="title-option">
+			<td class="subtitle" myid="title_lan_mac_text">- <%:LAN%></td>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_DEMO_APPLY') == '1' then -----#### SUPPORT_DEMO_APPLY START ###
+%>
+			<td id="mac_lan" myid="lan_mac_text"><%:88:DC:96:88:99:30%></td>
+<%
+else -----#### SUPPORT_DEMO_APPLY ELSE ###
+%>
+			<td id="mac_lan" myid="lan_mac_text"><%=ntm:get_mac("br-lan")%></td>
+<%
+end -----#### SUPPORT_DEMO_APPLY END ###
+%>
+		</tr>
+<% end --[[ #### SUPPORT_DUAL_LAN_PORT END ### --]] %>
+<% end --[[ #### HIDE_LAN_PORT END ### --]] %>
+<% if WLAN24G=="1" then %>
+		<tr class="title-option">
+			<td class="subtitle" myid="title_wifi24_bssid1_text">- <%:Wireless LAN%> - 2.4GHz</td>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_DEMO_APPLY') == '1' then -----#### SUPPORT_DEMO_APPLY START ###
+%>
+			<td id="mac_24g" myid="wifi24_bssid1_text"><%:88:DC:96:88:99:32%></td>
+<%
+else -----#### SUPPORT_DEMO_APPLY ELSE ###
+%>
+			<td id="mac_24g" myid="wifi24_bssid1_text"><%=ntm:get_mac("wifi0")%></td>
+<%
+end -----#### SUPPORT_DEMO_APPLY END ###
+%>
+
+			
+		</tr>
+<% end %>
+<% if WLAN5G=="1" then %>	
+		<tr class="title-option">
+			<td class="subtitle" myid="title_wifi5_bssid1_text">- <%:Wireless LAN%> - 5GHz<% if WLAN5G_2 == '1' then%> - 1<% end %></td>
+<% if uci:get('functionlist','functionlist','SUPPORT_DEMO_APPLY') == '1' then --[[ #### SUPPORT_DEMO_APPLY START ### --]] %>
+			<td id="mac_5g" myid="wifi5_bssid1_text"><%:88:DC:96:88:99:33%></td>			
+<% else --[[ #### SUPPORT_DEMO_APPLY ELSE ### --]] %>
+			<td id="mac_5g" myid="wifi5_bssid1_text"><%=ntm:get_mac("wifi1")%></td>
+<% end --[[ #### SUPPORT_DEMO_APPLY END ### --]] %>
+		</tr>
+	<% if WLAN5G_2 == '1' then --[[ #### WLAN5G_2 feature ### --]] %>
+		<tr class="title-option">
+			<td class="subtitle" myid="title_wifi5_1_bssid1_text">- <%:Wireless LAN%> - 5GHz - 2</td>
+			<td id="mac_5g_2" myid="wifi5_1_bssid1_text"><%=ntm:get_mac("wifi2")%></td>
+		</tr>
+	<% end --[[ #### WLAN5G_2 feature ### --]] %>
+<% end %>
+		<tr class="title-option">
+			<td myid="title_wifi_country_text"><%:Country%></td>
+		<% if (uci:get('functionlist', 'functionlist', 'SUPPORT_WLAN24G') == '1') then %>
+			<% if (uci:get('wireless', 'wifi0', 'country') == '00') then %>
+				<td id="ws_country" myid="wifi_country_text"><%:Please select the country%></td>
+			<% else %>
+				<td id="ws_country" myid="wifi_country_text"><%=ntm:get_country()%></td>
+			<% end %>
+		<% else %>
+			<% if (uci:get('wireless', 'wifi1', 'country') == '00') then %>
+				<td id="ws_country" myid="wifi_country_text"><%:Please select the country%></td>
+			<% else %>
+				<td id="ws_country" myid="wifi_country_text"><%=ntm:get_country()%></td>
+			<% end %>
+		<% end %>
+		</tr>
+		<tr class="title-option"><td width="40%" myid="title_localtime_text"><%:Current Local Time%></td><td id="localtime" myid="localtime_text"><%=os.date()%></td></tr>
+		<tr class="title-option"><td width="40%" myid="title_uptime_text"><%:Uptime%></td><td id="uptime" myid="uptime_text">
+			<script>document.write(String.format('%t','<%=luci.sys.uptime()%>'));</script></td></tr>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_CAPWAP_CONTROL') == '1' and uci:get('sysProductInfo','model','modelName') ~= 'EMD11' )  then -----#### SUPPORT_CAPWAP_CONTROL START ###
+%>
+	<%
+	if (uci:get('functionlist','functionlist','SUPPORT_ATKK_FW_VERSION') == '1')  then -----#### SUPPORT_ATKK_FW_VERSION START ###
+	%>
+		<tr class="title-option"><td width="40%" myid="title_fw_ver_text"><%:Firmware Version%></td><td myid="fw_ver_text">
+			<script>
+			function pad(num, size) {
+			    var s = num+"";
+			    while (s.length < size) s = "0" + s;
+			    return s;
+			}
+
+			document.write((firmwareVersion == "?")?"?":"V"+firmwareVersion.substring(0, firmwareVersion.lastIndexOf('.'))+" B"+pad(firmwareVersion.substring(firmwareVersion.lastIndexOf('.')+1),2));</script>
+
+		</td></tr>
+	<%
+	else -----####  SUPPORT_ATKK_FW_VERSION ELSE #### 
+	%>
+		<tr class="title-option"><td width="40%" myid="title_fw_ver_text"><%:Firmware Version%></td><td myid="fw_ver_text">
+			<script>document.write((firmwareVersion == "?")?"?":"v"+firmwareVersion.substring(0, firmwareVersion.lastIndexOf('.'))+"_c<%=capwap_firmwareVersion%>");</script>
+		</td></tr>
+	<%
+	end-----####  SUPPORT_ATKK_FW_VERSION END #### 
+	%>
+<%
+else -----####  SUPPORT_CAPWAP_CONTROL ELSE #### 
+%>
+		<tr class="title-option"><td width="40%" myid="title_fw_ver_text"><%:Firmware Version%></td><td myid="fw_ver_text">
+			<script>document.write((firmwareVersion == "?")?"?":firmwareVersion.substring(0, firmwareVersion.lastIndexOf('.')));</script>
+		</td></tr>		
+<%
+end-----####  SUPPORT_CAPWAP_CONTROL END #### 
+%>	
+		<tr class="title-option"><td width="40%"><%:Device Version%></td><td>
+			<script>
+			function get_hardware_version(){
+				var model_name = '<%=uci:get('sysProductInfo','model','modelName')%>'.slice(-2);
+				if (model_name.slice(0, 1)=="v" && isNaN(model_name.slice(-1))==false){
+					return model_name.slice(-1)+'.0';
+				}
+				else{
+					return "1.0";
+				}
+			}
+			document.write(get_hardware_version());
+			</script>
+		</td></tr>
+<%
+if (uci:get('sysProductInfo','model','modelName') ~= 'EMD11') then
+%>
+		<tr class="title-option">
+			<td myid="title_VLAN_id_text"><%:Management VLAN ID%></td>
+<% if (WLANVLANEnable =="0") or (tonumber(managementVlanId) > ManagementVLANID_MAX_VALUE) or (tonumber(managementVlanId) < 1) then %>
+			<td id="mg_vlan_id" myid="VLAN_id_text"><%:Untagged%></td>
+<% else %>
+			<td id="mg_vlan_id" myid="VLAN_id_text"><%=managementVlanId%></td>
+<% end %>
+		</tr>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_CAPWAP_CONTROL') == '1')  then -----#### SUPPORT_CAPWAP_CONTROL START ###
+	if (uci:get('functionlist','functionlist','SUPPORT_HIDE_CHECK_CODE_IN_STATUS') == '1')  then -----#### SUPPORT_HIDE_CHECK_CODE_IN_STATUS START ###
+	else
+%>		
+		<tr class="title-option">
+			<td style="width:45%;"><%:Registration Check Code%></td>
+			<td>
+				<div id="RegiCheckCodeInfo"></div>
+			</td>
+		</tr>
+<%
+	end -----####  SUPPORT_HIDE_CHECK_CODE_IN_STATUS END ####
+end-----####  SUPPORT_CAPWAP_CONTROL END #### 
+%>
+<%
+end
+%>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+
+	<table width="100%" cellspacing="10">
+		<tr>
+			<td colspan="2" class="title"><%:Memory Information%></td>
+		</tr>
+		<tr class="title-option"><td width="40%"><%:Total Available%></td><td id="memtotal">-</td></tr>
+		<tr class="title-option"><td width="40%"><%:Free%></td><td id="memfree">-</td></tr>
+		<tr class="title-option"><td width="40%"><%:Cached%></td><td id="memcache">-</td></tr>
+		<tr class="title-option"><td width="40%"><%:Buffered%></td><td id="membuff">-</td></tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+	<table width="100%" cellspacing="10">
+		<tr>
+			<td colspan="2" class="title"><%:LAN Information%> - IPv4</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_ipaddr_text"><%:IP Address%></td>
+			<td id="ipv4_ipaddr" myid="lan_ipaddr_text"><%=laninfo["ipaddr"]%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_netmask_text"><%:Subnet Mask%></td>
+			<td id="ipv4_netmask" myid="lan_netmask_text"><%=laninfo["netmask"]%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_gateway_text"><%:Gateway%></td>
+			<td id="ipv4_gwaddr" myid="lan_gateway_text"><%=laninfo["gateway"]%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_dns1_text"><%:Primary DNS%></td>
+			<td id="ipv4_dns" myid="lan_dns1_text">N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_dns2_text"><%:Secondary DNS%></td>
+			<td id="ipv4_dns2" myid="lan_dns2_text">N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_dhcp_protocol_text"><%:DHCP Client%></td>
+			<td id="ipv4_proto" myid="lan_dhcp_protocol_text"><%:Disable%></td>
+		</tr>
+<%
+if uci:get("functionlist","functionlist","SUPPORT_STP_STATUS") == "1" then
+else
+%>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_stp_text"><%:Spanning Tree Protocol(STP)%><img class="popper" data-popbox="STP_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+			<td id="ipv4_stp" myid="lan_stp_text">
+				<script>document.write(_status[wan_stp]);</script>
+			</td>
+		</tr>
+<%
+end
+%>
+	</table>
+</fieldset>
+
+<% if has_ipv6 and  disable_ipv6_GUI == "0" then %>
+<fieldset class="cbi-section">
+	<table width="100%" cellspacing="10">
+		<tr>
+			<td colspan="2" class="title"><%:LAN Information%> - IPv6</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_ip6addr_text"><%:IP Address%></td>
+			<td id="ipv6_ipaddr" myid="lan_ip6addr_text">N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_ip6linklocal_text"><%:Link-Local Address%></td>
+			<td id="ipv6_linklocal" myid="lan_ip6linklocal_text"><%=ipv6_linklocal%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_ip6gw_text"><%:Gateway%></td>
+			<td id="ipv6_gwaddr" myid="lan_ip6gw_text">N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_ip6dns1_text"><%:Primary DNS%></td>
+			<td id="ipv6_dns" myid="lan_ip6dns1_text">N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" myid="title_lan_ip6dns2_text"><%:Secondary DNS%></td>
+			<td id="ipv6_dns2" myid="lan_ip6dns2_text">N/A</td>
+		</tr>
+	</table>
+</fieldset>
+<% end %>
+<%
+if uci:get("functionlist","functionlist","SUPPORT_STP_STATUS") == "1" then
+%>
+<script type="text/javascript">
+	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "status", "get_stp_info")%>', null,
+		function(x, info){
+			 // console.log(x);
+			 // console.log(info);
+			if (info)
+			{
+				var stp_statistics_text = ["<%:Port ID%>","<%:Port Name%>","<%:Path Cost%>","<%:Port Status%>"];
+				var stp_statistics_order = ["port_id","port_name","port_path_cost","port_status"];
+				var stp_statistics_info={};
+				var stp_designated_root = info["designated_root"] || "N/A";
+
+				$('#stp_designated_root').text(stp_designated_root);
+				for(var idx=0 ,i = stp_statistics_order[0]; idx < stp_statistics_order.length ; idx++,i = stp_statistics_order[idx]){
+					for (var j in info[i]){
+						var tmp = "stp_statistics_info_"+j
+						stp_statistics_info[tmp] = stp_statistics_info[tmp] || {};
+						stp_statistics_info[tmp][i] = info[i][j];
+					}
+				}
+				$('#stp_statistics_tbl').remove();
+				myTable.newTable2([],"stp_statistics","stp_statistics_tbl");   
+				myTable.newTr([],"stp_statistics_tbl","");  
+				myTable.newTr(stp_statistics_text,"stp_statistics_tbl","stp_statistics_item");
+				 for(var i in stp_statistics_info){
+				 	myTable.newTr([],"stp_statistics_tbl",i);
+					for(var j in stp_statistics_info[i]){
+						var content_id = i+"_"+j+"_content";
+				        myTable.newTd([],i,i+"_"+j);
+				        myTable.newDiv(content_id,i+"_"+j);		
+				            myTable.newElement(content_id,stp_statistics_info[i][j]);
+					}
+				 }
+			}
+			
+		});
+</script>
+<fieldset class="cbi-section">
+	<table width="100%" cellspacing="10">
+<!-- 		<tr class="title-option">
+			<td colspan="2"><%:Spanning Tree Protocol(STP)%><img class="popper" data-popbox="STP_info" src="<%=media%>/pictures/icon_info_blue.png"></td>
+		</tr> -->
+		<tr>
+			<td colspan="2" class="title"><%:Spanning Tree Protocol(STP) Information%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Status%></td>
+			<td id="stp_status" ><script>document.write(_status['<%=laninfo["stp"] or "0"%>']);</script></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Hello Time%></td>
+			<td id="stp_hello_time" ><%=laninfo["hello_time"] or "0"%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Max Age%></td>
+			<td id="stp_max_age" ><%=laninfo["max_age"] or "0"%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Forward Delay%></td>
+			<td id="stp_forward_delay" ><%=laninfo["forward_delay"] or "0"%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Priority%></td>
+			<td id="stp_priority" ><%=laninfo["priority"] or "0"%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Designated Root%></td>
+			<td id="stp_designated_root" >N/A</td>
+		</tr>		
+		<tr><td colspan="2"><div id="stp_statistics" class="table"></div></td></tr>	
+	</table>
+	<!-- <div id="stp_statistics" class="table"></div> -->
+</fieldset>
+<%
+end
+%>
+<%
+if uci:get("functionlist","functionlist","SUPPORT_ETHERNET_BONDING") == "1" then
+	if uci:get("functionlist","functionlist","SUPPORT_ETHERNET_BONDING_STATUS") == "1" then
+%>
+<script type="text/javascript">
+	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "status", "get_lacp_info")%>', null,
+		function(x, info){
+			var actor_key = "N/A";
+			var partner_key = "N/A";
+			var partner_mac = "N/A";
+			if(x.responseText && info){
+				// console.log(x);
+				 // console.log(info);
+				actor_key = info["actor_key"]=="0" || info["actor_key"]==""?"N/A":info["actor_key"];
+				partner_key = info["partner_key"]=="0" || info["partner_key"]==""?"N/A":info["partner_key"];
+				partner_mac = info["partner_mac"]==""?"N/A":info["partner_mac"];		
+			}
+				$('#lacp_actor_key').text(actor_key);
+				$('#lacp_partner_key').text(partner_key);
+				$('#lacp_partner_mac').text(partner_mac);
+		});
+</script>
+<fieldset class="cbi-section">
+	<table width="100%" cellspacing="10">
+<!-- 		<tr class="title-option">
+			<td colspan="2"><%:Link Aggregation Control Protocol (LACP)%></td>
+		</tr> -->
+		<tr>
+			<td colspan="2" class="title"><%:Link Aggregation Control Protocol (LACP) Information%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Status%></td>
+			<td id="lacp_status" ><script>document.write(_status['<%=lacpinfo["lacp_enable"] or "0"%>']);</script></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Timeout%></td>
+			<td id="lacp_timeout" ><script>document.write(_short_timeout['<%=lacpinfo["short_timeout"] or "0"%>']);</script></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:System Priority%></td>
+			<td id="lacp_system_priority" ><%=lacpinfo["system_priority"] or "0"%></td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Actor Key%></td>
+			<td id="lacp_actor_key" >N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Partner Key%></td>
+			<td id="lacp_partner_key" >N/A</td>
+		</tr>
+		<tr class="title-option">
+			<td width="40%" ><%:Partner Mac Address%></td>
+			<td id="lacp_partner_mac" >N/A</td>
+		</tr>						
+	</table>
+</fieldset>
+<%
+	end
+end	
+%>
+<% if has_wifi then %>
+<fieldset class="cbi-section">
+	<table id="wifi_status_table" width="100%" cellspacing="10">
+		<tr><td><em><%:Collecting data...%></em></td></tr>
+	</table>
+</fieldset>
+<% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == '1' then %>
+<fieldset class="cbi-section">
+	<table id="wifi_status_table_ap" width="100%" cellspacing="10" class="ecm-tbl">
+		<tr><td></td></tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section">
+	<table id="wifi_status_table_wds_ap" width="100%" cellspacing="10" class="ecm-tbl">
+		<tr><td></td></tr>
+	</table>
+</fieldset>
+<% end %>
+<% end %>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_ENGENIUS_DDNS') == '1') or (uci:get('functionlist','functionlist','OMIT_ENGENIUS_DDNS') == '0')then -----#### SUPPORT_ENGENIUS_DDNS or OMIT_ENGENIUS_DDNS ###
+%>
+<fieldset class="cbi-section">
+	<table width="100%" cellspacing="10">
+		<tr>
+			<td colspan="2" class="title"><%:UID / DDNS%></td>
+		</tr>	
+		<tr class="title-option">
+			<td style="width:45%;"><label for=""><%:Default UID%></label></td>
+			<td>
+				<div id="UID"><%=luci.util.trim(luci.util.exec("setconfig -g 35"))%></div>
+			</td>
+		</tr>
+		<tr class="title-option">
+			<td style="width:45%;"><label for=""><%:Default DDNS Name%></label></td>
+			<td>
+				<div id="DDNSName"><%=luci.util.trim(luci.util.exec("setconfig -g 35"))%>.<%=luci.util.trim(luci.util.exec("setconfig -g 37"))%></div>
+			</td>
+		</tr>
+	</table>
+</fieldset>
+<%
+end-----####  SUPPORT_ENGENIUS_DDNS  or OMIT_ENGENIUS_DDNS ####
+%>
+<%-
+	require "luci.util"
+	require "nixio.fs"
+
+	local plugins = nixio.fs.dir(luci.util.libpath() .. "/view/admin_status/index")
+	if plugins then
+		local inc
+		for inc in plugins do
+			if inc:match("%.htm$") then
+				include("admin_status/index/" .. inc:gsub("%.htm$", ""))
+			end
+		end
+	end
+-%>
+<script>
+	var lan_proto = "<%=uci:get('network', 'lan', 'proto')%>",
+			lan_ip, lan_mask, lan_gwaddr, lan_dnsaddr;
+
+<%
+if uci:get('functionlist','functionlist','SUPPORT_DEMO_APPLY') ~= '1' then -----#### SUPPORT_DEMO_APPLY START ###
+%>
+	if(lan_proto == "dhcp")
+	{
+		lan_ip = '<%=ntm.init():get_network("lan"):ipaddr()%>';
+		lan_mask = '<%=ntm.init():get_network("lan"):netmask()%>';
+		lan_gwaddr = '<%=ntm.init():get_network("lan"):gwaddr()%>';
+		lan_dnsaddr = eval('<%luci.http.write_json(ntm.init():get_network("lan"):dnsaddrs())%>');
+	}
+	else
+<%
+end-----#### SUPPORT_DEMO_APPLY END ###
+%>
+	{
+		lan_ip = '<%=uci:get("network", "lan", "ipaddr")%>';
+		lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+		lan_gwaddr = '<%=uci:get("network", "lan", "gwaddr")%>';
+		lan_dnsaddr = '<%=uci:get("network", "lan", "dns")%>'.split(" ");
+	}
+	if(lan_proto == "dhcp")
+	{
+		getById('ipv4_ipaddr').innerHTML = (lan_ip) ? lan_ip : "<%=lan_ip%>";
+		getById('ipv4_netmask').innerHTML = (lan_mask) ? lan_mask : "<%=lan_mask%>";
+		getById('ipv4_gwaddr').innerHTML = (lan_gwaddr) ? lan_gwaddr : 'N/A';
+	}
+	if(lan_dnsaddr)
+	{
+		getById('ipv4_dns').innerHTML = (lan_dnsaddr[0]) ? lan_dnsaddr[0] : 'N/A';
+		getById('ipv4_dns2').innerHTML = (lan_dnsaddr[1]) ? lan_dnsaddr[1] : 'N/A';
+	}
+	getById('ipv4_proto').innerHTML = (lan_proto == "dhcp") ? "<%:Enable%>" : "<%:Disable%>";
+
+</script>
+<%
+if (uci:get('functionlist','functionlist','SUPPORT_CAPWAP_CONTROL') == '1')  then -----#### SUPPORT_CAPWAP_CONTROL START ###
+	if (uci:get('functionlist','functionlist','SUPPORT_HIDE_CHECK_CODE_IN_STATUS') == '1')  then -----#### SUPPORT_HIDE_CHECK_CODE_IN_STATUS START ###
+	else
+%>
+<script type="text/javascript">
+	function getRegistCheckCode()
+	{
+		$.ajax({
+            url: "<%=luci.dispatcher.build_url('admin/status/getRegistCheckCode')%>",
+			success: function(re) {
+				$('#RegiCheckCodeInfo').text(re);
+			}
+		});
+	}
+$( document ).ready(function() {
+    getRegistCheckCode();
+});	
+</script>
+<%
+	end -----####  SUPPORT_HIDE_CHECK_CODE_IN_STATUS END ####
+end-----####  SUPPORT_CAPWAP_CONTROL END #### 
+%>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_RENEW_STATISTICS_BY_BUTTON') == '1' then -----#### SUPPORT_RENEW_STATISTICS_BY_BUTTON START ###
+
+	local ntm = require "luci.model.network".init()
+	local fwm = require "luci.model.firewall".init()
+	local net
+	local ifaces = { }
+	local netlist = { }
+
+	for _, net in ipairs(ntm:get_networks()) do
+		if net:name() ~= "loopback" and net:name() ~= "pptp" and net:name() ~= "l2tp"  then
+              --local z = fwm:get_zone_by_network(net:name())
+               ifaces[#ifaces+1] = net:name()
+               netlist[#netlist+1] = {
+                  net:name()
+               }
+       	end        
+	end
+	if only_eth1_for_lan == '1' then
+		ifaces[#ifaces+1] = "eth1"
+	end
+--[[
+	for _, wdev in ipairs(ntm:get_wifidevs()) do
+		local wnet
+		for _, wnet in ipairs(wdev:get_wifinets()) do
+               ifaces[#ifaces+1] = wnet:name()
+               netlist[#netlist+1] = {
+                  wnet:name()
+               }
+               luci.sys.exec('echo '.. wnet:name().." >> /tmp/test123")
+		end
+	end
+]]
+	table.sort(netlist,
+		function(a, b)
+			return a[1] < b[1]
+		end)
+%>
+<STYLE type="text/css">
+.ecm-tbl .tbl-grey {
+    background-color: #EEEEEE;
+    padding-left: 6px;
+    vertical-align : middle;
+}
+.ecm-tbl .tbl-grey-15px {
+    background-color: #EEEEEE;
+    padding-left: 6px;
+}
+.tbl-grey {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 16px;
+    height: 27px;
+}
+.tbl-grey-15px {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 15px;
+    height: 27px;
+    line-height: 19px;
+}
+.ecm-tbl td:not(.title){
+    text-align: center;
+}
+
+</STYLE>
+<div id="interface_statistics" class="table"></div>
+<script>
+	var myTable = (function() {    
+    var titleTable={
+    "interface_statistics":"<%:Statistics%>",
+    "stp_statistics":"<%:STP Status%>"
+    },
+    newTable = function (data,div_id,table_id){
+        var $table = $(document.createElement('table'));
+        $table.attr("id",table_id);
+        $table.addClass("ecm-tbl");
+        $table.appendTo($("#"+div_id));
+        for(var i in data){
+            for(var j in data[i]){
+                 newTr(data[i],table_id,table_id+"_"+i);
+            }           
+        
+        }
+            newElement(table_id,'<tr><td colspan="9" class="title">'+titleTable[div_id]+'</td></tr>');
+  },
+      newTable2 = function (data,div_id,table_id){
+        var $table = $(document.createElement('table'));
+        $table.attr("id",table_id);
+        // $table.addClass("ecm-tbl");
+        $table.appendTo($("#"+div_id));
+        for(var i in data){
+            for(var j in data[i]){
+                 newTr(data[i],table_id,table_id+"_"+i);
+            }           
+        
+        }
+  },
+    newTr = function(data,table_id,tr_id){
+        var $tr = $(document.createElement('tr'));
+        $tr.attr("id",tr_id);
+        $tr.appendTo($("#"+table_id));
+        for(var i in data){
+            newTd(data[i],tr_id,tr_id+"_"+i);
+        }
+
+    },
+    newTd = function(data,tr_id,td_id){
+        var $td = $(document.createElement('td'));
+        $td.attr("id",td_id);
+        //$td.addClass((tr_id.indexOf("_name")>-1)?"tbl-grey":"tbl-value");
+        $td.addClass((tr_id.indexOf("_name")>-1)?"tbl-grey":"tbl-value");
+        $td.width('20%');
+        $td.appendTo($("#"+tr_id));
+        $td.text(data);
+        //(typeof data!="string" && data)?$td.text(data):newDiv(data,tr_id);  
+   
+    },
+    newDiv = function(data,td_id){
+        var $div = $(document.createElement('div'));
+        $div.attr("id",data);
+        $div.appendTo($("#"+td_id));
+    },
+    newElement = function(container_id,element){
+          $("#" + container_id).append(element);
+    };
+    
+return{
+        newTable : newTable,
+        newTable2 : newTable2,
+        newTr : newTr,
+        newTd : newTd,
+        newDiv : newDiv,
+        newElement : newElement
+    };
+}());  
+
+function info2obj(info){
+	// var ifc_name = info.type=="wifi"?info.name.replace("Master","").replace(/\"/g,""):info.id;
+	<% if only_eth1_for_lan == '1' then %> 
+		var ifc_name = info.name=="eth1"?"Ethernet":SpecHTML(info.name);
+	<% else %>
+		var ifc_name = info.name=="br-lan"?"Ethernet":SpecHTML(info.name);
+	<% end %>
+	var ifc_rx= String.format('%.2mB(%d <%:Pkts.%>)',info.rx_bytes,info.rx_packets);
+	var ifc_tx = String.format('%.2mB(%d <%:Pkts.%>)',info.tx_bytes,info.tx_packets);
+	return {ssid:ifc_name,mac:info.macaddr,rx:ifc_rx,tx:ifc_tx};
+}
+
+function renew_statistics_func(){
+	getById('loading').style.display = "";
+ 	XHR.get('<%=luci.dispatcher.build_url("admin", "network", "iface_status2", table.concat(ifaces, ","))%>', null,
+		function(x, ifcs)
+		{			
+			if (ifcs)
+			{
+				var interface_statistics_text = ["<%:SSID%>","<%:MAC%>","<%:RX(Packets)%>","<%:TX(Packets)%>"];
+				var interface_statistics_info=[];
+				for (var idx = 0; idx < ifcs.length; idx++)
+				{
+					var ifc = ifcs[idx];
+					if(ifc["device"]!="<%=filterRadio%>" && ifc["is_up"] == true){
+						if(ifc["macaddr"] != "00:00:00:00:00:00" && !isNumber(parseInt(ifc["id"],10)) && ifc["ifname"]!="br-inner" <%if only_eth1_for_lan then%> && ifc["ifname"]!="br-lan" <%end%>){
+							interface_statistics_info.push(info2obj(ifc));
+						}
+					}
+				}
+
+				$('#interface_statistics_tbl').remove();
+				myTable.newTable([],"interface_statistics","interface_statistics_tbl");     
+				myTable.newTr(interface_statistics_text,"interface_statistics_tbl","interface_statistics_name");
+				 for(var i in interface_statistics_info){
+				 	myTable.newTr([],"interface_statistics_tbl",i);
+					for(var j in interface_statistics_info[i]){
+						var content_id = i+"_"+j+"_content";
+				        myTable.newTd([],i,i+"_"+j);
+				        myTable.newDiv(content_id,i+"_"+j);		
+				            myTable.newElement(content_id,interface_statistics_info[i][j]);
+					}
+				 }
+			}
+			if(getById('loading').style.display == "")
+			{
+				getById('loading').style.display = "none";
+			}
+		}
+	);
+}
+
+function renew_statistics_func_SSID_based(){
+	getById('loading').style.display = "";
+ 	XHR.get('<%=luci.dispatcher.build_url("admin", "network", "iface_status2", table.concat(ifaces, ","))%>', null,
+		function(x, ifcs)
+		{
+			if (ifcs)
+			{
+				var ap_str="";
+				var wds_ap_str="";
+
+				var combined_ssid_ap=[];
+				var combined_ssid_wds_ap=[];
+
+				var classification_ap=[];
+<% if uci:get('functionlist','functionlist','SUPPORT_ENJET') == '1' then %>
+				for(var i=0;i<10;i++){     //i=9 for enjet1, i=8 for mgmt0, i=0~7 for ath0~ath07(ath1~ath17)
+					classification_ap[i]=0;
+				}
+<% else %>
+				for(var i=0;i<8;i++){
+					classification_ap[i]=0;
+				}
+<% end %>
+				var classification_wds_ap=[];
+				for(var i=0;i<5;i++){
+					classification_wds_ap[i]=0;
+				}
+				var myid_ap_num=1;
+				var myid_wds_ap_num=1;
+				for (var idx = 0; idx < ifcs.length; idx++)
+				{
+					var ifc = ifcs[idx];
+					if(ifc["device"]!="<%=filterRadio%>" && ifc["is_up"] == true){
+							if(ifc["macaddr"] != "00:00:00:00:00:00" && !isNumber(parseInt(ifc["id"],10)) && ifc["ifname"]!="br-inner" <%if only_eth1_for_lan then%> && ifc["ifname"]!="br-lan" <%end%>){
+								var currMode = ifc["mode_display"];
+								if (ifc["ifname"] == "enjet1" && opmodeArr[1] == "wds_ap") {
+									currMode = "wds_ap";
+								}
+								switch (currMode) {
+								case "ap":
+									var pattern_ap;
+									if(ifc["ifname"]=="enjet1"){
+										pattern_ap = 9; //pattern_ap 9 for enjet1, pattern_ap 8 for mgmt0, pattern_ap 0~7 for ath0~ath07(ath1~ath17)
+									}else if(ifc["ifname"]=="mgmt0"){
+										pattern_ap = 8; //pattern_ap 9 for enjet1, pattern_ap 8 for mgmt0, pattern_ap 0~7 for ath0~ath07(ath1~ath17)
+									}else if(ifc["ifname"].length=="5"){
+										pattern_ap = ifc["ifname"].slice(-1); //get last char
+									}else{
+										pattern_ap = 0; //first interface
+									}
+									classification_ap[pattern_ap]+=1;
+									if(classification_ap[pattern_ap]>=2){
+										combined_ssid_ap[ifc["ifname"]]=pattern_ap+","+ifc["rx_bytes"]+","+ifc["rx_packets"]+","+ifc["tx_bytes"]+","+ifc["tx_packets"];
+									}else if(ifc["name"]!="MESH_RP_AP_5G"){
+										ap_str += '<tr><td id="ap_profile"></td><td style="display:none;" id="statistic_ap_'+pattern_ap+'">'+ifc["ifname"]+'</td><td class="tbl-value one-long-line"><span myid="wifi_ssid'+myid_ap_num+'_text">'+SpecHTML(ifc["name"])+'</span></td><td class="tbl-value" myid="wifi_securitymode'+myid_ap_num+'_text">'+showEncryption(ifc["encr"])+'</td><td class="tbl-value" myid="wifi_vlan_id'+myid_ap_num+'_text">'+((ifc["isolation"]=="1" && ifc["guest_network"]=="Disable")?ifc["vlanid"]:"-")+'</td><td class="tbl-value" myid="wifi_8021q'+myid_ap_num+'_text">'+((ifc["isolation"]=="1")?"<%:Enable%>":"<%:Disable%>")+'</td><td id="rx" class="tbl-value" >'+ifc["rx_bytes"]+','+ifc["rx_packets"]+'</td><td id="tx" class="tbl-value" >'+ifc["tx_bytes"]+','+ifc["tx_packets"]+'</td></tr>';
+											myid_ap_num++;
+									}
+									break;
+								case "wds_ap":
+									if(ifc["ifname"].slice(-1)!="4"){
+										var pattern_wds_ap;
+										pattern_wds_ap = ifc["ifname"].slice(-1); //get last char
+										classification_wds_ap[pattern_wds_ap]+=1;
+										if(classification_wds_ap[pattern_wds_ap]>=2){
+											combined_ssid_wds_ap[ifc["ifname"]]=pattern_wds_ap+","+ifc["rx_bytes"]+","+ifc["rx_packets"]+","+ifc["tx_bytes"]+","+ifc["tx_packets"];
+										}else{
+											wds_ap_str += '<tr><td id="wds_ap_profile"></td><td style="display:none;" id="statistic_wds_ap_'+pattern_wds_ap+'">'+ifc["ifname"]+'</td><td class="tbl-value one-long-line"><span myid="wifi_ssid'+myid_wds_ap_num+'_text">'+SpecHTML(ifc["name"])+'</span></td><td class="tbl-value" myid="wifi_securitymode'+myid_wds_ap_num+'_text">'+showEncryption(ifc["encr"])+'</td><td class="tbl-value"  myid="wifi_vlan_id'+myid_wds_ap_num+'_text">'+((ifc["isolation"]=="1")?ifc["vlanid"]:"-")+'</td><td class="tbl-value" myid="wifi_8021q'+myid_wds_ap_num+'_text">'+((ifc["isolation"]=="1")?"<%:Enable%>":"<%:Disable%>")+'</td><td id="rx" class="tbl-value" >'+ifc["rx_bytes"]+','+ifc["rx_packets"]+'</td><td id="tx" class="tbl-value" >'+ifc["tx_bytes"]+','+ifc["tx_packets"]+'</td></tr>';
+												myid_wds_ap_num++;
+										}
+									}
+									break;
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+									case "sta_ap":
+									if(ifc["ifname"].slice(-1)=="8"){
+										var pattern_ap=10;
+										ap_str += '<tr><td id="ap_profile"></td><td style="display:none;" id="statistic_ap_'+pattern_ap+'">'+ifc["ifname"]+'</td><td class="tbl-value one-long-line"><span myid="wifi_ssid'+myid_ap_num+'_text">'+ifc["name"]+'</span></td><td class="tbl-value" myid="wifi_securitymode'+myid_ap_num+'_text">'+showEncryption(ifc["encr"])+'</td><td class="tbl-value" myid="wifi_vlan_id'+myid_ap_num+'_text">'+((ifc["isolation"]=="1" && ifc["guest_network"]=="Disable")?ifc["vlanid"]:"-")+'</td><td class="tbl-value" myid="wifi_8021q'+myid_ap_num+'_text">'+((ifc["isolation"]=="1")?"<%:Enable%>":"<%:Disable%>")+'</td><td id="rx" class="tbl-value" >'+ifc["rx_bytes"]+','+ifc["rx_packets"]+'</td><td id="tx" class="tbl-value" >'+ifc["tx_bytes"]+','+ifc["tx_packets"]+'</td></tr>';
+										myid_ap_num++;
+									}
+									break;
+<% end %>
+								}
+							}
+					}
+			    }
+				
+		if(ap_str!=""){
+				var title_ssid_radio_str = "<%:Statistics%>"
+				title_ssid_radio_str += " - Access Point ";
+				if(opmodeArr[0]=="ap"
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+				 || opmodeArr[0]=="sta_ap"
+<% end %>
+				 ){
+<% if WLAN24G == '1' then %>
+					title_ssid_radio_str+= "2.4GHz"
+<% end %>
+				}
+				if(opmodeArr[1]=="ap"
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+				 || opmodeArr[1]=="sta_ap"
+<% end %>
+				 ){
+					if(title_ssid_radio_str!=("<%:Statistics%>" + " - Access Point ")){
+						title_ssid_radio_str+= "/5GHz";
+					}else{
+						title_ssid_radio_str+= "5GHz";
+					}
+				}
+				if(opmodeArr[2]=="ap"){
+					if(title_ssid_radio_str!=("<%:Statistics%>" + " - Access Point ")){
+						title_ssid_radio_str+= "/5GHz - 2";
+					}else{
+						title_ssid_radio_str+= "5GHz - 2";
+					}
+				}
+				ap_str='<tr><td colspan="7" class="title">'+title_ssid_radio_str+'</td></tr><tr style="background-color: #EEEEEE;" class="title-option"><td class="tbl-grey" myid="title_wifi_Profile_text" style="width:5%;">Profile</td><td class="tbl-grey" myid="title_wifi_ssid_text" style="width:20%;">SSID</td><td class="tbl-grey" myid="title_wifi_securitymode_text" style="width:15%;">Security</td><td class="tbl-grey" myid="title_wifi_vlan_id_text" style="width:5%;">VID</td><td class="tbl-grey" myid="title_wifi_8021q_text" style="width:5%;">802.1Q</td><td class="tbl-grey" style="width:20%;">RX(Packets)</td><td class="tbl-grey" style="width:20%;">TX(Packets)</td></tr>'+ap_str;
+    				$('#wifi_status_table_ap').html(ap_str);
+		}else{
+			$('#wifi_status_table_ap').css( "display", "none" );
+		}
+
+		if(wds_ap_str!=""){
+				var title_ssid_radio_str = "<%:Statistics%>"
+				title_ssid_radio_str += " - WDS Access Point ";
+				if(opmodeArr[0]=="wds_ap"){title_ssid_radio_str+= "2.4GHz"}
+				if(opmodeArr[1]=="wds_ap"){
+					if(title_ssid_radio_str!=("<%:Statistics%>" + " - WDS Access Point ")){
+						title_ssid_radio_str+= "/5GHz";
+					}else{
+						title_ssid_radio_str+= "5GHz";
+					}
+				}
+				if(opmodeArr[2]=="wds_ap"){
+					if(title_ssid_radio_str!=("<%:Statistics%>" + " - WDS Access Point ")){
+						title_ssid_radio_str+= "/5GHz - 2";
+					}else{
+						title_ssid_radio_str+= "5GHz - 2";
+					}
+				}
+				wds_ap_str='<tr><td colspan="7" class="title">'+title_ssid_radio_str+'</td></tr><tr style="background-color: #EEEEEE;" class="title-option"><td class="tbl-grey" myid="title_wifi_Profile_text" style="width:5%;">Profile</td><td class="tbl-grey" myid="title_wifi_ssid_text" style="width:20%;">SSID</td><td class="tbl-grey" myid="title_wifi_securitymode_text" style="width:15%;">Security</td><td class="tbl-grey" myid="title_wifi_vlan_id_text" style="width:5%;">VID</td><td class="tbl-grey" myid="title_wifi_8021q_text" style="width:5%;">802.1Q</td><td class="tbl-grey" style="width:20%;">RX(Packets)</td><td class="tbl-grey" style="width:20%;">TX(Packets)</td></tr>'+wds_ap_str;
+    				$('#wifi_status_table_wds_ap').html(wds_ap_str);
+		}else{
+			$('#wifi_status_table_wds_ap').css( "display", "none" );
+		}
+
+		//deal with ap table, add up rx, tx info
+		for(var i in combined_ssid_ap){ 
+			var curPattern = combined_ssid_ap[i].slice(0,1);
+				$('[id=statistic_ap_'+curPattern+']').each(function(){
+					var rxInfo = $(this).siblings().filter(function(){ return this.id.match(/rx/) }).text().split(",");
+					//console.log("rxInfo "+rxInfo[0]+"  "+rxInfo[1]); //0:bytes, 1:packets
+	
+					var txInfo = $(this).siblings().filter(function(){ return this.id.match(/tx/) }).text().split(",");
+					//console.log("txInfo "+txInfo[0]+"  "+txInfo[1]); //0:bytes, 1:packets
+	
+					var currIfaceInfo = combined_ssid_ap[i].split(",");
+	
+					var addUpRxBytes = parseInt(rxInfo[0],10);
+					var addUpRxPackets = parseInt(rxInfo[1],10);
+					addUpRxBytes += parseInt(currIfaceInfo[1],10);
+					addUpRxPackets += parseInt(currIfaceInfo[2],10);
+	
+					var addUpTxBytes = parseInt(txInfo[0],10);
+					var addUpTxPackets = parseInt(txInfo[1],10);
+					addUpTxBytes += parseInt(currIfaceInfo[3],10);
+					addUpTxPackets += parseInt(currIfaceInfo[4],10);
+
+					$(this).siblings().filter(function(){ return this.id.match(/rx/) }).text(addUpRxBytes+","+addUpRxPackets);
+					$(this).siblings().filter(function(){ return this.id.match(/tx/) }).text(addUpTxBytes+","+addUpTxPackets);
+				});
+		} //deal with ap table end
+
+		//deal with wds-ap table, add up rx, tx info
+		for(var i in combined_ssid_wds_ap){
+			var curPattern = combined_ssid_wds_ap[i].slice(0,1);
+					$('[id=statistic_wds_ap_'+curPattern+']').each(function(){
+					var rxInfo = $(this).siblings().filter(function(){ return this.id.match(/rx/) }).text().split(",");
+					//console.log("rxInfo "+rxInfo[0]+"  "+rxInfo[1]); //0:bytes, 1:packets
+	
+					var txInfo = $(this).siblings().filter(function(){ return this.id.match(/tx/) }).text().split(",");
+					//console.log("txInfo "+txInfo[0]+"  "+txInfo[1]); //0:bytes, 1:packets
+	
+					var currIfaceInfo = combined_ssid_wds_ap[i].split(",");
+	
+					var addUpRxBytes = parseInt(rxInfo[0],10);
+					var addUpRxPackets = parseInt(rxInfo[1],10);
+					addUpRxBytes += parseInt(currIfaceInfo[1],10);
+					addUpRxPackets += parseInt(currIfaceInfo[2],10);
+	
+					var addUpTxBytes = parseInt(txInfo[0],10);
+					var addUpTxPackets = parseInt(txInfo[1],10);
+					addUpTxBytes += parseInt(currIfaceInfo[3],10);
+					addUpTxPackets += parseInt(currIfaceInfo[4],10);
+
+					$(this).siblings().filter(function(){ return this.id.match(/rx/) }).text(addUpRxBytes+","+addUpRxPackets);
+					$(this).siblings().filter(function(){ return this.id.match(/tx/) }).text(addUpTxBytes+","+addUpTxPackets);
+			});
+		}//deal with wds-ap table end
+
+	var ap_num=1;
+	$('[id=ap_profile]').each(function(){
+		$(this).html("#"+ap_num);
+		$(this).attr("myid","wifi_Profile"+ap_num+"_text");
+		ap_num++;
+	});
+	
+	var wds_ap_num=1; 
+	$('[id=wds_ap_profile]').each(function(){
+	        $(this).html("#"+wds_ap_num);
+	        $(this).attr("myid","wifi_Profile"+wds_ap_num+"_text");
+	        wds_ap_num++;
+	});
+
+
+	$('[id^=statistic_]').each(function(){
+		var rx_raw_info = $(this).siblings().filter(function(){ return this.id.match(/rx/) }).text().split(",");
+		var tx_raw_info = $(this).siblings().filter(function(){ return this.id.match(/tx/) }).text().split(",");
+	
+		var ifc_rx= String.format('%.2mB(%d <%:Pkts.%>)',rx_raw_info[0],rx_raw_info[1]);
+		var ifc_tx = String.format('%.2mB(%d <%:Pkts.%>)',tx_raw_info[0],tx_raw_info[1]);
+	
+		$(this).siblings().filter(function(){ return this.id.match(/rx/) }).text(ifc_rx);
+		$(this).siblings().filter(function(){ return this.id.match(/tx/) }).text(ifc_tx);
+	});
+			}
+			if(getById('loading').style.display == "")
+			{
+				getById('loading').style.display = "none";
+			}
+		}
+	);
+}
+
+$( document ).ready(function() {
+    <% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == '1' then %>
+		setTimeout("renew_statistics_func_SSID_based()", 6000);
+    <% else %>
+		setTimeout("renew_statistics_func()", 6000);
+    <% end %>
+});
+</script>
+<div class="cbi-page-actions left">
+	<input class="cbi-button cbi-button-save" id="renew_statistics" type="button" value="<%:Refresh%>" <% if uci:get('functionlist','functionlist','SUPPORT_COMBINED_SSID_SETTING') == '1' then %>onclick='renew_statistics_func_SSID_based();'<% else %>onclick='renew_statistics_func();'<% end %> />
+	<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" id="loading" class="cbi-section" style="display: '';" />
+</div>
+<%
+end-----####  SUPPORT_RENEW_STATISTICS_BY_BUTTON END #### 
+%>
+<%+footer%>

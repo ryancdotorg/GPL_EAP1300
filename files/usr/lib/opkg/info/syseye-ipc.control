@@ -1,0 +1,10 @@
+Package: syseye-ipc
+Version: 1.2-6-g64dfa5c
+Depends: libc, mio, ezjson, syseye
+Source: SENAO/package/senao-syseye
+Section: net
+Maintainer: Ryan Hsu <ryan_hsu@hotmail.com.tw>
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 3739
+Description:  senao system management center controller client.

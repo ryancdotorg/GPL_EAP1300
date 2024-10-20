@@ -1,0 +1,24 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+# fix WDS AP fastroamingEnable null
+commit_flag=0
+
+for wifi_num in 0 1 2; do
+	for ssid_num in 1 2 3 4; do
+		# check wireless.wifiX_wds_X
+		if [ -n "$(uci -q get wireless.wifi${wifi_num}_wds_${ssid_num})" ]; then
+			# check wireless.wifiX_wds_X.fastroamingEnable 
+			if [ -z "$(uci -q get wireless.wifi${wifi_num}_wds_${ssid_num}.fastroamingEnable)" ]; then
+				# set wireless.wifiX_wds_X.fastroamingEnable 
+				uci set wireless.wifi${wifi_num}_wds_${ssid_num}.fastroamingEnable=0
+				commit_flag=1
+			fi
+		fi
+	done
+done
+
+# commit
+[ $commit_flag -eq 1 ] && uci commit wireless
+
+exit 0

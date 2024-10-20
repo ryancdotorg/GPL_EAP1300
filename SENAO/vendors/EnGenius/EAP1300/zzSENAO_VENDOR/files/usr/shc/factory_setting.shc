@@ -1,0 +1,215 @@
+#!/bin/sh
+
+. /lib/auth.sh
+. /lib/functions.sh
+. /lib/functions/service.sh
+. /lib/sn_functions.sh
+
+START=19
+
+hw_id_find=0
+
+check_hw_id() {
+	local hw_id=$(setconfig -g 9)
+	if [ "$hw_id" = "$1" ]; then
+		hw_id_find=1
+	fi
+}
+
+check_hostName() {
+	local hw_id=$(setconfig -g 9)
+	local config_hw_id
+	local modelName
+	local description
+	
+	if [ -z "$hw_id" ] || [ "$hw_id_find" = "0" ]; then
+		hw_id=00000000
+	fi
+	
+	if [ "$hw_id" = "$1" ]; then
+		config_get modelName $1 modelName
+		config_get description $1 description
+		uci set system.@system[0].hostname="$modelName" 
+		uci set system.@system[0].SystemName="$modelName"
+		uci set snmpd.@system[0].sysName="$modelName"
+		echo "$modelName" > /proc/sys/kernel/hostname
+		printf "$modelName" > /etc/modelname
+		uci rename sysProductInfo."$1"="model"
+	else
+		uci delete sysProductInfo."$1"
+	fi	
+
+	uci commit
+}
+
+check_boarddata() {
+
+	local modelName=$(uci get sysProductInfo.model.modelName)
+
+	[ -d "/lib/firmware/AR900B/hw.2/$modelName" ] && {
+		ln -sf /lib/firmware/AR900B/hw.2/$modelName/* /lib/firmware/AR900B/hw.2/
+	}
+}
+
+get_mac_dual() {
+	local device=$1
+	local phydevice=${device}
+	# Per-SSID base 2.4G & 5G use the same MAC address to gen SSID.
+	printf $(cat /tmp/wifi0_mac.txt |tr [a-z] [A-Z]|sed 's/://g'|cut -c 7-)
+}
+
+check_ssid() {
+	local ssid
+	local device
+	config_get ssid $1 ssid
+	config_get device $1 device
+
+	mac="$(get_mac_dual $device)"
+	#ssid2=$(echo "$ssid")
+	ssid2=$(escape_character "$ssid")
+	ssid2=$(eval "echo $ssid2 | sed -e 's/-mac-/$mac/g'")
+	mac_ssid="$ssid2"
+	uci set wireless."$1".ssid="$mac_ssid"
+}
+
+check_securityFake() {
+   local device
+   local wifix
+   local encryptionFake
+   local key
+
+   config_get device $1 device
+   config_get encryptionFake $1 encryptionFake
+
+   wifix=${device:4:4}
+   case "$encryptionFake" in
+             none)
+             ;;
+             *psk*)
+                        key="$(sysCommand generate wpa2psk $wifix)"
+                        uci set wireless."$1".key="$key"
+             ;;
+             *wpa*)
+             ;;
+             *wep*)
+             ;;
+             8021x)
+             ;;
+             *)
+             ;;
+   esac
+}
+
+
+check_login_passwd() {
+	local account
+	local passwd
+	account="$(grep ":" /etc/webpasswd|cut -d : -f 1)"
+	#passwd="$(sysCommand generate wpa2psk 0)"
+	passwd="admin"
+	sysCommand setup login "$account" "$passwd"
+	set_auth "$account" "$passwd"
+
+}
+
+check_wpsPinCode() {
+	local wps_pin
+	local device
+	local wifix
+	local pin_code
+
+	config_get wps_pin $1 wps_pin
+	config_get device $1 device
+
+	[ -n "$wps_pin" ] && {
+		wifix=${device:4:4}
+		pin_code="$(sysCommand generate wpsPin $wifix)"
+		uci set wireless."$1".wps_pin="$pin_code"
+	}
+}
+
+samba_passwd() {
+	uci set samba.@samba[0].userpassword=$(sysCommand generate wpa2psk 0)
+}
+
+check_model() {
+	local hw_id=$(setconfig -g 9)
+
+	#0101009D=>EAP1300, 0101009E=>EAP1300EXT, 0101008A=>EWS355AP.
+	if [ "$hw_id" = "0101008A" ]; then
+		#EWS355AP support ap/wdsb/wdsap/repeater mode, same with EAP1300.
+		uci set functionlist.functionlist.SUPPORT_AP_MODE_ONLY=0
+		uci set functionlist.functionlist.SUPPORT_MESH_SETTING=1
+	else
+		uci set functionlist.functionlist.SUPPORT_AP_MODE_ONLY=0
+		uci set functionlist.functionlist.SUPPORT_MESH_SETTING=1
+	fi
+
+	# Fix upgrade to new firmware, the config don't update.
+	uci set sysProductInfo.model.description="AC1300 Dual Concurrent Indoor Ceiling Mount AP"
+
+	uci commit
+}
+
+sync_uboot_ver()
+{
+	local currentUbootVer=$(setconfig -g 24)
+	local APPSBLENV_MTD=$(cat /proc/mtd |grep APPSBLENV | awk -F ':' '{printf $1}')
+	local uboot_env=$(cat /dev/$APPSBLENV_MTD)
+	local realUbootVer
+
+	realUbootVer=`echo ${uboot_env#*uboot_ver=} | cut -c 1-5`
+
+	if [ "$currentUbootVer" != "$realUbootVer" ]; then
+		echo "find uboot version different, sync uboot version APPSBLENV to u-boot-env" > /dev/console
+		setconfig -a 1
+		setconfig -a 2 -s 24 -d $realUbootVer
+		setconfig -a 5
+	fi
+
+}
+
+start() {
+
+	[ -d /overlay/upper/etc/lighttpd ] && {
+		uci set system.factory.init=1
+		uci commit
+	}
+
+	local factory_init=$(uci get system.factory.init)
+
+	# factory_init 2 means GUI from radio-base to ssid-base
+	if [ "$factory_init" = "0" ] || [ "$factory_init" = "2" ]; then
+		[ "$factory_init" = "0" ] && {
+			config_load sysProductInfo
+			config_foreach check_hw_id model
+			config_foreach check_hostName model
+			check_boarddata
+		}
+		config_load wireless
+		config_foreach check_ssid wifi-iface
+#		config_foreach check_securityFake wifi-iface
+		config_foreach check_wpsPinCode wifi-iface
+#		check_login_passwd
+#		samba_passwd
+		sleep 1
+		uci set system.factory.init=1
+		uci commit
+	
+		uci -X show wireless > /etc/wirelessDefault
+	fi
+
+	check_model
+
+	# support PACKAGE_uboot-ipq40xx-MAKEOPTS_SENAO_AUTO_UPDATE_UBOOT_VERSION, sync uboot version from APPSBLENV.
+	sync_uboot_ver
+}
+
+stop() {
+    echo "$0" do nothing
+}
+
+case "$1" in
+	start) start;;
+	stop) stop;;
+esac

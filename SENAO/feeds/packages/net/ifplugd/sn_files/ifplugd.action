@@ -1,0 +1,5 @@
+#!/bin/sh
+[ "$2" == "up" ] && /usr/sbin/snmpdtrap.sh linkUp
+[ "$2" == "down" ] && /usr/sbin/snmpdtrap.sh linkDown
+env -i INTERFACE=$1 ACTION=$2 /sbin/hotplug-call ifplugd > /dev/null 2>&1 &
+[ -e /sbin/chkEth2GW.sh ] && sh /sbin/chkEth2GW.sh

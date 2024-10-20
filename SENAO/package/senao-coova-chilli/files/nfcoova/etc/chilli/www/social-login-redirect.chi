@@ -1,0 +1,9 @@
+<? # -*- mode: shell-script -*-
+. ./config.sh
+. /etc/chilli/chilli-libs.sh
+#. /tmp/etc/chilli/$CONFIG_NAME/config
+
+chilli_query -s /var/run/chilli.$HS_CONFIG_NAME.sock addgarden mac $REMOTE_MAC data captive.apple.com 1>/dev/null 2>&1 &
+http_redirect2 "http://$HS_UAMLISTEN:$HS_UAMPORT/www/social-login-ready.html"
+
+?>

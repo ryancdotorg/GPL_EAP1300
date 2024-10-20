@@ -1,0 +1,96 @@
+<? # -*- mode: shell-script -*-
+# Copyright (C) 2009-2012 David Bird (Coova Technologies) <support@coova.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. ./config.sh
+. /etc/chilli/chilli-libs.sh
+
+ssid_num=$(get_ssid_num $DHCPIF)
+section_name=ssid_${ssid_num}
+
+
+uam_type=$(get_uam_type ${HS_LOGIN_TYPE:-0})
+
+if [ $uam_type -eq 2 ]
+then
+    # cloud AP  HS_LOGIN_TYPE range 1xx
+    if [ "$HS_LOGIN_TYPE" = "105" ]
+    then
+        # oauth_AAA
+        FORM_oauth_AAA=1
+    fi
+fi
+
+# replace FORM_password here
+if [ -n "$FORM_oauth_AAA" ]
+then
+    FORM_password=$FORM_token
+elif [ -n "$FORM_oauth" ]
+then
+    FORM_password=$FORM_oauth
+fi
+
+if [ -n "$FORM_username" -a -n "$COOVA_CHALLENGE" ]
+then
+    http_header
+    dologin
+else
+    case "$FORM_res" in
+    success|already)
+        # third-party
+        if [ $uam_type -eq 3 ]
+        then
+            url=$FORM_redirurl
+            url=${url:-$FORM_userurl}
+            http_redirect3 "$url"
+        elif [ $uam_type -eq 1 ]
+        then
+            # ezmaster
+            url=$FORM_redirurl
+            url=${url:-$FORM_userurl}
+            http_redirect3 "$url"
+        else
+            # engeius-cloud
+            SUCESS_QS=$(echo $QUERY_STRING | sed 's/&md=[^&=]*$//')
+            SUCESS_URL="$HS_UAMFORMAT?uamip=$HS_UAMLISTEN&uamport=$HS_UAMPORT&$SUCESS_QS"
+            SUCESS_CHECK="$SUCESS_URL$HS_UAMSECRET"
+            SUCESS_CHECK_MD5=$(echo -n "$SUCESS_CHECK" |md5sum|cut -d' ' -f1|tr 'a-z' 'A-Z');
+            eval 'curl -s -i --connect-timeout 8 -m 10 -k "$SUCESS_URL"'
+            if [ $? -ne 0 ]
+            then
+                url=$FORM_redirurl
+                url=${url:-$FORM_userurl}
+                http_redirect3 "$url"
+            fi
+        fi
+
+        exit
+        ;;
+    esac
+
+    if [ -n "$QUERY_STRING" ]
+    then
+        if [ -z "$GET_md" -a -z "$FORM_uamip" -a -z "$FORM_uamport" ]
+        then
+            http_redirect3 "$HS_UAMFORMAT?uamip=$HS_UAMLISTEN&uamport=$HS_UAMPORT&"$QUERY_STRING
+        else
+            http_redirect3 "$HS_UAMFORMAT"?$QUERY_STRING
+        fi
+    else
+        http_redirect2 "http://$HS_UAMLISTEN:$HS_UAMPORT/prelogin"
+    fi
+fi
+
+?>

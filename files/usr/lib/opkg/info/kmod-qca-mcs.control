@@ -1,0 +1,9 @@
+Package: kmod-qca-mcs
+Version: 4.4.60+g30bdbbe8c-1
+Depends: kernel (=4.4.60-1-00d4d08f108a4ac04f94cf3f2682d73e)
+Source: qca/feeds/qca-mcs/qca-mcs-lkm
+Section: kernel
+Maintainer: Qualcomm Atheros, Inc.
+Architecture: ipq40xx
+Installed-Size: 26115
+Description:  This package installs the IGMP/MLD Snooping Module

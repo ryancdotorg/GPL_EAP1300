@@ -1,0 +1,134 @@
+---SYNOPSIS---
+---[TOPIC]---
+#[COMMENT]
+CONTEXT
+
+---Before Compiling---
+Make sure the disk free capacity is enough for compiling. The shortage
+will cause so many unknown compiling error.
+
+---How to Compile Vendor---
+(Suggest to locate codebase in / )
+(Suggest to use "SmartOpenWrt_EX" to be codebase name, If the codebase name 
+is too long or the path name is too long, it will cause compile fail)
+
+Example:
+cd /SmartOpenWrt_EX/SENAO/vendors/EnGenius/EWS357AP_CS
+sh rebuild-all.sh
+
+---Compile Tools Install---
+#This command is for older/32-bit Debian/Ubuntu releases; customize it for other distributions:
+apt-get install gcc g++ binutils patch bzip2 flex make gettext pkg-config unzip zlib1g-dev libc6-dev subversion libncurses5-dev gawk sharutils curl libxml-parser-perl ocaml-nox ocaml-nox ocaml ocaml-findlib libpcre3-dev binutils-gold python-yaml libgl1-mesa-dri:i386 ia32-libs-multiarch:i386 libgd2-xpm:i386 ia32-libs-multiarch ia32-libs
+
+---Compile Tools Install---
+#This command is for Ubuntu 16.04.3 64-bit build hosts:
+sudo apt-get install gcc g++ binutils patch bzip2 flex make gettext pkg-config unzip zlib1g-dev libc6-dev subversion libncurses5-dev gawk sharutils curl libxml-parser-perl ocaml-nox ocaml ocaml-findlib libpcre3-dev binutils-gold python-yaml libgl1-mesa-dri:i386 libgd-dev multiarch-support
+lib32ncurses5 lib32z1 libssl-dev
+
+---Generate a Complete Firmware Image---
+Install mkimage: sudo apt-get install uboot-mkimage u-boot-tools
+Install DTC: sudo apt-get install device-tree-compiler
+<add from qca_spf_10_0_cs>
+Install libfdt: sudo apt-get install libfdt-dev
+
+---If Encountering Compiling Problem, Try Installing Following Packages---
+apt-get install coccinelle openssl-dev libsdl1.2-dev libssl-dev
+
+---16.04 host/coccinelle compile error, install following tools---
+apt-get install libparmap-ocaml-dev
+gitresetall -f  ###Everything reset to intial state, please save your code to git server
+
+---Make sure the git-lfs version is 2.4---
+#Remove the latest version, get "git-lfs-linux-amd64-2.4.0.tar.gz" at rdserver.senao.com/firmware
+#tar file and cp git-lfs to /usr/bin/.
+apt-get remove git-lfs;
+wget ftp://ftpuser:senao123@rdserver.senao.com/firmware/git-lfs-linux-amd64-2.4.0.tar.gz
+tar -xvf git-lfs-linux-amd64-2.4.0.tar.gz;cp git-lfs-2.4.0/git-lfs /usr/bin/
+
+---How To Change QSDK SPF Repository, Please Refer Following Variable In sysProductInfo.mk---
+#Example to use QSDK SPF5.3
+export QCA_PRODUCT_CYCLE=SPF5.3 #(optional)If you use akronite platform
+export QCA_SP_REPO=qca_spf_5_3_CS
+export QCA_SP_BRANCH=pure-qca-wifi-spf5.3 #(optional)If you need to use pure QSDK wifi as QSDK release
+export QCA_BOARD=ap.dk04.1-c1
+
+---Senao Support QSDK SPF---
+#(Name)::(Senao Repository)::(Suggested Senao Kernel)
+SPF4.0_CSU2::qca_spf_4_0_CSU2::linux-3.14.77
+SPF5.2_ED1::qca_spf_5_2_ED1::linux-4.4.46
+SPF5.3_CS::qca_spf_5_3_CS::linux-4.4.60
+SPF6.0_CSU1::qca_spf_6_0_CSU1::linux-3.14.77_spf_6_0_csu1
+SPF6.0_CSU1_MIPS::qca_spf_6_0_CSU1_NHSS_MIPS_6_0::linux-3.3.8_spf_6_0_csu1_nhss_mips_6_0
+SPF6.0_CSU1_NHSS_6.1::qca_spf_6_0_CSU1_NHSS_6_1::linux-4.4.60_spf_6_0_csu1_nhss_6_1
+SPF6.1.0_CS::qca_spf_6_1_0_CS::linux-4.4.60_spf_6_1_0_cs
+SPF7.0_ED5::qca_spf_7_0_ED5::linux-4.4.60_spf_7_0_ED5
+SPF8.0_ED7::qca_spf_8_0_ED7::linux-4.4.60_spf_8_0_ED7
+SPF8.0_CS::qca_spf_8_0_CS::linux-4.4.60_spf_8_0_cs
+SPF8.0_CSU1::qca_spf_8_0_CSU1::linux-4.4.60_spf_8_0_csu1
+SPF9.0_ES::qca_spf_9_0_ES::linux-4.4.60_spf_9_0_es
+SPF9.0_REL3::qca_spf_9_0_REL3::linux-4.4.60_spf_9_0_rel3
+SPF9.0_REL4::qca_spf_9_0_REL4::linux-4.4.60_spf_9_0_rel4
+SPF9.0_CS::qca_spf_9_0_CS::linux-4.4.60_spf_9_0_cs
+SPF10.0_ES2::qca_spf_10_0_ES2::linux-4.4.60_spf_10_0_es2
+SPF10.0_FC::qca_spf_10_0_fc::linux-4.4.60_spf_10_0_fc
+SPF10.0_CS_PREVIEW::qca_spf_10_0_cs_preview::linux-4.4.60_spf_10_0_cs_preview
+SPF10.0_CS::qca_spf_10_0_cs::linux-4.4.60_spf_10_0_cs
+SPF10.0_CS_PATCH1::qca_spf_10_0_cs_patch1::linux-4.4.60_spf_10_0_cs_patch1
+SPF10.0_CS_PATCH2::qca_spf_10_0_cs_patch2::linux-4.4.60_spf_10_0_cs_patch2
+IPQ6018_ILQ12.0_ES1::qca_ipq6018_ilq12.0_es1::linux-4.4.60_ipq6018_ilq12.0_es1
+IPQ6018_ILQ11.0_FC::qca_ipq6018_ilq11.0_fc::linux-4.4.60_ipq6018_ilq11.0_fc
+SPF11.0_CSU1::qca_spf_11_0_csu1::linux-4.4.60_spf_11_0_csu1
+SPF11.2::qca_spf_11_2::linux-4.4.60_spf_11_2
+SPF10.0_CS_PATCH5::qca_spf_10_0_cs_patch5::linux-4.4.60_spf_10_0_cs_patch5
+
+---How to check QSDK SPF version and details---
+#Example
+cat /SmartOpenWrt_EX/qca/QCA_Networking_2017.SPF.5.3_CS_r1_00001.0
+or
+cat /SmartOpenWrt_EX/qca/README.md
+
+Release:        QCA_Networking_2017.SPF.5.3 CS
+Release Tag:    r1_00001.0
+Release Note:   80-YB104-1 Rev. C
+
+---Senao GPL vendor for example---
+/SmartOpenWrt_EX/SENAO/vendors/EnGenius/ECM955AP/GPL
+/SmartOpenWrt_EX/SENAO/vendors/EnGenius/EnStationACv2_ENH500v3/GPL
+
+---Senao Custom OpenSource Package or Porting---
+CONFIG_PACKAGE_libjson-c
+CONFIG_PACKAGE_libwebsockets
+
+---Create SENAO package---
+step1:Ask manager to create a repo for you
+step2:Follow below commands:
+    Existing folder or Git repository
+    cd existing_folder
+    git init
+    git remote add origin git@atlantis.senao.com:OpenWrt/test.git
+    git add .
+    git commit
+    git push -u origin master
+
+---External toolchain ftp path---
+#ftpuser="ftpuser"
+#PASSWORD="senao123"
+#Example:
+ftp://ftpuser:PASSWORD@rdserver.senao.com/toolchains/openwrt_toolchains/EX/
+ex:ftp://ftpuser:PASSWORD@rdserver.senao.com/toolchains/openwrt_toolchains/EX/toolchain-arm_cortex-a7_gcc-5.2.0_musl-1.1.16_eabi.tar
+
+---External toolchain install path---
+#Example:
+/opt/cross/EX/
+cd /opt/cross/EX;tar -xvf toolchain-arm_cortex-a7_gcc-5.2.0_musl-1.1.16_eabi.tar
+
+---Package Path---
+#Senao Proprietary Package(SENAO專有軟體)
+/SmartOpenWrt_EX/SENAO/package
+#Senao Porting Package(Porting from opensouce and no senao proprietary)
+/SmartOpenWrt_EX/SENAO/feeds/packages
+#QCA pacakge
+/SmartOpenWrt_EX/qca/feeds
+
+---Kernel Path---
+/SmartOpenWrt_EX/SENAO/kernel

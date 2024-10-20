@@ -1,0 +1,94 @@
+#!/bin/sh
+
+ERROR_MSG_101="101:Md5 check failed."
+ERROR_MSG_102="102:MAC check failed."
+ERROR_MSG_103="103:Other failed."
+
+CLIENT_KEY_CHK=/tmp/client.key.chk
+CLIENT_KEY_MD5_CHK=/tmp/client.key.md5.chk
+CLIENT_CRT_CHK=/tmp/client.crt.chk
+CLIENT_CRT_MD5_CHK=/tmp/client.crt.md5.chk
+
+PART_FILE=/tmp/part_file
+
+# ====== cert file format =====
+# length of client.key
+# xxxxxxxxx
+# xxxxxxxxx
+# length of client.crt
+# xxxxxxxxx
+# xxxxxxxxx
+# MD5
+# length of MD5 with client.key
+# MD5 with client.key
+# length of MD5 with client.crt
+# MD5 with client.crt
+CERT_MTD=$(cat /proc/mtd | grep cert | awk -F: '{print $1}')
+
+# cat cert partition to file.
+cat /dev/$CERT_MTD > $PART_FILE
+
+# get client.key size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get client.key
+dd if=$PART_FILE of=$CLIENT_KEY_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# remove client.key from PART_FILE
+lines=$(wc -l ${CLIENT_KEY_CHK}|cut -d ' ' -f 1)
+sed -i 1,"$lines"d $PART_FILE
+
+# get client.crt size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get client.crt
+dd if=$PART_FILE of=$CLIENT_CRT_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# remove client.crt from PART_FILE
+lines=$(wc -l ${CLIENT_CRT_CHK}|cut -d ' ' -f 1)
+sed -i 1,"$lines"d $PART_FILE
+
+# remove MD5 string
+sed -i '1d' $PART_FILE
+# get MD5 with client.key size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get MD5 with client.key
+dd if=$PART_FILE of=$CLIENT_KEY_MD5_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# remove MD5 with client.key from PART_FILE
+lines=$(wc -l ${CLIENT_KEY_MD5_CHK}|cut -d ' ' -f 1)
+sed -i 1,"$lines"d $PART_FILE
+
+# get MD5 with client.crt size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get MD5 with client.key
+dd if=$PART_FILE of=$CLIENT_CRT_MD5_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# check client.key
+if [ "$(cat "$CLIENT_KEY_MD5_CHK")" != "$(md5sum "$CLIENT_KEY_CHK" | cut -d " " -f 1)" ]; then
+	echo "$ERROR_MSG_101"
+	return
+fi
+
+# check client.crt
+if [ "$(cat "$CLIENT_CRT_MD5_CHK")" != "$(md5sum "$CLIENT_CRT_CHK" | cut -d " " -f 1)" ]; then
+	echo "$ERROR_MSG_101"
+	return
+fi
+
+# check the mac of key same with DUT's MAC.
+CRT_MAC=$(openssl x509 -in $CLIENT_CRT_CHK -text -noout | grep UID)
+# Subject: O = "EnGenius Technologies, Inc.", CN = *.engeniuscloud.com, serialNumber = 34:76:c5:02:20:85, UID = 88:dc:96:ee:ee:34
+CRT_MAC=${CRT_MAC##*UID = }
+CRT_MAC=$(echo $CRT_MAC | tr 'A-F' 'a-f')
+
+DUT_MAC=$(setconfig -g 6 | tr 'A-F' 'a-f' | tr -d " ")
+
+if [ "$CRT_MAC" != "$DUT_MAC" ];then
+	echo "$ERROR_MSG_102"
+	return
+fi
+
+echo "Success !!!"

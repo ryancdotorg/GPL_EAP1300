@@ -1,0 +1,8 @@
+*nat
+:portal_pre_nat - [0:0]
+:portal_post_nat - [0:0]
+-F portal_pre_nat
+-F portal_post_nat
+-I PREROUTING -j portal_pre_nat
+-I POSTROUTING -j portal_post_nat
+COMMIT

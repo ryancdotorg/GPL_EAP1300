@@ -1,0 +1,34 @@
+/* -*- mode: c; c-basic-offset: 2 -*- */
+
+#ifndef _RADIUS_ENGENIUS_H
+#define _RADIUS_ENGENIUS_H
+
+
+//Ref: https://www.iana.org/assignments/enterprise-numbers/enterprise-numbers
+#define RADIUS_VENDOR_ENGENIUS                       44194
+// for Engenius Cloud use 200~255
+#define RADIUS_ATTR_ENGENIUS_NETWORK_ID                200 /* string */   // 507f191e810c19729de860ea
+#define RADIUS_ATTR_ENGENIUS_CONFIG_ID                 201 /* integer */  // wireless: 1,2,3,4,5,6,7,8, ethprofile: 9(port_1),10,11(ECW115 use port_3)
+#define RADIUS_ATTR_ENGENIUS_SSID_PROFILE_ID           202 /* string */   // 5cd232d9ad8e1200016cf957
+#define RADIUS_ATTR_ENGENIUS_LOGIN_TYPE                203 /* integer */  // 105, oauth_aaa
+#define RADIUS_ATTR_ENGENIUS_OAUTH_PROVIDER            204 /* string */   // google, facebook; max length 15
+#define RADIUS_ATTR_ENGENIUS_DEVICE_MODEL_NAME         205 /* string */   // ECW120
+#define RADIUS_ATTR_ENGENIUS_DEVICE_FIRMWARE_VERSION   206 /* string */   // 1.0.0
+
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_EZM_SPLASH_GO                  0
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_EZM_EG_RADIUS                  1
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_EZM_CUSTOM_RADIUS              2
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_EZM_THIRD_PARTY                3
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_EZM_SOCIAL_LOGIN               4
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_CLICK_THROUGH          100
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_EG_RADIUS              101
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_HOT_SPOT               102
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_CUSTOM_RADIUS          103
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_THIRD_PARTY            104
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_SOCIAL_LOGIN           105
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_AD_AUTHENTICATION      106
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_LDAP_AUTHENTICATION    107
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_CLOUD_FACEBOOK_WIFI          108
+#define RADIUS_VALUE_ENGENIUS_LOGIN_TYPE_WATCHGUARD_CLICK_THROUGH     300
+
+#endif	/* !_RADIUS_ENGENIUS_H */

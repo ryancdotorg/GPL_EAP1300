@@ -1,0 +1,64 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
+#
+. /lib/functions.sh
+. /lib/sn_functions.sh
+
+PROC_WDS_BRIDGE_PATH="/dev/null"
+WLANCONFIG_LIST="/tmp/wlan_config_list"
+SCANNING_LIST="/tmp/scanning_list"
+PROC_SN_ROLE="/proc/sn_role"
+
+TIMEOUT_VAL=5
+
+CHECK_ROUND_TIME=60
+
+while true
+do
+    [ -f /var/run/luci-reload-status ] || [ $(cat "$PROC_SN_ROLE") != "2" ] && continue
+    #echo ">>>>>WDS_BRDIGE" > /dev/console
+
+    for vap in $(iwconfig 2>/dev/null | grep ^ath | awk {'print $1'}); do
+        for iface in $(foreach wireless wifi-iface); do
+            if [ "$vap" == "$(uci get wireless.$iface.ifname)" ]; then
+                if [ "$(uci get wireless.$iface.mode_display)" == "wds_bridge" ]; then
+                    wlanconfig $vap list > $WLANCONFIG_LIST
+                    count=0
+                    idle_count=0
+                    for mac in $(tail -n +2 $WLANCONFIG_LIST | awk '{printf $1"\n";}'); do
+                        master=$(grep "$mac" $WLANCONFIG_LIST | awk '{printf $19"\n";}')
+                        #echo ">>>>>$master" > /dev/console
+                        if [ $master = "1" ]; then
+                            count=$(($count+1))
+                            idle_time=$(grep "$mac" $WLANCONFIG_LIST | awk '{printf $9"\n";}')
+                            #echo "idle_time:$idle_time" > /dev/console
+                            if [ $idle_time -gt $TIMEOUT_VAL ]; then
+                                idle_count=$(($idle_count+1))
+                                target_mac="$target_mac $mac"
+                            fi
+                        fi
+                    done
+                    #echo ">>>>idle_count:$idle_count, count:$count" > /dev/console
+                    if [ $idle_count -ge $count ]; then
+                        device=$(uci get wireless.$iface.device)
+                        iwlist $vap scanning > $SCANNING_LIST
+                        for mac in $target_mac; do
+                            channel=$(grep -i $mac $SCANNING_LIST | awk '{printf $(NF-3)"\n";}')
+                            if [ -n "$channel" ] && [ "$channel" != "$(uci get wireless.$device.channel)" ] ; then
+                                echo -e "\033[31m reconnect to $mac at CH:$channel and luci-reload auto network\n\033[0m" > /dev/console
+                                uci set wireless.$device.channel=$channel
+                                luci-reload auto network
+                            fi
+                        done
+                    fi
+                    echo 1 > "$PROC_WDS_BRIDGE_PATH"
+                else
+                    echo 0 > "$PROC_WDS_BRIDGE_PATH"
+                fi
+            fi
+        done
+    done
+    
+    sleep $CHECK_ROUND_TIME
+done

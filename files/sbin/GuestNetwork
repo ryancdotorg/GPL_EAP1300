@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ -x /etc/init.d/firewall ]; then
+    /etc/init.d/firewall restart
+fi
+
+if [ -e "/etc/config/ndpi" ]; then
+    luci-reload auto ndpi
+fi
+luci-reload auto portal 1>/dev/null 2>&1
+

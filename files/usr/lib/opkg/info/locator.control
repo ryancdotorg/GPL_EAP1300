@@ -1,0 +1,9 @@
+Package: locator
+Version: 1.0.0
+Depends: libc
+Source: SENAO/package/locator
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 16987
+Description:  Locator

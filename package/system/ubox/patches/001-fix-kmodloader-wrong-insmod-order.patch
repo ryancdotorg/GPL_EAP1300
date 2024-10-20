@@ -1,0 +1,714 @@
+Index: ubox-2015-11-22/kmodloader.c
+===================================================================
+--- ubox-2015-11-22.orig/kmodloader.c
++++ ubox-2015-11-22/kmodloader.c
+@@ -27,7 +27,6 @@
+ #include <string.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
+-#include <syslog.h>
+ #include <libgen.h>
+ #include <glob.h>
+ #include <elf.h>
+@@ -46,8 +45,6 @@ enum {
+ };
+ 
+ struct module {
+-	struct avl_node avl;
+-
+ 	char *name;
+ 	char *depends;
+ 	char *opts;
+@@ -56,12 +53,21 @@ struct module {
+ 	int usage;
+ 	int state;
+ 	int error;
++	int refcnt;			/* number of references from module_node.m */
++};
++
++struct module_node {
++	struct avl_node avl;
++	struct module *m;
++	bool is_alias;
+ };
+ 
+ static struct avl_tree modules;
+ 
+ static char **module_folders = NULL;
+ 
++static void free_module(struct module *m);
++
+ static int init_module_folders(void)
+ {
+ 	int n = 0;
+@@ -89,8 +95,10 @@ static int init_module_folders(void)
+ 		if (!stat(path, &st) && S_ISDIR(st.st_mode)) {
+ 			module_folders = realloc(module_folders, sizeof(p) * (n + 2));
+ 
+-			if (!module_folders)
++			if (!module_folders) {
++				ULOG_ERR("out of memory\n");
+ 				return -1;
++			}
+ 
+ 			module_folders[n++] = strdup(path);
+ 		}
+@@ -107,16 +115,26 @@ static int init_module_folders(void)
+ 
+ static struct module *find_module(const char *name)
+ {
+-	struct module *m;
+-	return avl_find_element(&modules, name, m, avl);
++	struct module_node *mn;
++	mn = avl_find_element(&modules, name, mn, avl);
++	if (mn)
++		return mn->m;
++	else
++		return NULL;
+ }
+ 
+ static void free_modules(void)
+ {
+-	struct module *m, *tmp;
++	struct module_node *mn, *tmp;
++
++	avl_remove_all_elements(&modules, mn, avl, tmp) {
++		struct module *m = mn->m;
+ 
+-	avl_remove_all_elements(&modules, m, avl, tmp)
+-		free(m);
++		m->refcnt -= 1;
++		if (m->refcnt == 0)
++			free_module(m);
++		free(mn);
++	}
+ }
+ 
+ static char* get_module_path(char *name)
+@@ -139,10 +157,10 @@ static char* get_module_path(char *name)
+ 
+ static char* get_module_name(char *path)
+ {
+-	static char name[32];
++	static char name[33];
+ 	char *t;
+ 
+-	strncpy(name, basename(path), sizeof(name));
++	strncpy(name, basename(path), sizeof(name) - 1);
+ 
+ 	t = strstr(name, ".ko");
+ 	if (t)
+@@ -198,6 +216,19 @@ static int elf32_find_section(char *map,
+ static int elf_find_section(char *map, const char *section, unsigned int *offset, unsigned int *size)
+ {
+ 	int clazz = map[EI_CLASS];
++	int endian = map[EI_DATA];
++
++#if __BYTE_ORDER == __LITTLE_ENDIAN
++	if (endian != ELFDATA2LSB)
++#elif __BYTE_ORDER == __BIG_ENDIAN
++	if (endian != ELFDATA2MSB)
++#else
++#error "unsupported endian"
++#endif
++	{
++		ULOG_ERR("invalid endianess: %d\n", endian);
++		return -1;
++	}
+ 
+ 	if (clazz == ELFCLASS32)
+ 		return elf32_find_section(map, section, offset, size);
+@@ -209,11 +240,30 @@ static int elf_find_section(char *map, c
+ 	return -1;
+ }
+ 
++static struct module_node *
++alloc_module_node(const char *name, struct module *m, bool is_alias)
++{
++	struct module_node *mn;
++	char *_name;
++
++	mn = calloc_a(sizeof(*mn),
++		&_name, strlen(name) + 1);
++	if (mn) {
++		mn->avl.key = strcpy(_name, name);
++		mn->m = m;
++		mn->is_alias = is_alias;
++		avl_insert(&modules, &mn->avl);
++		m->refcnt += 1;
++	}
++	return mn;
++}
++
+ static struct module *
+-alloc_module(const char *name, const char *depends, int size)
++alloc_module(const char *name, const char * const *aliases, int naliases, const char *depends, int size)
+ {
+ 	struct module *m;
+ 	char *_name, *_dep;
++	int i;
+ 
+ 	m = calloc_a(sizeof(*m),
+ 		&_name, strlen(name) + 1,
+@@ -221,7 +271,7 @@ alloc_module(const char *name, const cha
+ 	if (!m)
+ 		return NULL;
+ 
+-	m->avl.key = m->name = strcpy(_name, name);
++	m->name = strcpy(_name, name);
+ 	m->opts = 0;
+ 
+ 	if (depends) {
+@@ -232,13 +282,23 @@ alloc_module(const char *name, const cha
+ 			_dep++;
+ 		}
+ 	}
+-
+ 	m->size = size;
+-	avl_insert(&modules, &m->avl);
++
++	m->refcnt = 0;
++	alloc_module_node(m->name, m, false);
++	for (i = 0; i < naliases; i++)
++		alloc_module_node(aliases[i], m, true);
+ 
+ 	return m;
+ }
+ 
++static void free_module(struct module *m)
++{
++	if (m->opts)
++		free(m->opts);
++	free(m);
++}
++
+ static int scan_loaded_modules(void)
+ {
+ 	size_t buf_len = 0;
+@@ -263,7 +323,11 @@ static int scan_loaded_modules(void)
+ 		if (!m.name || !m.depends)
+ 			continue;
+ 
+-		n = alloc_module(m.name, m.depends, m.size);
++		n = find_module(m.name);
++		if (!n) {
++			/* possibly a module outside /lib/modules/<ver>/ */
++			n = alloc_module(m.name, NULL, 0, m.depends, m.size);
++		}
+ 		n->usage = m.usage;
+ 		n->state = LOADED;
+ 	}
+@@ -277,38 +341,42 @@ static struct module* get_module_info(co
+ {
+ 	int fd = open(module, O_RDONLY);
+ 	unsigned int offset, size;
+-	char *map, *strings, *dep = NULL;
+-	struct module *m;
++	char *map = MAP_FAILED, *strings, *dep = NULL;
++	const char **aliases = NULL;
++	int naliases = 0;
++	struct module *m = NULL;
+ 	struct stat s;
+ 
+-	if (!fd) {
++	if (fd < 0) {
+ 		ULOG_ERR("failed to open %s\n", module);
+-		return NULL;
++		goto out;
+ 	}
+ 
+ 	if (fstat(fd, &s) == -1) {
+ 		ULOG_ERR("failed to stat %s\n", module);
+-		return NULL;
++		goto out;
+ 	}
+ 
+ 	map = mmap(NULL, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+ 	if (map == MAP_FAILED) {
+ 		ULOG_ERR("failed to mmap %s\n", module);
+-		return NULL;
++		goto out;
+ 	}
+ 
+ 	if (elf_find_section(map, ".modinfo", &offset, &size)) {
+ 		ULOG_ERR("failed to load the .modinfo section from %s\n", module);
+-		return NULL;
++		goto out;
+ 	}
+ 
+ 	strings = map + offset;
+-	while (strings && (strings < map + offset + size)) {
++	while (true) {
+ 		char *sep;
+ 		int len;
+ 
+ 		while (!strings[0])
+ 			strings++;
++		if (strings >= map + offset + size)
++			break;
+ 		sep = strstr(strings, "=");
+ 		if (!sep)
+ 			break;
+@@ -316,14 +384,31 @@ static struct module* get_module_info(co
+ 		sep++;
+ 		if (!strncmp(strings, "depends=", len + 1))
+ 			dep = sep;
++		else if (!strncmp(strings, "alias=", len + 1)) {
++			aliases = realloc(aliases, sizeof(sep) * (naliases + 1));
++			if (!aliases) {
++				ULOG_ERR("out of memory\n");
++				goto out;
++			}
++
++			aliases[naliases++] = sep;
++		}
+ 		strings = &sep[strlen(sep)];
+ 	}
+ 
+-	m = alloc_module(name, dep, s.st_size);
+-	if (!m)
+-		return NULL;
++	m = alloc_module(name, aliases, naliases, dep, s.st_size);
++
++	if (m)
++		m->state = SCANNED;
++
++out:
++	if (map != MAP_FAILED)
++		munmap(map, s.st_size);
++
++	if (fd >= 0)
++		close(fd);
+ 
+-	m->state = SCANNED;
++	free(aliases);
+ 
+ 	return m;
+ }
+@@ -334,7 +419,7 @@ static int scan_module_folder(const char
+ 	struct utsname ver;
+ 	char *path;
+ 	glob_t gl;
+-	int j;
++	int j, rv = 0;
+ 
+ 	uname(&ver);
+ 	path = alloca(strlen(dir) + sizeof("*.ko") + 1);
+@@ -351,13 +436,15 @@ static int scan_module_folder(const char
+ 			continue;
+ 
+ 		m = find_module(name);
+-		if (!m)
+-			get_module_info(gl.gl_pathv[j], name);
++		if (!m) {
++			if (!get_module_info(gl.gl_pathv[j], name))
++				rv |= -1;
++		}
+ 	}
+ 
+ 	globfree(&gl);
+ 
+-	return 0;
++	return rv;
+ }
+ 
+ static int scan_module_folders(void)
+@@ -379,37 +466,40 @@ static int print_modinfo(char *module)
+ 	int fd = open(module, O_RDONLY);
+ 	unsigned int offset, size;
+ 	struct stat s;
+-	char *map, *strings;
++	char *map = MAP_FAILED, *strings;
++	int rv = -1;
+ 
+-	if (!fd) {
++	if (fd < 0) {
+ 		ULOG_ERR("failed to open %s\n", module);
+-		return -1;
++		goto out;
+ 	}
+ 
+ 	if (fstat(fd, &s) == -1) {
+ 		ULOG_ERR("failed to stat %s\n", module);
+-		return -1;
++		goto out;
+ 	}
+ 
+ 	map = mmap(NULL, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+ 	if (map == MAP_FAILED) {
+ 		ULOG_ERR("failed to mmap %s\n", module);
+-		return -1;
++		goto out;
+ 	}
+ 
+ 	if (elf_find_section(map, ".modinfo", &offset, &size)) {
+ 		ULOG_ERR("failed to load the .modinfo section from %s\n", module);
+-		return -1;
++		goto out;
+ 	}
+ 
+ 	strings = map + offset;
+ 	printf("module:\t\t%s\n", module);
+-	while (strings && (strings < map + offset + size)) {
++	while (true) {
+ 		char *dup = NULL;
+ 		char *sep;
+ 
+ 		while (!strings[0])
+ 			strings++;
++		if (strings >= map + offset + size)
++			break;
+ 		sep = strstr(strings, "=");
+ 		if (!sep)
+ 			break;
+@@ -426,7 +516,16 @@ static int print_modinfo(char *module)
+ 			free(dup);
+ 	}
+ 
+-	return 0;
++	rv = 0;
++
++out:
++	if (map != MAP_FAILED)
++		munmap(map, s.st_size);
++
++	if (fd >= 0)
++		close(fd);
++
++	return rv;
+ }
+ 
+ static int deps_available(struct module *m, int verbose)
+@@ -434,7 +533,7 @@ static int deps_available(struct module
+ 	char *dep;
+ 	int err = 0;
+ 
+-	if (!strcmp(m->depends, "-") || !strcmp(m->depends, ""))
++	if (!m->depends || !strcmp(m->depends, "-") || !strcmp(m->depends, ""))
+ 		return 0;
+ 
+ 	dep = m->depends;
+@@ -466,17 +565,26 @@ static int insert_module(char *path, con
+ 	}
+ 
+ 	fd = open(path, O_RDONLY);
+-	if (!fd) {
++	if (fd < 0) {
+ 		ULOG_ERR("cannot open %s\n", path);
+ 		return ret;
+ 	}
+ 
+ 	data = malloc(s.st_size);
+-	if (read(fd, data, s.st_size) == s.st_size)
++	if (!data) {
++		ULOG_ERR("out of memory\n");
++		goto out;
++	}
++
++	if (read(fd, data, s.st_size) == s.st_size) {
+ 		ret = syscall(__NR_init_module, data, (unsigned long) s.st_size, options);
++		if (errno == EEXIST)
++			ret = 0;
++	}
+ 	else
+ 		ULOG_ERR("failed to read full module %s\n", path);
+ 
++out:
+ 	close(fd);
+ 	free(data);
+ 
+@@ -511,24 +619,34 @@ static int iterations = 0;
+ static int load_modprobe(void)
+ {
+ 	int loaded, todo;
++	struct module_node *mn;
+ 	struct module *m;
+ 
+-	avl_for_each_element(&modules, m, avl)
++	avl_for_each_element(&modules, mn, avl) {
++		if (mn->is_alias)
++			continue;
++		m = mn->m;
+ 		if (m->state == PROBE)
+ 			load_moddeps(m);
++	}
+ 
+ 	do {
+ 		loaded = 0;
+ 		todo = 0;
+-		avl_for_each_element(&modules, m, avl) {
+-			if ((m->state == PROBE) && (!deps_available(m, 0))) {
++		avl_for_each_element(&modules, mn, avl) {
++			if (mn->is_alias)
++				continue;
++			m = mn->m;
++			if ((m->state == PROBE) && (!deps_available(m, 0)) && m->error < 2) {
+ 				if (!insert_module(get_module_path(m->name), (m->opts) ? (m->opts) : (""))) {
+ 					m->state = LOADED;
+ 					m->error = 0;
+ 					loaded++;
+ 					continue;
+ 				}
+-				m->error = 1;
++
++				if (++m->error > 1)
++					ULOG_ERR("failed to load %s\n", m->name);
+ 			}
+ 
+ 			if ((m->state == PROBE) || m->error)
+@@ -547,6 +665,13 @@ static int print_insmod_usage(void)
+ 	return -1;
+ }
+ 
++static int print_modprobe_usage(void)
++{
++	ULOG_INFO("Usage:\n\tmodprobe [-q] filename\n");
++
++	return -1;
++}
++
+ static int print_usage(char *arg)
+ {
+ 	ULOG_INFO("Usage:\n\t%s module\n", arg);
+@@ -583,6 +708,12 @@ static int main_insmod(int argc, char **
+ 		len += strlen(argv[i]) + 1;
+ 
+ 	options = malloc(len);
++	if (!options) {
++		ULOG_ERR("out of memory\n");
++		ret = -1;
++		goto err;
++	}
++
+ 	options[0] = 0;
+ 	cur = options;
+ 	for (i = 2; i < argc; i++) {
+@@ -593,21 +724,26 @@ static int main_insmod(int argc, char **
+ 		cur += sprintf(cur, "%s", argv[i]);
+ 	}
+ 
+-	init_module_folders();
++	if (init_module_folders()) {
++		fprintf(stderr, "Failed to find the folder holding the modules\n");
++		ret = -1;
++		goto err;
++	}
+ 
+ 	if (get_module_path(argv[1])) {
+ 		name = argv[1];
+ 	} else if (!get_module_path(name)) {
+ 		fprintf(stderr, "Failed to find %s. Maybe it is a built in module ?\n", name);
+-		return -1;
++		ret = -1;
++		goto err;
+ 	}
+ 
+ 	ret = insert_module(get_module_path(name), options);
+-	free(options);
+-
+ 	if (ret)
+ 		ULOG_ERR("failed to insert %s\n", get_module_path(name));
+ 
++err:
++	free(options);
+ 	return ret;
+ }
+ 
+@@ -641,16 +777,32 @@ static int main_rmmod(int argc, char **a
+ 
+ static int main_lsmod(int argc, char **argv)
+ {
++	struct module_node *mn;
+ 	struct module *m;
++	char *dep;
+ 
+ 	if (scan_loaded_modules())
+ 		return -1;
+ 
+-	avl_for_each_element(&modules, m, avl)
+-		if (m->state == LOADED)
+-			printf("%-20s%8d%3d %s\n",
+-				m->name, m->size, m->usage,
+-				(*m->depends == '-') ? ("") : (m->depends));
++	avl_for_each_element(&modules, mn, avl) {
++		if (mn->is_alias)
++			continue;
++		m = mn->m;
++		if (m->state == LOADED) {
++			printf("%-20s%8d%3d ",
++				m->name, m->size, m->usage);
++			if (m->depends && strcmp(m->depends, "-") && strcmp(m->depends, "")) {
++				dep = m->depends;
++				while (*dep) {
++					printf("%s", dep);
++					dep = dep + strlen(dep) + 1;
++					if (*dep)
++						printf(",");
++				}
++			}
++			printf("\n");
++		}
++	}
+ 
+ 	free_modules();
+ 
+@@ -688,25 +840,45 @@ static int main_modinfo(int argc, char *
+ 
+ static int main_modprobe(int argc, char **argv)
+ {
++	struct module_node *mn;
+ 	struct module *m;
+ 	char *name;
++	char *mod = NULL;
++	int opt;
++	bool quiet = false;
++
++	while ((opt = getopt(argc, argv, "q")) != -1 ) {
++		switch (opt) {
++			case 'q': /* shhhh! */
++				quiet = true;
++				break;
++			default: /* '?' */
++				return print_modprobe_usage();
++				break;
++			}
++	}
+ 
+-	if (argc != 2)
+-		return print_usage("modprobe");
++	if (optind >= argc)
++		return print_modprobe_usage(); /* expected module after options */
+ 
+-	if (scan_loaded_modules())
+-		return -1;
++	mod = argv[optind];
+ 
+ 	if (scan_module_folders())
+ 		return -1;
+ 
+-	name = get_module_name(argv[1]);
++	if (scan_loaded_modules())
++		return -1;
++
++	name = get_module_name(mod);
+ 	m = find_module(name);
+ 	if (m && m->state == LOADED) {
+-		ULOG_ERR("%s is already loaded\n", name);
+-		return -1;
++		if (!quiet)
++			ULOG_ERR("%s is already loaded\n", name);
++		return 0;
+ 	} else if (!m) {
+-		ULOG_ERR("failed to find a module named %s\n", name);
++		if (!quiet)
++			ULOG_ERR("failed to find a module named %s\n", name);
++		return -1;
+ 	} else {
+ 		int fail;
+ 
+@@ -718,9 +890,13 @@ static int main_modprobe(int argc, char
+ 			ULOG_ERR("%d module%s could not be probed\n",
+ 			         fail, (fail == 1) ? ("") : ("s"));
+ 
+-			avl_for_each_element(&modules, m, avl)
++			avl_for_each_element(&modules, mn, avl) {
++				if (mn->is_alias)
++					continue;
++				m = mn->m;
+ 				if ((m->state == PROBE) || m->error)
+ 					ULOG_ERR("- %s\n", m->name);
++			}
+ 		}
+ 	}
+ 
+@@ -732,7 +908,8 @@ static int main_modprobe(int argc, char
+ static int main_loader(int argc, char **argv)
+ {
+ 	int gl_flags = GLOB_NOESCAPE | GLOB_MARK;
+-	char *dir = "/etc/modules.d/*";
++	char *dir = "/etc/modules.d/";
++	struct module_node *mn;
+ 	struct module *m;
+ 	glob_t gl;
+ 	char *path;
+@@ -742,16 +919,25 @@ static int main_loader(int argc, char **
+ 		dir = argv[1];
+ 
+ 	path = malloc(strlen(dir) + 2);
++	if (!path) {
++		ULOG_ERR("out of memory\n");
++		return -1;
++	}
++
+ 	strcpy(path, dir);
+ 	strcat(path, "*");
+ 
+-	if (scan_loaded_modules())
++	if (scan_module_folders()) {
++		free (path);
+ 		return -1;
++	}
+ 
+-	if (scan_module_folders())
++	if (scan_loaded_modules()) {
++		free (path);
+ 		return -1;
++	}
+ 
+-	syslog(LOG_INFO, "kmodloader: loading kernel modules from %s\n", path);
++	ULOG_INFO("loading kernel modules from %s\n", path);
+ 
+ 	if (glob(path, gl_flags, NULL, &gl) < 0)
+ 		goto out;
+@@ -799,9 +985,15 @@ static int main_loader(int argc, char **
+ 		ULOG_ERR("%d module%s could not be probed\n",
+ 		         fail, (fail == 1) ? ("") : ("s"));
+ 
+-		avl_for_each_element(&modules, m, avl)
++		avl_for_each_element(&modules, mn, avl) {
++			if (mn->is_alias)
++				continue;
++			m = mn->m;
+ 			if ((m->state == PROBE) || (m->error))
+ 				ULOG_ERR("- %s - %d\n", m->name, deps_available(m, 1));
++		}
++	} else {
++		ULOG_INFO("done loading kernel modules from %s\n", path);
+ 	}
+ 
+ out:
+@@ -811,20 +1003,23 @@ out:
+ 	return 0;
+ }
+ 
++static inline char weight(char c)
++{
++	return c == '_' ? '-' : c;
++}
++
+ static int avl_modcmp(const void *k1, const void *k2, void *ptr)
+ {
+ 	const char *s1 = k1;
+ 	const char *s2 = k2;
+ 
+-	while (*s1 && ((*s1 == *s2) ||
+-	               ((*s1 == '_') && (*s2 == '-')) ||
+-	               ((*s1 == '-') && (*s2 == '_'))))
++	while (*s1 && (weight(*s1) == weight(*s2)))
+ 	{
+ 		s1++;
+ 		s2++;
+ 	}
+ 
+-	return *(const unsigned char *)s1 - *(const unsigned char *)s2;
++	return (unsigned char)weight(*s1) - (unsigned char)weight(*s2);
+ }
+ 
+ int main(int argc, char **argv)
+@@ -847,5 +1042,6 @@ int main(int argc, char **argv)
+ 	if (!strcmp(exec, "modprobe"))
+ 		return main_modprobe(argc, argv);
+ 
++	ulog_open(ULOG_KMSG, LOG_USER, "kmodloader");
+ 	return main_loader(argc, argv);
+ }

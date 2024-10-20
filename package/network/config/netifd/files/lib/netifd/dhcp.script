@@ -1,0 +1,138 @@
+#!/bin/sh
+[ -z "$1" ] && echo "Error: should be run by udhcpc" && exit 1
+
+. /lib/functions.sh
+. /lib/netifd/netifd-proto.sh
+
+config_load network
+
+
+# add option43 server list into capwapc config file
+[ -n "$acaddr" ] && {
+    acaddrs=`echo $acaddr | awk -F' ' '{for(i=1;i <= NF; i++){print $i}}'`;
+    for addr in $acaddrs
+    do
+	if [ "$addr" != "255.255.255.255" ]; then
+		#uci set apcontroller.capwap.force_ac=$addr;
+		#uci commit apcontroller;
+		echo $addr >/tmp/dhcp_option;
+		break;
+	fi
+    done
+}
+
+set_classless_routes() {
+	local max=128
+	while [ -n "$1" -a -n "$2" -a $max -gt 0 ]; do
+		proto_add_ipv4_route "${1%%/*}" "${1##*/}" "$2" "$ip"
+		max=$(($max-1))
+		shift 2
+	done
+}
+
+setup_interface () {
+	local resolvfile=$(uci get dhcp.@dnsmasq[0].resolvfile)
+
+	# Trick netifd to accept new IP.
+	if [ "$1" = "bound" ]; then
+		ifconfig br-${INTERFACE} 0.0.0.0
+		#sleep 1
+	fi
+
+	proto_init_update "*" 1
+	proto_add_ipv4_address "$ip" "${subnet:-255.255.255.0}"
+	# TODO: apply $broadcast
+
+	for i in $router; do
+		proto_add_ipv4_route "$i" 32 "" "$ip"
+		proto_add_ipv4_route 0.0.0.0 0 "$i" "$ip"
+
+		for r in $CUSTOMROUTES; do
+			proto_add_ipv4_route "${r%%/*}" "${r##*/}" "$i" "$ip"
+		done
+	done
+
+	# CIDR STATIC ROUTES (rfc3442)
+	[ -n "$staticroutes" ] && set_classless_routes $staticroutes
+	[ -n "$msstaticroutes" ] && set_classless_routes $msstaticroutes
+
+	for dns in $dns; do
+		proto_add_dns_server "$dns"
+	done
+	for domain in $domain; do
+		proto_add_dns_search "$domain"
+	done
+
+	if [ -n "$resolvfile" ] && [ -f "$resolvfile.dhcp6c_dns_backup" ]; then
+		for dns in $( cat "$resolvfile.dhcp6c_dns_backup" | awk '{ print $0 }'); do
+			proto_add_dns_server "$dns"
+		done
+	fi
+
+	proto_add_data
+	[ -n "$ZONE" ]     && json_add_string zone "$ZONE"
+	[ -n "$ntpsrv" ]   && json_add_string ntpserver "$ntpsrv"
+	[ -n "$timesvr" ]  && json_add_string timeserver "$timesvr"
+	[ -n "$hostname" ] && json_add_string hostname "$hostname"
+	[ -n "$message" ]  && json_add_string message "$message"
+	[ -n "$timezone" ] && json_add_int timezone "$timezone"
+	[ -n "$lease" ]    && json_add_int leasetime "$lease"
+	proto_close_data
+
+	proto_send_update "$INTERFACE"
+
+
+	if [ "$IFACE6RD" != 0 -a -n "$ip6rd" ]; then
+		local v4mask="${ip6rd%% *}"
+		ip6rd="${ip6rd#* }"
+		local ip6rdprefixlen="${ip6rd%% *}"
+		ip6rd="${ip6rd#* }"
+		local ip6rdprefix="${ip6rd%% *}"
+		ip6rd="${ip6rd#* }"
+		local ip6rdbr="${ip6rd%% *}"
+
+		[ -n "$ZONE" ] || ZONE=$(fw3 -q network $INTERFACE)
+		[ -z "$IFACE6RD" -o "$IFACE6RD" = 1 ] && IFACE6RD=${INTERFACE}_6
+
+		json_init
+		json_add_string name "$IFACE6RD"
+		json_add_string ifname "@$INTERFACE"
+		json_add_string proto "6rd"
+		json_add_string peeraddr "$ip6rdbr"
+		json_add_int ip4prefixlen "$v4mask"
+		json_add_string ip6prefix "$ip6rdprefix"
+		json_add_int ip6prefixlen "$ip6rdprefixlen"
+		json_add_string tunlink "$INTERFACE"
+		[ -n "$IFACE6RD_DELEGATE" ] && json_add_boolean delegate "$IFACE6RD_DELEGATE"
+		[ -n "$ZONE6RD" ] || ZONE6RD=$ZONE
+		[ -n "$ZONE6RD" ] && json_add_string zone "$ZONE6RD"
+		[ -n "$MTU6RD" ] && json_add_string mtu "$MTU6RD"
+		json_close_object
+
+		ubus call network add_dynamic "$(json_dump)"
+	fi
+	echo "dhcpip: $ip" > /tmp/dhcp_addr
+}
+
+deconfig_interface() {
+	proto_init_update "*" 0
+	proto_send_update "$INTERFACE"
+	# Set static IP when udhcpc can not get IP
+	config_get ipaddr lan ipaddr
+	ifconfig br-${INTERFACE} $ipaddr
+	echo "noip: $ipaddr" > /tmp/dhcp_addr
+}
+
+case "$1" in
+	deconfig)
+		deconfig_interface
+	;;
+	renew|bound)
+		setup_interface $1
+	;;
+esac
+
+# user rules
+[ -f /etc/udhcpc.user ] && . /etc/udhcpc.user
+
+exit 0

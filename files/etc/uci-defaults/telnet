@@ -1,0 +1,13 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@telnet[-1]
+	del_list ucitrack.@system[-1].affects=telnet
+	add ucitrack telnet
+	set ucitrack.@telnet[0].init=telnet
+	add_list ucitrack.@system[0].affects=telnet
+	commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

@@ -1,0 +1,89 @@
+Index: procd-2015-10-29.1/state.c
+===================================================================
+--- procd-2015-10-29.1.orig/state.c
++++ procd-2015-10-29.1/state.c
+@@ -41,6 +41,52 @@ enum {
+ static int state = STATE_NONE;
+ static int reboot_event;
+ 
++#define SUPPORT_SENAO_FACTORY_HOTPLUG 1
++#if SUPPORT_SENAO_FACTORY_HOTPLUG
++/*****************************************************************
++* NAME: stateInteract
++* ---------------------------------------------------------------
++* FUNCTION:  
++* INPUT:    
++* OUTPUT:   
++* Author:   
++* Modify:   
++****************************************************************/
++static int stateInteract(char *output, int outputlen, char *fmt, ...) 
++{
++	static char cmd_for_stateInteract[256];
++	FILE *pipe;
++	int c,i;
++	va_list ap;
++
++	va_start(ap, fmt);
++	vsnprintf(cmd_for_stateInteract, sizeof(cmd_for_stateInteract), fmt, ap);
++	va_end(ap);
++
++	if((pipe = popen(cmd_for_stateInteract, "r")) == NULL)
++		goto err;
++
++	memset(output, 0, outputlen);	
++	for(i = 0; ((c = fgetc(pipe)) != EOF) && (i < outputlen - 1); i++)
++		output[i] = (char) c;
++
++	output[i] = '\0';
++	pclose(pipe);
++
++	if(strlen(output) == 0)
++		goto noresponse;
++
++	return 1;//command return some values
++	
++noresponse:
++	return 0;//command return nothing
++
++err:
++	strcpy(output, "ERROR");
++	return -1;
++}
++#endif
++
+ static void set_stdio(const char* tty)
+ {
+ 	if (chdir("/dev") ||
+@@ -96,12 +142,31 @@ static void set_console(void)
+ static void state_enter(void)
+ {
+ 	char ubus_cmd[] = "/sbin/ubusd";
++#if SUPPORT_SENAO_FACTORY_HOTPLUG
++	int rval=0;
++	char op[16];
++#endif
+ 
+ 	switch (state) {
+ 	case STATE_EARLY:
+ 		LOG("- early -\n");
+ 		watchdog_init(0);
++#if SUPPORT_SENAO_FACTORY_HOTPLUG
++    	/* get op_mode */
++	    rval = stateInteract(op, sizeof(op), "setconfig -g 5");
++
++		if (atoi(op)==3)
++		{
++			printf("== SENAO FACTORY HOTPLUG RULE ==> /etc/hotplug-sn-factory.json ==\n");
++			hotplug("/etc/hotplug-sn-factory.json");
++		}
++		else
++		{
++			hotplug("/etc/hotplug.json");
++		}
++#else
+ 		hotplug("/etc/hotplug.json");
++#endif
+ 		procd_coldplug();
+ 		break;
+ 

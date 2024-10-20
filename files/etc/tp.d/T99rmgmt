@@ -1,0 +1,7 @@
+#!/bin/sh /etc/rc.common
+
+TP=99
+
+start() {
+        /sbin/rmgmt -p -d -u &
+}

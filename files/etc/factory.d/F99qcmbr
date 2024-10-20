@@ -1,0 +1,10 @@
+#!/bin/sh /etc/rc.common
+# (C) 2008 openwrt.org
+
+FACTORY=99
+
+start() {
+	[ -e /etc/init.d/qcmbr ] && {
+		/etc/init.d/qcmbr restart
+	}
+}

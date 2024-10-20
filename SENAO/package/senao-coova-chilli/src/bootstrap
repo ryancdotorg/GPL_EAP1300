@@ -1,0 +1,14 @@
+#! /bin/sh
+# Run this script to setup the automake environment.
+# ./configure
+# make
+# make install
+if [ "$1" != "" ];then
+    STAGING_BIN_PATH=$1/
+fi
+${STAGING_BIN_PATH}libtoolize --force --copy
+${STAGING_BIN_PATH}aclocal
+${STAGING_BIN_PATH}autoheader
+${STAGING_BIN_PATH}autoconf
+${STAGING_BIN_PATH}automake --add-missing
+${STAGING_BIN_PATH}automake

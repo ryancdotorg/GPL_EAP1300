@@ -1,0 +1,14 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -656,7 +656,8 @@ print_scanning_token(struct stream_descr
+     case IWEVQUAL:
+       {
+           int qualtmp;
+-          qualtmp=(int)event->u.qual.qual;
++          //qualtmp=(int)event->u.qual.qual;
++          qualtmp=(signed char )event->u.qual.level;
+           printf("%d\t", qualtmp);
+       }
+       //iw_print_stats(buffer, sizeof(buffer), &event->u.qual, iw_range, has_range);

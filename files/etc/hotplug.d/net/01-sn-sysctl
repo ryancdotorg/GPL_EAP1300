@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ "$ACTION" = add ]
+then
+	if [ "${DEVICENAME:0:7}" = "br-vlan" -o "$DEVICENAME" = "99" ]
+	then
+		sysctl -w net.ipv4.conf.$DEVICENAME.forwarding=0
+		echo Disable $DEVICENAME forwarding > /dev/console
+	fi
+fi

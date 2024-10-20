@@ -1,0 +1,4 @@
+/lib/modules/4.4.60/qca-nss-cfi-cryptoapi.ko
+/etc/modules.d/59-qca-nss-cfi
+/lib/modules/4.4.60/qca-nss-ipsec.ko
+/lib/modules/4.4.60/qca-nss-cfi-ocf.ko

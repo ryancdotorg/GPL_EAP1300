@@ -1,0 +1,5 @@
+config capwap 'capwap'
+	option enable '0'
+	option force_ac ''
+	option disc_int '10'
+	option disc_proxy '0'

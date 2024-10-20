@@ -1,0 +1,44 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+# support repeater mode first time.
+
+# Check
+if [ -z "$(uci get wireless.wifi0_sta_ap_1)" ]; then
+	# wifi0_sta_ap_1
+	local w0_ap1=$(eval "uci show /rom/etc/config/wireless.wifi0_sta_ap_1 | grep -v ' '")
+	for i in $w0_ap1; do
+		eval uci set ${i}
+	done
+	uci set wireless.wifi0_sta_ap_1.ssid="AP SSID"
+
+	# wifi0_sta_ap_2
+	local w0_ap2=$(eval "uci show /rom/etc/config/wireless.wifi0_sta_ap_2 | grep -v ' '")
+	for i in $w0_ap2; do
+		eval uci set ${i}
+	done
+	uci set wireless.wifi0_sta_ap_2.ssid="AP SSID"
+
+	# wifi1_sta_ap_1
+	local w1_ap1=$(eval "uci show /rom/etc/config/wireless.wifi1_sta_ap_1 | grep -v ' '")
+	for i in $w1_ap1; do
+		eval uci set ${i}
+	done
+	uci set wireless.wifi1_sta_ap_1.ssid="AP SSID_5G"
+
+	# wifi1_sta_ap_2
+	local w1_ap2=$(eval "uci show /rom/etc/config/wireless.wifi1_sta_ap_2 | grep -v ' '")
+	for i in $w1_ap2; do
+		eval uci set ${i}
+	done
+	uci set wireless.wifi1_sta_ap_2.ssid="AP SSID_5G"
+
+	uci set wireless.wifi1.qwrap_enable=0
+	uci set wireless.wifi1.qwrap_eth_sta_add_en=0
+	uci set wireless.wifi0.qwrap_enable=0
+	uci set wireless.wifi0.qwrap_eth_sta_add_en=0
+
+	uci commit
+fi
+
+exit 0

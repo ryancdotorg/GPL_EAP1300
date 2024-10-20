@@ -1,0 +1,11 @@
+--- a/avahi-core/server.c
++++ b/avahi-core/server.c
+@@ -901,7 +901,7 @@ static void dispatch_packet(AvahiServer *s, AvahiDnsPacket *p, const AvahiAddres
+ 
+     if (!(i = avahi_interface_monitor_get_interface(s->monitor, iface, src_address->proto)) ||
+         !i->announcing) {
+-        avahi_log_warn("Received packet from invalid interface.");
++        avahi_log_debug("Received packet from invalid interface.");
+         return;
+     }
+ 

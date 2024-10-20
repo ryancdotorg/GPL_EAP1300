@@ -1,0 +1,4 @@
+config 'module' 'wifi'
+	option disabled '1'
+	option role 'auto'
+	option mode 'mesh_ap'

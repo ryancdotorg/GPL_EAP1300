@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=50
+STOP=50
+
+
+start() {
+	/usr/shc/ifplugd start
+}
+
+stop() {
+	/usr/shc/ifplugd stop
+}

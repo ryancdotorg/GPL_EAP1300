@@ -1,0 +1,255 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+FACTORY=10
+
+########################################################
+# Definition
+########################################################
+BOARD_CFG="/etc/factory.d/board.cfg"
+
+if [ -e $BOARD_CFG ]; then
+    . $BOARD_CFG
+else
+    echo "$BOARD_CFG is not exist!";
+    exit 1;
+fi
+
+BOOT_CFG="/etc/factory.d/boot.cfg"
+
+if [ -e $BOOT_CFG ]; then
+    . $BOOT_CFG
+else
+    echo "$BOOT_CFG is not exist!";
+    exit 1;
+fi
+
+########################################################
+# sub-Functions
+########################################################
+#-----------------------------------------------------
+# enable_console_login()  
+#-----------------------------------------------------
+enable_console_login() {
+        local cons=$1
+        local initline
+        if [ -e /bin/login ]; then
+                initline="$cons::askfirst:/bin/login"
+        else
+                initline="$cons::askfirst:/bin/ash --login"
+        fi;
+
+        grep -qs "^$initline" /etc/inittab || {
+                echo "$initline" >> /etc/inittab
+                sync
+                kill -HUP 1
+        }
+}
+
+#-----------------------------------------------------
+# inittab_console_fixup()  
+#-----------------------------------------------------
+inittab_console_fixup() {
+        for cons in ttyS0 ttyATH0; do
+                grep -qs "console=$cons" /proc/cmdline && {
+                        enable_console_login $cons
+                }
+        done
+}
+
+#-----------------------------------------------------
+# boot_ipq401x() 
+#-----------------------------------------------------
+boot_ipq401x() {
+	sh -c '. /lib/functions.sh;'
+	if [ -f /sbin/kmodloader ]; then
+		## load all modules
+		/sbin/kmodloader;
+		## for button test
+		if [ ! -f /etc/factory.d/poe_btn.cfg ]; then
+			for i in `ls /etc/modules.d/ | grep 'input-gpio-keys\|button-hotplug'`; do
+				sed 's/^[^#]/rmmod &/' /etc/modules.d/$i| ash 2>&- || :
+			done
+		fi
+	else
+		echo "error: no kmodloader!!!!!!!!" > /dev/console
+		exit 1;
+	fi
+}
+
+#-----------------------------------------------------
+# boot_ipq807x() 
+#-----------------------------------------------------
+function update_ini_file()
+{
+	grep -q $1 /ini/global.ini && sed -i "/$1=/c $1=$2" /ini/global.ini || echo $1=$2 >> /ini/global.ini
+}
+
+# refer to /lib/wifi/qcawifi.sh from QSDK SPF9.0 ES
+ftm_qcawifi() {
+	error=0
+	for mod in $(cat /lib/wifi/qca-wifi-modules); do
+		case ${mod} in
+			umac) [ -d /sys/module/${mod} ] || { \
+				insmod ${mod} || { \
+					lock -u /var/run/wifilock
+					unload_qcawifi
+					error=1
+				}
+			};;
+
+			qdf) [ -d /sys/module/${mod} ] || { \
+				insmod ${mod} || { \
+					lock -u /var/run/wifilock
+					unload_qcawifi
+					error=2
+				}
+			};;
+
+			qca_ol) [ -d /sys/module/${mod} ] || { \
+                # unused
+				#do_cold_boot_calibration
+				insmod ${mod} soc_probe_module_load=1 fbc_enabled=1 hw_mode_id=1 testmode=1 cfg80211_config=1 || { \
+					lock -u /var/run/wifilock
+					unload_qcawifi
+					error=3
+				}
+			};;
+
+			qca_da|ath_dev|hst_tx99|ath_rate_atheros|ath_hal)
+			;;
+
+			smart_antenna|ath_pktlog)
+			;;
+
+			*) [ -d /sys/module/${mod} ] || { \
+				insmod ${mod} || { \
+					lock -u /var/run/wifilock
+					unload_qcawifi
+					error=4
+				}
+			};;
+
+		esac
+	done
+
+	[ $error != 0 ] && echo "FTM error: $error" > /dev/console && return 1
+}
+
+boot_ipq807x() {
+    inittab_console_fixup;
+
+    kmodloader;
+
+    ## for button test
+	if [ ! -f /etc/factory.d/poe_btn.cfg ]; then
+		for i in `ls /etc/modules.d/ | grep 'input-gpio-keys\|button-hotplug'`; do
+			sed 's/^[^#]/rmmod &/' /etc/modules.d/$i| ash 2>&- || :
+		done
+	fi
+
+    # allow wifi modules time to settle
+    sleep 3;
+
+    if [ -e /ini/global.ini ]; then
+    	echo -n "/ini" > /sys/module/firmware_class/parameters/path
+    	update_ini_file cfg80211_config "1"
+    fi
+
+	ftm_qcawifi
+}
+
+#-----------------------------------------------------
+# boot_ipq60xx()
+#-----------------------------------------------------
+boot_ipq60xx() {
+    inittab_console_fixup;
+
+    kmodloader;
+
+    ## for button test
+	if [ ! -f /etc/factory.d/poe_btn.cfg ]; then
+		for i in `ls /etc/modules.d/ | grep 'input-gpio-keys\|button-hotplug'`; do
+			sed 's/^[^#]/rmmod &/' /etc/modules.d/$i| ash 2>&- || :
+		done
+	fi
+
+    # allow wifi modules time to settle
+    sleep 3;
+
+	if [ -e /ini/global.ini ]; then
+		echo -n "/ini" > /sys/module/firmware_class/parameters/path
+		update_ini_file cfg80211_config "1"
+	fi
+
+	ftm_qcawifi
+}
+
+#-----------------------------------------------------
+# boot_qca956x() 
+#-----------------------------------------------------
+boot_qca956x() {
+	sh -c '. /lib/functions.sh;'
+	if [ -f /sbin/kmodloader ]; then
+		## load all modules
+		/sbin/kmodloader;
+		## for button test
+		if [ ! -f /etc/factory.d/poe_btn.cfg ]; then
+			for i in `ls /etc/modules.d/ | grep 'input-gpio-keys\|button-hotplug'`; do
+				sed 's/^[^#]/rmmod &/' /etc/modules.d/$i| ash 2>&- || :
+			done
+		fi
+	else
+		echo "error: no kmodloader!!!!!!!!" > /dev/console
+		exit 1;
+	fi
+}
+
+#-----------------------------------------------------
+# boot_ipq806x()
+#-----------------------------------------------------
+boot_ipq806x() {
+	sh -c '. /lib/functions.sh;'
+	if [ -f /sbin/kmodloader ]; then
+		## load all modules
+		/sbin/kmodloader;
+		## for button test
+		if [ ! -f /etc/factory.d/poe_btn.cfg ]; then
+			for i in `ls /etc/modules.d/ | grep 'input-gpio-keys\|button-hotplug'`; do
+				sed 's/^[^#]/rmmod &/' /etc/modules.d/$i| ash 2>&- || :
+			done
+		fi
+	else
+		echo "error: no kmodloader!!!!!!!!" > /dev/console
+		exit 1;
+	fi
+}
+
+########################################################
+# START
+########################################################
+start() {
+	inittab_console_fixup
+
+    case $CPU in
+	    "IPQ4019"|"IPQ4018")
+            boot_ipq401x;
+            ;;
+	    "IPQ8070"|"IPQ8072"|"IPQ8074")
+            boot_ipq807x;
+            ;;
+	    "IPQ6010"|"IPQ6018")
+            boot_ipq60xx;
+            ;;
+	    "QCA9563")
+            boot_qca956x;
+            ;;
+	    "IPQ8064")
+            boot_ipq806x;
+            ;;
+        *)
+            echo "unknown CPU type!";
+            exit 1;
+            ;;
+    esac
+}

@@ -1,0 +1,27 @@
+define Package/$(PKG_NAME)/override_version
+choice 
+	prompt "Version"
+	depends on PACKAGE_$(PKG_NAME)
+	default $(PKG_NAME)_1.4.1 if EXTERNAL_KERNEL_TREE="$$(TOPDIR)/SENAO/kernel/linux-4.4.60_spf_9_0_cs" || EXTERNAL_KERNEL_TREE="$$(TOPDIR)/SENAO/kernel/linux-4.4.60" 
+	default $(PKG_NAME)_1.2.0 if EXTERNAL_KERNEL_TREE="$$(TOPDIR)/target/linux/ipq40xx/src/linux-3.14.43"
+	help
+		This version should be the same as what uboot and kernel dtc used. Please check the file to sync up: $(KERNEL_DIR)/script/dtc/version_gen.h
+	config $(PKG_NAME)_1.2.0
+		bool 1.2.0
+		default n
+		help 
+			$(PKG_NAME)_1.2.0
+	config $(PKG_NAME)_1.4.1
+		bool 1.4.1
+		default n
+		help 
+			$(PKG_NAME)_1.4.1
+endchoice
+endef
+
+ifdef CONFIG_$(PKG_NAME)_1.4.1
+	PKG_VERSION:=1.4.1
+endif
+ifdef CONFIG_$(PKG_NAME)_1.2.0
+	PKG_VERSION:=1.2.0
+endif

@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
+START=50
+
+start() {
+	/usr/shc/snmpd start
+}
+
+stop() {
+	/usr/shc/snmpd stop
+}
+
+reload(){
+	/usr/shc/snmpd stop
+	/usr/shc/snmpd start
+}

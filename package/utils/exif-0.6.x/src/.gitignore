@@ -1,0 +1,14 @@
+Makefile
+config.h
+exif.spec
+exif/Makefile
+exif/exif
+libjpeg/Makefile
+libtool
+m4m/Makefile
+po/Makefile
+po/Makefile.in
+po/POTFILES
+stamp-h1
+test/Makefile
+test/check-vars.sh

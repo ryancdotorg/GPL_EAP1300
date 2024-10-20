@@ -1,0 +1,9 @@
+Package: senao-guest-syncd
+Version: 4.1-4-g206cb4e
+Depends: libc, libopenssl
+Source: SENAO/package/senao-guest-syncd
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 16602
+Description:  for senao-coova-chilli sync data.

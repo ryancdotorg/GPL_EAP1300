@@ -1,0 +1,9 @@
+Package: senao_capwap_c1.9.x
+Version: 1.9-51-g68afb1e
+Depends: libc, libopenssl, openlldp, libpthread, librt, libapi, fcgi, libjson-c, libsnjson, senao-sysutil, ezCom, discovery, fingerprint, senao-coova-chilli, senao-acs-shorterm
+Source: SENAO/package/senao_capwap_c1.9.x
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 162128
+Description:  This package is an implementation of CAPWAP agents for WTPs and ACs.

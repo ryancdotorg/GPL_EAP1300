@@ -1,0 +1,34 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org 
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+APPSENV="APPSBLENV"
+APPSENV_UTIL_CONFIG="/etc/fw_env.config"
+
+gen_env_util_config() {
+	UBOOTENV_PART=$(cat /proc/mtd | grep APPSBLENV)
+	mtd_dev=$(echo $UBOOTENV_PART | awk '{print $1}' | sed 's/:$//')
+	mtd_size=0x$(echo $UBOOTENV_PART | awk '{print $2}')
+	mtd_erase=0x$(echo $UBOOTENV_PART | awk '{print $3}')
+
+	uboot_env_size=$UBOOT_ENV_SIZE
+	sectors=$(( $uboot_env_size / $mtd_erase ))
+
+	if [ ! -e $APPSENV_UTIL_CONFIG ]; then
+		echo "Creating $APPSENV_UTIL_CONFIG ..." > /dev/console
+		echo "# MTD device name    Device offset   Env. size    Flash sector size    Number of sectors" > $APPSENV_UTIL_CONFIG
+		echo "/dev/$mtd_dev           0x0             $uboot_env_size     $mtd_erase           $sectors" >> $APPSENV_UTIL_CONFIG
+	fi
+}
+
+start() {
+	if [ ! -e  $APPSENV_UTIL_CONFIG ];then
+		gen_env_util_config
+	fi
+}
+
+case "$1" in
+	start) start;;
+esac

@@ -1,0 +1,430 @@
+#!/bin/sh /etc/rc.common
+
+FACTORY=20
+
+########################################################
+# Definition
+########################################################
+BOARD_CFG="/etc/factory.d/board.cfg"
+
+if [ -e $BOARD_CFG ]; then
+    . $BOARD_CFG
+else
+    echo "$BOARD_CFG is not exist!";
+    exit 1;
+fi
+
+NETWORK_DEF="/etc/factory.d/network.def"
+
+if [ -e $NETWORK_DEF ]; then
+    . $NETWORK_DEF
+else
+    echo "$NETWORK_DEF is not exist!";
+    exit 1;
+fi
+
+NETWORK_CFG="/etc/factory.d/network.cfg"
+
+if [ -e $NETWORK_CFG ]; then
+    . $NETWORK_CFG
+else
+    echo "$NETWORK_CFG is not exist!";
+    exit 1;
+fi
+
+########################################################
+# Debug message
+########################################################
+DEBUG=2;
+
+DBG() {
+    [ $DEBUG -gt 0 ] && echo "=> $@" > /dev/console
+}
+dbg() {
+    [ $DEBUG -gt 1 ] &&	echo "$@" > /dev/console
+}
+
+########################################################
+# sub-Functions
+########################################################
+
+#-----------------------------------------------------
+# fix_giga_phy2_phy3_phy4()
+# fix phy2/phy3/phy4 link rate to 1000mbps
+#-----------------------------------------------------
+fix_giga_phy2_phy3_phy4() {
+    dbg "fix_giga_phy2_phy3_phy4";
+	ssdk_sh debug phy set 2  0x9 0x300;
+	ssdk_sh debug phy set 2  0x4 0xc01;
+	ssdk_sh debug phy set 2  0x0 0x1200;
+	ssdk_sh debug phy set 3  0x9 0x300;
+	ssdk_sh debug phy set 3  0x4 0xc01;
+	ssdk_sh debug phy set 3  0x0 0x1200;
+	ssdk_sh debug phy set 4  0x9 0x300;
+	ssdk_sh debug phy set 4  0x4 0xc01;
+	ssdk_sh debug phy set 4  0x0 0x1200;
+}
+
+#-----------------------------------------------------
+# fix_giga_phy3_phy4()
+# fix phy3/phy4 link rate to 1000mbps
+#-----------------------------------------------------
+fix_giga_phy3_phy4() {
+    dbg "fix_giga_phy3_phy4";
+	ssdk_sh debug phy set 3  0x9 0x300;
+	ssdk_sh debug phy set 3  0x4 0xc01;
+	ssdk_sh debug phy set 3  0x0 0x1200;
+	ssdk_sh debug phy set 4  0x9 0x300;
+	ssdk_sh debug phy set 4  0x4 0xc01;
+	ssdk_sh debug phy set 4  0x0 0x1200;
+}
+
+#-----------------------------------------------------
+# fix_giga_phy1_phy2()
+# fix phy1/phy2 link rate to 1000mbps
+#-----------------------------------------------------
+fix_giga_phy1_phy2() {
+    dbg "fix_giga_phy1_phy2";
+	ssdk_sh debug phy set 1  0x9 0x300
+	ssdk_sh debug phy set 1  0x4 0xc01
+	ssdk_sh debug phy set 1  0x0 0x1200
+	ssdk_sh debug phy set 2  0x9 0x300
+	ssdk_sh debug phy set 2  0x4 0xc01
+	ssdk_sh debug phy set 2  0x0 0x1200
+}
+
+#-----------------------------------------------------
+# fix_giga_phy3()
+# fix phy3 link rate to 1000mbps
+#-----------------------------------------------------
+fix_giga_phy3() {
+    dbg "fix_giga_phy3";
+	ssdk_sh debug phy set 3  0x9 0x300;
+	ssdk_sh debug phy set 3  0x4 0xc01;
+	ssdk_sh debug phy set 3  0x0 0x1200;
+}
+
+#-----------------------------------------------------
+# fix_giga_phy4()
+# fix phy4 link rate to 1000mbps
+#-----------------------------------------------------
+fix_giga_phy4() {
+    dbg "fix_giga_phy4";
+	ssdk_sh debug phy set 4  0x9 0x300;
+	ssdk_sh debug phy set 4  0x4 0xc01;
+	ssdk_sh debug phy set 4  0x0 0x1200;
+}
+
+#-----------------------------------------------------
+# vlan_phy3_phy4_V4_V5_eth1_eth1() 
+# 1. truncate port4, port5, to vlan group 4, 5
+# 2. bring up interface eth1.4, eth1.5 with IP
+#-----------------------------------------------------
+vlan_phy3_phy4_V4_V5_eth1_eth1() {
+    dbg "vlan_phy3_phy4_V4_V5_eth1_eth1";
+
+    # 1. vlan setting
+    swconfig dev switch0 set reset;
+    swconfig dev switch0 set enable_vlan 1;
+    swconfig dev switch0 vlan 4 set ports "0t  4" ## PSGMII tag bind port 4;
+    swconfig dev switch0 vlan 5 set ports "0t  5" ## PSGMII tag bind port 5;
+    swconfig dev switch0 set apply;
+
+    # 2. bring up interface
+    vconfig add eth1 4
+    vconfig add eth1 5
+    ifconfig eth1 0.0.0.0 up
+    ifconfig eth1.4 $IP1 up;
+    ifconfig eth1.5 $IP2 up;
+}
+
+#-----------------------------------------------------
+# vlan_phy3_phy4_V1_V2_eth0_eth1() 
+# 1. truncate port4, port5, to vlan group 1, 2
+# 2. bring up interface eth0, eth1 with IP
+#-----------------------------------------------------
+vlan_phy3_phy4_V1_V2_eth0_eth1() {
+    dbg "vlan_phy3_phy4_V1_V2_eth0_eth1";
+
+    # 1. vlan setting
+    swconfig dev switch0 set reset;
+    swconfig dev switch0 set enable_vlan 1;
+    swconfig dev switch0 vlan 1 set ports "0t  4" ## PSGMII tag bind port 4;
+    swconfig dev switch0 vlan 2 set ports "0t  5" ## PSGMII tag bind port 5;
+    swconfig dev switch0 set apply;
+
+    # 2. bring up interface
+    ifconfig eth0 $IP1 up;
+    ifconfig eth1 $IP2 up;
+}
+
+#-----------------------------------------------------
+# vlan_phy1_phy2_V2_V3_eth0_eth0() 
+# 1. truncate port2, port3, to vlan group 2, 3
+# 2. bring up interface eth0.2, eth0.3 with IP
+#-----------------------------------------------------
+vlan_phy1_phy2_V2_V3_eth0_eth0() {
+    dbg "vlan_phy1_phy2_V2_V3_eth0_eth0";
+
+    # 1. vlan setting
+    swconfig dev switch0 set reset;
+    swconfig dev switch0 set enable_vlan 1;
+    swconfig dev switch0 vlan 2 set ports "0t  2" ## PSGMII tag bind port 2;
+    swconfig dev switch0 vlan 3 set ports "0t  3" ## PSGMII tag bind port 3;
+    swconfig dev switch0 set apply;
+
+    # 2. bring up interface
+    vconfig add eth0 2
+    vconfig add eth0 3
+    ifconfig eth0 0.0.0.0 up
+    ifconfig eth0.2 $IP1 up;
+    ifconfig eth0.3 $IP2 up;
+}
+
+#-----------------------------------------------------
+# vlan_phy2_phy3_phy4_V3_V4_V5_eth1_eth1_eth1()
+# 1. truncate port3, port4, port5, to vlan group 3, 4, 5
+# 2. bring up interface eth1.3, eth1.4, eth1.5 with IP
+#-----------------------------------------------------
+vlan_phy2_phy3_phy4_V3_V4_V5_eth1_eth1_eth1() {
+    dbg "vlan_phy2_phy3_phy4_V3_V4_V5_eth1_eth1_eth1";
+
+    # 1. vlan setting
+    swconfig dev switch0 set reset;
+    swconfig dev switch0 set enable_vlan 1;
+    swconfig dev switch0 vlan 3 set ports "0t  3" ## PSGMII tag bind port 4;
+    swconfig dev switch0 vlan 4 set ports "0t  4" ## PSGMII tag bind port 4;
+    swconfig dev switch0 vlan 5 set ports "0t  5" ## PSGMII tag bind port 5;
+    swconfig dev switch0 set apply;
+
+    # 2. bring up interface
+    vconfig add eth1 3
+    vconfig add eth1 4
+    vconfig add eth1 5
+    ifconfig eth1 0.0.0.0 up
+    ifconfig eth1.3 $IP1 up;
+    ifconfig eth1.4 $IP2 up;
+    ifconfig eth1.5 $IP3 up;
+}
+
+#-----------------------------------------------------
+# bring_up_eth0() 
+# 1. bring up interface eth0 with IP
+#-----------------------------------------------------
+bring_up_eth0() {
+    dbg "bring_up_eth0";
+
+    # 1. bring up interface
+    ifconfig eth0 $IP1 up;
+}
+
+#-----------------------------------------------------
+# bring_up_eth1() 
+# 1. bring up interface eth1 with IP
+#-----------------------------------------------------
+bring_up_eth1() {
+    dbg "bring_up_eth1";
+
+    # 1. bring up interface
+    ifconfig eth1 $IP1 up;
+}
+
+#-----------------------------------------------------
+# bring_up_eth0_eth1() 
+# 1. bring up interface eth0 with IP1
+# 2. bring up interface eth1 with IP2
+#-----------------------------------------------------
+bring_up_eth0_eth1() {
+    dbg "bring_up_eth0_eth1";
+
+    # 1. bring up interface
+    ifconfig eth0 $IP1 up;
+    ifconfig eth1 $IP2 up;
+}
+
+#-----------------------------------------------------
+# factory_switch() 
+# 1. truncate vlan
+# 2. fix link rate to giga
+# 3. bring up interface
+#-----------------------------------------------------
+factory_switch() {
+    case $CPU in
+	    "IPQ4019" | "IPQ4018")
+            case $ETH in
+                "QCA8072")
+                    if [ $PHY_ADDR == "phy3_phy4" ]; then
+                        if [ $INTERFACE == "eth0_eth1" ]; then
+                            # due to /proc/sys/net/edma/default_lan_tag & /proc/sys/net/edma/default_wan_tag; vlan group must to be 1 & 2
+                            vlan_phy3_phy4_V1_V2_eth0_eth1;
+                            fix_giga_phy3_phy4;
+                        elif [ $INTERFACE == "eth1_eth1" ]; then
+                            # vlan group can't be 1(don't know why), I choose 4 & 5
+                            vlan_phy3_phy4_V4_V5_eth1_eth1;
+                            fix_giga_phy3_phy4;
+                        else
+                            echo "unknown interface type!";
+                            exit 1;
+                        fi
+                    elif [ $PHY_ADDR == "phy3" ]; then
+                        if [ $INTERFACE == "eth0" ]; then
+                            bring_up_eth0;
+                            fix_giga_phy3;
+                        elif [ $INTERFACE == "eth1" ]; then
+                            bring_up_eth1;
+                            fix_giga_phy3;
+                        else
+                            echo "unknown interface type!";
+                            exit 1;
+                        fi
+                    elif [ $PHY_ADDR == "phy4" ]; then
+                        if [ $INTERFACE == "eth0" ]; then
+                            bring_up_eth0;
+                            fix_giga_phy4;
+                        elif [ $INTERFACE == "eth1" ]; then
+                            bring_up_eth1;
+                            fix_giga_phy4;
+                        else
+                            echo "unknown interface type!";
+                            exit 1;
+                        fi
+                    else
+                        echo "unknown phy address!";
+                        exit 1;
+                    fi
+                    ;;
+                "QCA8075")
+                    if [ $PHY_ADDR == "phy2_phy3_phy4" ]; then
+                        if [ $INTERFACE == "eth1_eth1_eth1" ]; then
+                            vlan_phy2_phy3_phy4_V3_V4_V5_eth1_eth1_eth1;
+                            fix_giga_phy2_phy3_phy4;
+                        else
+                            echo "unknown interface type!";
+                            exit 1;
+                        fi
+                    else
+                        echo "unknown phy address!";
+                        exit 1;
+                    fi
+                    ;;
+                *)
+                    echo "unknow ethernet type!";
+                    exit 1;
+                    ;;
+            esac
+            ;;
+	    "IPQ8070" | "IPQ8072" | "IPQ8074")
+            case $ETH in
+                "QCA8072")
+                    if [ $PHY_ADDR == "phy4" ]; then
+                        if [ $INTERFACE == "eth1" ]; then
+                            bring_up_eth1;
+                            fix_giga_phy4;
+                        fi
+                    else
+                        echo "unknown phy address!";
+                        exit 1;
+                    fi
+                    ;;
+                "AQR112C" | "AQR112C_QCA8081" | "AQR114C_QCA8033")
+                    # fix link rate to 2.5G in TP mode.
+                    if [ $INTERFACE == "eth0" ]; then
+                        bring_up_eth0;
+                    elif  [ $INTERFACE == "eth1" ]; then
+                        bring_up_eth1;
+                    elif  [ $INTERFACE == "eth0_eth1" ]; then    
+                        bring_up_eth0_eth1;
+                    fi
+                    ;;
+                "QCA8081")
+                    # fix link rate to 2.5G in TP mode.
+                    if [ $INTERFACE == "eth0" ]; then
+                        bring_up_eth0;
+                    elif  [ $INTERFACE == "eth1" ]; then
+                        bring_up_eth1;
+                    fi
+                    ;;
+                *)
+                    echo "unknow ethernet type!";
+                    exit 1;
+                    ;;
+            esac
+            ;;
+	    "IPQ6010" | "IPQ6018")
+            case $ETH in
+                "QCA8072")
+                    if [ $PHY_ADDR == "phy4" ]; then
+                        if [ $INTERFACE == "eth0" ]; then
+                            bring_up_eth0;
+                            fix_giga_phy4;
+                        fi
+                    else
+                        echo "unknown phy address!";
+                        exit 1;
+                    fi
+                    ;;
+                "QCA8081")
+                    if [ $INTERFACE == "eth0" ]; then
+                        bring_up_eth0;
+                    elif  [ $INTERFACE == "eth1" ]; then
+                        bring_up_eth1;
+                    fi
+                    ;;
+                *)
+                    echo "unknow ethernet type!";
+                    exit 1;
+                    ;;
+            esac
+            ;;
+	    "IPQ8064")
+            case $ETH in
+                "QCA8334")
+                    if [ $PHY_ADDR == "phy1_phy2" ]; then
+                        if [ $INTERFACE == "eth0_eth1" ]; then
+                            bring_up_eth0_eth1;
+                            fix_giga_phy1_phy2;
+                        fi
+                    else
+                        echo "unknown phy address!";
+                        exit 1;
+                    fi
+                    ;;
+                *)
+                    echo "unknow ethernet type!";
+                    exit 1;
+                    ;;
+            esac
+            ;;
+	    "QCA9563")
+            case $ETH in
+                "QCA8334")
+                    if [ $PHY_ADDR == "phy1_phy2" ]; then
+                        if [ $INTERFACE == "eth0_eth0" ]; then
+                            vlan_phy1_phy2_V2_V3_eth0_eth0;
+                            fix_giga_phy1_phy2;
+                        fi
+                    else
+                        echo "unknown phy address!";
+                        exit 1;
+                    fi
+                    ;;
+                *)
+                    echo "unknow ethernet type!";
+                    exit 1;
+                    ;;
+            esac
+            ;;
+
+        *)
+            echo "unknown CPU type!";
+            exit 1;
+            ;;
+    esac
+}
+
+########################################################
+# START
+########################################################
+start() {
+	factory_switch
+}

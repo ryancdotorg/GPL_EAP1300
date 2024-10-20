@@ -1,0 +1,9 @@
+Package: senao-mgmt
+Version: 1.2-1-gb5b2594
+Depends: libc, kmod-ebtables, kmod-ebtables-ipv4, ebtables, isc-dhcp-server-ipv4
+Source: SENAO/package/senao-mgmt
+Section: opt
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 7115
+Description:  MANAGEMENT_SSID

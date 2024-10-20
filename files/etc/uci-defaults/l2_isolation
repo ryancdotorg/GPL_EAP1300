@@ -1,0 +1,13 @@
+#!/bin/sh
+uci batch <<-EOF
+del ucitrack.@l2_isolation[-1]
+del_list ucitrack.@network[0].affects=l2_isolation
+del_list ucitrack.@lan-ip-obtain[0].affects=l2_isolation
+add ucitrack l2_isolation
+set ucitrack.@l2_isolation[0].init=l2_isolation
+add_list ucitrack.@network[0].affects=l2_isolation
+add_list ucitrack.@lan-ip-obtain[0].affects=l2_isolation
+commit ucitrack
+EOF
+
+exit 0

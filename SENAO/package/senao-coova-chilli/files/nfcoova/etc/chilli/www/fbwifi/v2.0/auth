@@ -1,0 +1,102 @@
+<? # -*- mode: shell-script -*-
+
+
+if [ -z "$REMOTE_MAC" ]
+then
+    echo "fbwifi: remote_mac null" > /dev/console
+    exit
+fi
+
+. /etc/chilli/fbwifi-libs.sh
+
+http_auth_get_resp() {
+
+fbwifi_include_urls_config $CONFIG_NAME
+
+location_url=${fbwifi_landing_page_url:-$(fbwifi_get_landing_page $$CONFIG_NAME)}
+
+printf "HTTP/1.1 302 Found\r\n"
+printf "Location: $location_url\r\n"
+printf "\r\n"
+printf "<html><head><title>Redirecting to Captive Portal</title></head><body>"
+printf "If you are not redirected within 5 seconds, please"
+printf "<a href=\"$location_url\""
+printf "click here</a>.</body></html>\r\n"
+
+exit
+}
+
+http_auth_post_resp() {
+local is_valid=$1
+printf "HTTP/1.1 200 OK\r\n"
+printf "Content-type: application/json\r\n"
+
+fbwifi_header_add_allow_origin $CONFIG_NAME $HTTP_ORIGIN
+
+printf 'Connection: close\r\n'
+printf "\r\n"
+printf "{\"valid\": $is_valid}"
+printf "\r\n"
+
+if [ "$is_valid" = "true" ]
+then
+    local counter=0
+    while [ $counter -lt 5 ]
+    do
+        sleep 1
+        counter=$(($counter+1))
+        if [ -f "$done_file" ]
+        then
+            exit
+        fi
+    done
+fi
+
+exit
+}
+
+gateway_id=$(fbwifi_get_gateway_id $CONFIG_NAME)
+gateway_token=$(fbwifi_get_gateway_token $CONFIG_NAME)
+
+token_validation_api="https://api.fbwifi.com/v2.0/token?access_token=$gateway_token"
+
+if [ "$REQUEST_METHOD" = "POST" ]
+then
+    token=$POST_token
+
+    is_valid=false
+
+    fbwifi_tokens_dir=$fbwifi_tmp_dir/$CONFIG_NAME/$fbwifi_tokens_path
+    token_file=$fbwifi_tokens_dir/${REMOTE_MAC}
+    auth_file=$token_file-auth
+    done_file=$token_file-done
+
+    rm -f $auth_file
+    rm -f $done_file
+
+    retval=`$curl_command -X POST "$token_validation_api" --data "token=$token"`
+    if [ $? -eq 0 ]
+    then
+        is_valid=`echo "$retval" | jq -r -M ".valid"`
+        if [ "$is_valid" = "true" ]
+        then
+            printf $token > $auth_file
+        else
+            printf null > $auth_file
+            is_valid="false"
+        fi
+    else
+        printf fail > $auth_file
+        is_valid="false"
+    fi
+
+    http_auth_post_resp "$is_valid"
+
+else
+
+    token=$GET_token
+    http_auth_get_resp
+
+fi
+
+?>

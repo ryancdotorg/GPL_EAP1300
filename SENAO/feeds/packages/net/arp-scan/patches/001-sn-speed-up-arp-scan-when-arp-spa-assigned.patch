@@ -1,0 +1,27 @@
+Index: arp-scan-1.9.7/arp-scan.c
+===================================================================
+--- arp-scan-1.9.7.orig/arp-scan.c
++++ arp-scan-1.9.7/arp-scan.c
+@@ -217,8 +217,10 @@ main(int argc, char *argv[]) {
+        *
+        * Give a warning and use 0.0.0.0 if the interface has no IP address.
+        */
+-      ret_status = get_source_ip(if_name, &interface_ip_addr);
++      // Yolin: FIXME: use get_source_ip process time is too long, move into arp_spa_flag == 0 scope
++      // ret_status = get_source_ip(if_name, &interface_ip_addr);
+       if (arp_spa_flag == 0) {
++            ret_status = get_source_ip(if_name, &interface_ip_addr);
+          if (ret_status == -1) {
+             warn_msg("WARNING: Could not obtain IP address for interface %s. "
+                      "Using 0.0.0.0 for", if_name);
+@@ -229,6 +231,10 @@ main(int argc, char *argv[]) {
+          }
+          memcpy(&arp_spa, &(interface_ip_addr.s_addr), sizeof(arp_spa));
+       }
++      else
++      {
++         memcpy(&(interface_ip_addr.s_addr), &arp_spa, sizeof(arp_spa));
++      }
+    } else {
+       pcap_handle = NULL;
+    }

@@ -1,0 +1,59 @@
+genconfig() {
+    systemname=$(uci get system.@system[0].SystemName)
+
+    local br_if allow_interface
+    for br_if in $(ls /sys/class/net/ |grep br-)
+    do
+        if [ -z $allow_interface ]; then
+            allow_interface=$br_if
+        else
+            allow_interface=${allow_interface},$br_if
+        fi
+    done
+
+    cat << EOF > /tmp/etc/avahi/avahi-daemon.conf
+[server]
+host-name=engenius
+#domain-name=local
+use-ipv4=yes
+use-ipv6=no
+check-response-ttl=no
+use-iff-running=no
+allow-interfaces=$allow_interface
+
+[publish]
+publish-addresses=yes
+publish-hinfo=yes
+publish-workstation=no
+publish-domain=yes
+#publish-dns-servers=192.168.1.1
+#publish-resolv-conf-dns-servers=yes
+
+[reflector]
+enable-reflector=no
+reflect-ipv=no
+
+[rlimits]
+#rlimit-as=
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=30
+rlimit-stack=4194304
+rlimit-nproc=3
+EOF
+}
+
+genBonjourService() {
+    systemname=$(uci get system.@system[0].SystemName)
+
+    cat << EOF > /tmp/etc/avahi/services/bonjour.service
+<service-group>
+<name>$systemname</name>
+<service>
+<type>_http._tcp</type>
+<port>80</port>
+</service>
+</service-group>
+EOF
+}

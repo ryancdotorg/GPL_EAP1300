@@ -1,0 +1,10 @@
+Package: luci-wsplc
+Version: 1
+Depends: libc, luci, luci-mod-admin-core, luci-mod-admin-full
+Source: qca/feeds/ieee1905-security/qca-wsplc-luci
+Section: QCA
+Maintainer: Qualcomm Atheros
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 2811
+Description:  Luci WebUI for 1905.1 AP Auto Configuration and Security

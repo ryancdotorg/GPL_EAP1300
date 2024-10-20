@@ -1,0 +1,3 @@
+/lib/modules/4.4.60/qrfs.ko
+/etc/init.d/qrfs
+/etc/modules.d/29-qca-rfs

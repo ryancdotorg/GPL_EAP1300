@@ -1,0 +1,2 @@
+qca_spf_11_0_csu1/* filter=lfs diff=lfs merge=lfs -text
+qca_spf_11_1_csu2/* filter=lfs diff=lfs merge=lfs -text

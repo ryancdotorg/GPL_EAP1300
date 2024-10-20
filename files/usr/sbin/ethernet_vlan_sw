@@ -1,0 +1,25 @@
+#!/bin/sh
+#Clean EAP1300 VLAN table.
+ssdk_sh vlan entry flush
+#Set port-base vlan P0,P4,P5(P4).
+ssdk_sh portVlan member update 4 0x21
+#Set port-base vlan P0,P4,P5(P5).
+ssdk_sh portVlan member update 5 0x11
+#accept 8021.q and forward packet which is not 802.1q.
+ssdk_sh portVlan ingress set 0 fallback
+ssdk_sh portVlan ingress set 4 fallback
+ssdk_sh portVlan ingress set 5 fallback
+#Keep origin packet format.
+ssdk_sh portVlan egress set 0 untouched
+ssdk_sh portVlan egress set 4 untouched
+ssdk_sh portVlan egress set 5 untouched
+#Disable EDMA driver tag.
+echo 0 > /proc/sys/net/edma/default_lan_tag
+echo 0 > /proc/sys/net/edma/default_wan_tag
+
+#Drop invalid src IPV6 and dst IPV6 to prevent ethernet shut-down in Dakota + QCA8072
+#Solve Singapore ethernet shut-down issue
+#2019.01.28 Senao George
+#devmem 0xC000204 32 0x35000
+#Frame with IP length field error is dropped,IPV4 and IPV6 included
+#devmem 0xC000200 32 0x41

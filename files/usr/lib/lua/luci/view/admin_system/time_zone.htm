@@ -1,0 +1,408 @@
+<% local uci = luci.model.uci.cursor() %>
+<%+header%>
+<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+<%+myid%>
+<% end %>
+<script>
+var JSONDATA_SYSTEM=<%=JSONDATA_SYSTEM%>;
+var JSONDATA_NTP=<%=JSONDATA_NTP%>;
+var j; // # of zone
+var ntp_array={
+zone:[
+	["UTC12","UTC-12:00 Kwajalein"],
+	["UTC11","UTC-11:00 Midway Island, Samoa"],
+	["UTC10","UTC-10:00 Hawaii"],
+	["NAST9","UTC-09:00 Alaska"],
+	["PST8","UTC-08:00 Pacific Time"],
+	["UTC7","UTC-07:00 Arizona"],
+	["MST7","UTC-07:00 Mountain Time"],
+	["UTC6","UTC-06:00 Mexico"],
+	["CST6","UTC-06:00 Central Time"],
+	["UTC5","UTC-05:00 Colombia, Panama"],
+	["EST5","UTC-05:00 Eastern Time"],
+	["UTC4","UTC-04:00 Bolivia, Venezuela"],
+	["AST4","UTC-04:00 Atlantic Time"],
+	["BRWST4","UTC-04:00 Brazil West"],
+	["NST3:30","UTC-03:30 Newfoundland"],
+	["WGST3","UTC-03:00 Greenland"],
+	["BRST3","UTC-03:00 Brazil East"],
+	["UTC3","UTC-03:00 Guyana"],
+	["UTC2","UTC-02:00 Mid-Atlantic"],
+	["STD1","UTC-01:00 Azores"],
+	["UTC0","UTC+00:00 Gambia, Liberia, Morocco"],
+	["GMT0","UTC+00:00 England"],
+	["UTC-1","UTC+01:00 Tunisia"],
+	["STD-1","UTC+01:00 France, Germany, Italy"],
+	["UTC-2","UTC+02:00 South Africa"],
+	["STD-2","UTC+02:00 Greece, Ukraine, Romania, Turkey"],
+	["UTC-3","UTC+03:00 Iraq, Jordan, Kuwait"],
+	["EEST-3","UTC+03:00 Finland, Russia"],
+	["UTC-4","UTC+04:00 Armenia"],
+	["UTC-5","UTC+05:00 Pakistan, Russia"],
+	["UTC-5:30","UTC+05:30 Bombay, Calcutta, Madras, New Delhi"],
+	["UTC-6","UTC+06:00 Bangladesh, Russia"],
+	["UTC-7","UTC+07:00 Thailand, Russia"],
+	["UTC-8","UTC+08:00 China, Hong Kong, Western Australia, Singapore, Taiwan, Russia"],
+	["UTC-9","UTC+09:00 Japan, Korea"],
+	["CST-9:30","UTC+09:30 South Australia"],
+	["UTC-10","UTC+10:00 Guam, Russia"],
+	["STD-10","UTC+10:00 Australia"],
+	["UTC-11","UTC+11:00 Solomon Islands"],
+	["UTC-12","UTC+12:00 Fiji"],
+	["NZST-12","UTC+12:00 New Zealand"]]
+};
+
+var daylight_array = {
+mon:[
+	["1","January"],
+	["2","February"],
+	["3","March"],
+	["4","April"],
+	["5","May"],
+	["6","June"],
+	["7","July"],
+	["8","August"],
+	["9","September"],
+	["10","October"],
+	["11","November"],
+	["12","December"]],
+week_idx:[
+	["1","1st"],
+	["2","2nd"],
+	["3","3rd"],
+	["4","4th"],
+	["5","5th"],
+	["6","6th"]],
+week:[
+	["0","Sun"],
+	["1","Mon"],
+	["2","Tue"],
+	["3","Wed"],
+	["4","Thu"],
+	["5","Fri"],
+	["6","Sat"]],
+time:[
+	["0","00:00"],
+	["1","01:00"],
+	["2","02:00"],
+	["3","03:00"],
+	["4","04:00"],
+	["5","05:00"],
+	["6","06:00"],
+	["7","07:00"],
+	["8","08:00"],
+	["9","09:00"],
+	["10","10:00"],
+	["11","11:00"],
+	["12","12:00"],
+	["13","13:00"],
+	["14","14:00"],
+	["15","15:00"],
+	["16","16:00"],
+	["17","17:00"],
+	["18","18:00"],
+	["19","19:00"],
+	["20","20:00"],
+	["21","21:00"],
+	["22","22:00"],
+	["23","23:00"]]
+};
+
+function date_time_status()
+{
+	var ret = $('#ntpserverEnable_enable').prop('checked');
+	if(ret){
+		$('input[name^="man_"]').attr('disabled', 'disabled');
+		$('input[name^="ntp_server"]').removeAttr('disabled');
+
+	}
+	else{
+		$('input[name^="ntp_server"]').attr('disabled', 'disabled');
+		$('input[name^="man_"]').removeAttr('disabled');
+	}
+}
+function daylight_status()
+{
+	var ret = $('#daylight_enable').prop('checked');
+	if(ret){
+		$('select[name^="day_"]').removeAttr('disabled');
+	}
+	else{
+		$('select[name^="day_"]').attr('disabled', 'disabled');
+	}
+}
+function init()
+{
+	var zone_i = 0;
+	if('<%=uci:get_first("system","system","zonenumber")%>' != null)
+		zone_i = '<%=uci:get_first("system","system","zonenumber")%>'
+	document.getElementsByName("ntpserverEnable")[(JSONDATA_SYSTEM.ntp.enable_server=="1")?1:0].checked=true;
+	$('#time_zone').val(zone_i);
+	document.getElementsByName("daylight_enable")[0].checked=(JSONDATA_NTP.daylightsaving.DayLightEnable=="1")?true:false;
+	$('#day_s_mon').val(JSONDATA_NTP.daylightsaving.startMonth);
+	$('#day_s_week_idx').val(JSONDATA_NTP.daylightsaving.startWeek);
+	$('#day_s_week').val(JSONDATA_NTP.daylightsaving.startDay);
+	$('#day_s_time').val(JSONDATA_NTP.daylightsaving.startHour);
+	$('#day_e_mon').val(JSONDATA_NTP.daylightsaving.endMonth);
+	$('#day_e_week_idx').val(JSONDATA_NTP.daylightsaving.endWeek);
+	$('#day_e_week').val(JSONDATA_NTP.daylightsaving.endDay);
+	$('#day_e_time').val(JSONDATA_NTP.daylightsaving.endHour);
+	date_time_status();
+	daylight_status();
+}
+$(function() {
+	<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+	    AddMyid("form", "timezone_idchange");
+	<% end %>
+	init();
+});
+function isBigMonth(month)
+{
+	if( month==1 || month==3 || month==5 || month==7 || month==8 || month==9 || month==10 || month==12 )
+		return true;
+	else
+		return false;
+}
+function isLeapYear(year)
+{
+	if(((year%4==0)&&(year%100!=0))||(year%400==0))
+		return true;
+	else
+		return false;
+}
+function savechanges(type){
+	if(document.getElementsByName("ntpserverEnable")[0].checked == true){
+		var setTime;
+		if(type == 2) //sync with PC
+		{
+			var date = new Date();
+			var pcYear = date.getFullYear();
+			var pcMonth = date.getMonth() + 1;
+			var pcDate = date.getDate();
+			var pcHours = date.getHours();
+			var pcMinutes = date.getMinutes();
+			pcMonth=(pcMonth.toString().length==1?"0":"")+pcMonth;
+			pcDate=(pcDate.toString().length==1?"0":"")+pcDate;
+			pcHours=(pcHours.toString().length==1?"0":"")+pcHours;
+			pcMinutes=(pcMinutes.toString().length==1?"0":"")+pcMinutes;
+			$('#man_year').val(pcYear)
+			$('#man_mon').val(pcMonth)
+			$('#man_day').val(pcDate)
+			$('#man_hour').val(pcHours)
+			$('#man_min').val(pcMinutes)
+			setTime = pcYear+"-"+pcMonth+"-"+pcDate+" "+pcHours+":"+pcMinutes;
+		}
+		else{
+			var mo = $('#man_mon').val();
+			var d = $('#man_day').val();
+			var h = $('#man_hour').val();
+			var mi = $('#man_min').val();
+			var year = $('#man_year').val();
+			mo=(mo.toString().length==1?"0":"")+mo;
+			d=(d.toString().length==1?"0":"")+d;
+			h=(h.toString().length==1?"0":"")+h;
+			mi=(mi.toString().length==1?"0":"")+mi;
+
+			if(!isNumber(mo) || !isBetween(mo, 1, 12)){
+				alert(invalid("<%:month%>"));
+				setfocus(getByName('man_mon'));
+				return false;
+			}
+			if(!isBigMonth(mo))
+			{
+				if(!isBetween(d, 1, 30))
+				{
+					alert(invalid("<%:day%>"));
+					setfocus(getByName('man_day'));
+					return false;
+				}
+			}
+			if(mo==2)
+			{
+				if(isLeapYear(year))
+				{
+					if(!isBetween(d, 1, 29))
+					{
+						alert(invalid("<%:day%>"));
+						setfocus(getByName('man_day'));
+						return false;
+					}
+				}
+				else
+				{
+					if(!isBetween(d, 1, 28))
+					{
+						alert(invalid("<%:day%>"));
+						setfocus(getByName('man_day'));
+						return false;
+					}
+				}
+			}
+			if(!isNumber(d) || !isBetween(d, 1, 31)){
+				alert(invalid("<%:day%>"));
+				setfocus(getByName('man_day'));
+				return false;
+			}
+			if(!isNumber(h) || !isBetween(h, 0, 23)){
+				alert(invalid("<%:hour%>"));
+				setfocus(getByName('man_hour'));
+				return false;
+			}
+			if(!isNumber(mi) || !isBetween(mi, 0, 59)){
+				alert(invalid("<%:minute%>"));
+				setfocus(getByName('man_min'));
+				return false;
+			}
+			if(!isNumber(year)){
+				alert(invalid("<%:year%>"));
+				setfocus(getByName('man_year'));
+				return false;
+			}
+			setTime = $('#man_year').val().toString()+"-"+mo+"-"+d+" "+h+":"+mi;
+		}
+		getById('setTime').value = setTime;
+	}
+	else
+	{
+		var ntp_srv = $('#ntp_server').val();
+		if(!isHostName(ntp_srv) && !isIpaddr(ntp_srv)){
+			alert(invalid("<%:NTP server%>"));
+			setfocus(getByName('ntp_server'));
+			return false;
+		}
+		if(isLoopback(ntp_srv) || isMulticast(ntp_srv))
+		{
+			alert(invalid("<%:NTP server%>"));
+			setfocus(getByName('ntp_server'));
+			return false;
+		}
+	}
+	var tmp = ntp_array.zone[$('#time_zone').val()][1].split(':');
+	getById('timeZone').value = ntp_array.zone[$('#time_zone').val()][0];
+	getById('zoneName').value = tmp[1].substr(3);
+	type = type || 0;
+	getById('submitType').value = type;
+	if(document.getElementsByName("daylight_enable")[0].checked == true)
+		getById('daylightStatus').value = "1";
+	else
+		getById('daylightStatus').value = "0";
+	ajax_setCsrf();	
+	document.forms[document.forms.length-1].submit();
+
+	return true;
+}
+</script>
+<form name="form" action="<%=REQUEST_URI%>" method="post">
+<fieldset class="cbi-section">
+<table>
+	<tr>
+		<td colspan="1" class="title"><%:Date and Time Settings%></td>
+	</tr>
+	<tr class="title-option"><td>
+		<input type="radio" name="ntpserverEnable" value="0" id="ntpserverEnable_disable" onclick="date_time_status()" checked/>
+		<label for="ntpserverEnable_disable"><%:Manually Set Date and Time%></label></td>
+	</tr>
+	<tr class="title-option"><td class="subtitle">
+		<%:Date:%><input type="text" name="man_year" id="man_year" style="height:27px;width:70px;" maxlength="4" value="<%=luci.util.exec("date +'%Y'")%>"> / 
+		<input type="text" name="man_mon" id="man_mon" style="height:27px;width:50px;" maxlength="2" value="<%=luci.util.exec("date +'%m'")%>"> / 
+		<input type="text" name="man_day" id="man_day" style="height:27px;width:50px;" maxlength="2" value="<%=luci.util.exec("date +'%d'")%>"></td>
+	</tr>
+	<tr class="title-option"><td class="subtitle">
+		<%:Time:%><input type="text" name="man_hour" id="man_hour" style="height:27px;width:50px;" maxlength="2" value="<%=luci.util.exec("date +'%H'")%>"> : 
+		<input type="text" name="man_min" id="man_min" style="height:27px;width:50px;" maxlength="2" value="<%=luci.util.exec("date +'%M'")%>"> <%:(24-Hour)%></td>
+	</tr>
+	<tr class="title-option"><td class="subtitle">
+		<input id="man_syn_pc" type="button" name="man_syn_pc" class="cbi-button" onclick="return savechanges(2)" value="<%:Synchronize with PC%>"></td>
+	</tr>
+	<tr class="title-option"><td>
+		<input type="radio" name="ntpserverEnable" value="1" id="ntpserverEnable_enable" onclick="date_time_status()"/>
+		<label for="ntpserverEnable_enable"><%:Automatically Get Date and Time%></label></td>
+	</tr>
+	<tr class="title-option"><td class="subtitle">
+		<%:NTP Server:%><input type="text" name="ntp_server" id="ntp_server" style="height:27px;width:200px;" value="<%=luci.model.uci.cursor():get_list("system", "ntp","server")[1]%>"></td>
+	</tr>
+</table>
+</fieldset>
+<fieldset class="cbi-section">
+<table>
+	<tr>
+		<td colspan="1" class="title"><%:Time Zone%></td>
+	</tr>
+	<tr class="title-option"><td><%:Time Zone:%>
+		<select name="time_zone" id="time_zone" style="height:27px;width:400px;">
+			<script>
+			for(j = 0; j < ntp_array.zone.length; j++){
+				document.write("<option value='"+j+"'>"+ntp_array.zone[j][1]+"</option>"+'\n');
+			}</script>
+		</select>
+		</td>
+	</tr>
+	<tr class="title-option"><td><input type="checkbox" name="daylight_enable" id="daylight_enable" onclick="daylight_status()" checked><label>&nbsp;<%:Enable Daylight Saving%></label></td>
+	</tr>
+	<tr class="title-option"><td class="subtitle"><%:Start:%>
+		<select name="day_s_mon" id="day_s_mon" style="height:27px;width:100px;">
+			<script>
+			for(var i = 0; i < daylight_array.mon.length; i++){
+				document.write("<option value='"+daylight_array.mon[i][0]+"'>"+daylight_array.mon[i][1]+"</option>"+'\n');
+			}</script>
+		</select>
+		<select name="day_s_week_idx" id="day_s_week_idx" style="height:27px;width:50px;">
+			<script>
+			for(var i = 0; i < daylight_array.week_idx.length; i++){
+				document.write("<option value='"+daylight_array.week_idx[i][0]+"'>"+daylight_array.week_idx[i][1]+"</option>"+'\n');
+			}</script>
+		</select>		
+		<select name="day_s_week" id="day_s_week" style="height:27px;width:70px;">
+			<script>
+			for(var i = 0; i < daylight_array.week.length; i++){
+				document.write("<option value='"+daylight_array.week[i][0]+"'>"+daylight_array.week[i][1]+"</option>"+'\n');
+			}</script>
+		</select>		
+		<select name="day_s_time" id="day_s_time" style="height:27px;width:80px;">
+			<script>
+			for(var i = 0; i < daylight_array.time.length; i++){
+				document.write("<option value='"+daylight_array.time[i][0]+"'>"+daylight_array.time[i][1]+"</option>"+'\n');
+			}</script>
+		</select>
+		</td>
+	</tr>
+	<tr class="title-option"><td class="subtitle">
+		<%:End:%>&nbsp;&nbsp;
+		<select name="day_e_mon" id="day_e_mon" style="height:27px;width:100px;">
+			<script>
+			for(var i = 0; i < daylight_array.mon.length; i++){
+				document.write("<option value='"+daylight_array.mon[i][0]+"'>"+daylight_array.mon[i][1]+"</option>"+'\n');
+			}</script>
+		</select>
+		<select name="day_e_week_idx" id="day_e_week_idx" style="height:27px;width:50px;">
+			<script>
+			for(var i = 0; i < daylight_array.week_idx.length; i++){
+				document.write("<option value='"+daylight_array.week_idx[i][0]+"'>"+daylight_array.week_idx[i][1]+"</option>"+'\n');
+			}</script>
+		</select>		
+		<select name="day_e_week" id="day_e_week" style="height:27px;width:70px;">
+			<script>
+			for(var i = 0; i < daylight_array.week.length; i++){
+				document.write("<option value='"+daylight_array.week[i][0]+"'>"+daylight_array.week[i][1]+"</option>"+'\n');
+			}</script>
+		</select>		
+		<select name="day_e_time" id="day_e_time" style="height:27px;width:80px;">
+			<script>
+			for(var i = 0; i < daylight_array.time.length; i++){
+				document.write("<option value='"+daylight_array.time[i][0]+"'>"+daylight_array.time[i][1]+"</option>"+'\n');
+			}</script>
+		</select>
+		</td>
+	</tr>
+</table>
+</fieldset>
+<div class="cbi-page-actions">
+	<input type="hidden" id="submitType" name="submitType"/>
+	<input type="hidden" id="setTime" name="setTime"/>
+	<input type="hidden" id="timeZone" name="timeZone"/>
+	<input type="hidden" id="zoneName" name="zoneName"/>
+	<input type="hidden" id="daylightStatus" name="daylightStatus"/>
+	<input class="cbi-button cbi-button-apply" onclick="return savechanges(1)" type="submit" name="cbi.apply" myid="button_save" value="<%:Apply%>">&nbsp;<span class="btn_desc"><%:Apply saved settings to take effect %></span>
+</div>
+</form>
+<%+footer%>

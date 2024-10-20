@@ -1,0 +1,11 @@
+{
+	"wireless": {
+		"clients": [
+			{
+				"js_idx_mac_addr": "ffi",
+				"mac_addr": "ffi"
+			}
+		]
+	}
+}
+

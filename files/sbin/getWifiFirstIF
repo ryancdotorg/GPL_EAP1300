@@ -1,0 +1,38 @@
+#!/bin/sh
+
+wifiBand=$1	#0 for 2.4G, 1 for 5G, 2 for triband 5G second interface
+
+if [ -z "$wifiBand" ]; then
+        exit 0
+fi
+
+wifi_schedule=$(uci get wifi_schedule.wireless.ScheduleEnable)
+devSchedule=1
+
+wifiDev=$(echo $wifiBand | grep wifi)
+
+[ -z $wifiDev ] && wifiDev=$(echo $wifiBand | grep scan) 	#new naming rule for scaning radio name scan0 scan1
+
+if [ -z "$wifiDev" ]; then	#old usage, arg1 is radio index (wifix)
+	wifiDev="wifi$wifiBand"
+fi
+
+opmode="$(uci get wireless.$wifiDev.opmode)"
+
+vifs=$(eval /usr/sbin/foreach wireless wifi-iface device "$wifiDev")
+
+for vif in $vifs; do
+	mode_display=$(uci get wireless.$vif.mode_display)
+	devDisabled=$(uci get wireless.$vif.disabled)
+	ifname=$(uci get wireless.$vif.ifname)
+	if [ $wifi_schedule -eq 1 ]; then
+		if [ -f "/tmp/schedule_"$ifname ]; then
+			devSchedule=$(cat "/tmp/schedule_"$ifname)
+		fi
+	fi
+	if [ "$mode_display" == "$opmode" ] && [ $devDisabled -eq 0 ] && [ $devSchedule -eq 1 ]; then
+		echo "$ifname"
+		break
+	fi
+done
+

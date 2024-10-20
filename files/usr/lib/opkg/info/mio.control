@@ -1,0 +1,9 @@
+Package: mio
+Version: 1.0-1-g8f35bd5
+Depends: libc
+Source: SENAO/package/senao-mio
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 3821
+Description:  mio Library

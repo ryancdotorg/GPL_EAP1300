@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# for br-lan got new ip and reload firewall
+guest_bridge=br-guest
+
+if [ "$(ls /sys/class/net/$guest_bridge/brif 2>/dev/null)" != "" ]
+then
+    /etc/init.d/firewall reload
+fi

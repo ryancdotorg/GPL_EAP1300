@@ -1,0 +1,109 @@
+#!/bin/sh /etc/rc.common
+START=98
+STOP=10
+
+. /lib/functions.sh
+
+isApMode() {
+	for section in $(ifconfig -a  | grep wifi | awk -F " " {'print $1'})
+	do
+        # if wireless opmode not ap, don't start wtp(return 1).
+		[ "$(uci get wireless.$section.opmode)" != "ap" -a "$(uci get wireless.$section.opmode)" != "mon" ] && return 1
+	done
+
+    return 0
+}
+
+append_eth_vid()
+{
+	for eif in $1
+	do
+		if [ -n "$2" ]
+		then
+			eth_vlanifs="${eth_vlanifs} ${eif}.${2}"
+		fi
+	done
+	echo ${eth_vlanifs:-$1}
+}
+
+startlldpd()
+{
+	#copy from openlldpd.init init script in openlldp package
+	local func_enable_bonding=$(uci -q get network.lacp.lacp_enable)
+	if [ $func_enable_bonding -eq 1 ]; then
+		local lan_ifnames="bond0"
+	else
+		local lan_ifnames=$(uci -q get /rom/etc/config/network.lan.ifname)
+	fi
+
+	local mgmtvlan_en=$(uci -q get network.sys.WLANVLANEnable)
+	if [ ${mgmtvlan_en:-0} -eq 1 ]; then
+		local mgmtvlan_id=$(uci -q get network.sys.ManagementVLANID)
+		lan_ifnames=$(append_eth_vid "$lan_ifnames" $mgmtvlan_id)
+	fi
+
+	for ifname in $lan_ifnames
+	do
+		/usr/bin/lldpd -i $ifname &
+	done
+}
+
+startwtp() {
+	if [ -e /usr/bin/wtp ]; then
+		echo "start apcontroller" > /dev/console
+		/usr/bin/wtp --dir /etc/capwap --cert_dir /etc/capwap --dlog 0 & > /dev/ttyS0;
+	fi
+}
+
+start() {
+	if [ -z "$(pidof wtp)" ]; then
+		if [ "$(uci get functionlist.functionlist.SUPPORT_ENJET)" == "1" ]; then
+		    echo "Support multiple operation" > /dev/console
+		    startwtp
+		else
+		    if [ "$(uci get functionlist.functionlist.SUPPORT_AP_MODE_ONLY)" == "1" ]; then
+			    echo "Support AP Only" > /dev/console
+			    startwtp
+		    else
+			    echo "Support multiple operation: AP Only" > /dev/console
+			    isApMode && startwtp
+		    fi
+		fi
+	fi
+
+	if [ -z "$(pidof lldpd)" ]; then
+		if [ "$(uci get functionlist.functionlist.SUPPORT_ENJET)" == "1" ]; then
+		    echo "lldpd support multiple operation" > /dev/console
+		    startlldpd
+		else
+		    if [ "$(uci get functionlist.functionlist.SUPPORT_AP_MODE_ONLY)" == "1" ]; then
+			    echo "lldpd support AP Only" > /dev/console
+			    startlldpd
+		    else
+			    echo "lldpd support multiple operation: AP Only" > /dev/console
+			    isApMode && startlldpd
+		    fi
+		fi
+	fi
+}
+
+stop() {
+	#restart lldpd to change interface
+	if [ -n "$(pidof lldpd)" ]; then
+		killall -9 lldpd;
+		sleep 2
+	fi
+
+	if [ "$(uci get functionlist.functionlist.SUPPORT_ENJET)" == "1" ]; then
+	    echo "Support multiple operation" > /dev/console
+	    return
+	fi
+	if [ -n "$(pidof wtp)" ]; then
+		if [ "$(uci get functionlist.functionlist.SUPPORT_AP_MODE_ONLY)" != "1" ]; then
+			isApMode || {
+				echo "stop apcontroller, kill wtp & lldpd" > /dev/console
+				killall -9 wtp;
+			}
+		fi
+	fi
+}

@@ -1,0 +1,5 @@
+*raw
+:portal_snlog_raw - [0:0]
+-F portal_snlog_raw
+-I SN_LOGGING -j portal_snlog_raw
+COMMIT

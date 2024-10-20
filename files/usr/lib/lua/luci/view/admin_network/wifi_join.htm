@@ -1,0 +1,968 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2009 Jo-Philipp Wich <xm@subsignal.org>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+$Id: wifi_join.htm 9327 2012-09-26 17:38:14Z jow $
+
+-%>
+<%+functionlist%>
+<html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="<%=media%>/cascade.css">
+<script src="/luci-static/web_ECB_FANCY/jquery-1.10.1.min.js"></script>
+<script src="/luci-static/web_ECB_FANCY/common.js"></script>
+<script type="text/javascript" src="/luci-static/resources/cbi.js"></script>
+<script type="text/javascript" src="<%=resource%>/xhr.js"></script>
+<title><%=luci.http.formvalue("title") or translate("Site Survey")%></title>
+<%-
+    local  http = require "luci.http"
+	local sys = require "luci.sys"
+	local utl = require "luci.util"
+	local uci = luci.model.uci.cursor()
+	function guess_wifi_signal(info)
+		local scale = (100 / (info.quality_max or 100) * (info.quality or 0))
+		local icon
+
+		if not info.bssid or info.bssid == "00:00:00:00:00:00" then
+			icon = resource .. "/icons/signal-none.png"
+		elseif scale < 15 then
+			icon = resource .. "/icons/signal-0.png"
+		elseif scale < 35 then
+			icon = resource .. "/icons/signal-0-25.png"
+		elseif scale < 55 then
+			icon = resource .. "/icons/signal-25-50.png"
+		elseif scale < 75 then
+			icon = resource .. "/icons/signal-50-75.png"
+		else
+			icon = resource .. "/icons/signal-75-100.png"
+		end
+
+		return icon
+	end
+
+	function percent_wifi_signal(info)
+		local qc = info.quality or 0
+		local qm = info.quality_max or 0
+
+		if info.bssid and qc > 0 and qm > 0 then
+			return math.floor((100 / qm) * qc)
+		else
+			return 0
+		end
+	end
+
+	function format_wifi_encryption(info)
+		if info.wep == true then
+			return "WEP"
+		elseif info.wpa > 0 then
+			return translatef("<abbr title='Pairwise: %s / Group: %s'>%s - %s</abbr>",
+				table.concat(info.pair_ciphers, ", "),
+				table.concat(info.group_ciphers, ", "),
+				(info.wpa == 3) and translate("mixed WPA/WPA2")
+					or (info.wpa == 2 and "WPA2" or "WPA"),
+				table.concat(info.auth_suites, ", ")
+			)
+		elseif info.enabled then
+			return "<em>%s</em>" % translate("unknown")
+		else
+			return "<em>%s</em>" % translate("open")
+		end
+	end
+
+	local dev = luci.http.formvalue("device")
+    local tmpOpmode = luci.http.formvalue("tmpOpmode")
+    local netid = luci.http.formvalue("netid")
+	local iw = luci.sys.wifi.getiwinfo(dev)
+    local back = luci.http.formvalue("back")
+
+	if not iw then
+		luci.http.redirect(luci.dispatcher.build_url("admin/network/wireless_device"))
+		return
+	end
+
+
+	function scanlist(times)
+		local i, k, v
+		local l = { }
+		local s = { }
+
+		for i = 1, times do
+			for k, v in ipairs(iw.scanlist or { }) do
+				if not s[v.bssid] then
+					l[#l+1] = v
+					s[v.bssid] = true
+				end
+			end
+		end
+
+		return l
+	end
+-%>
+
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" and uci:get("system","firmware","first_login") == "1" then %>
+<%+header%>
+<% end %>
+
+ <STYLE type="text/css">
+* {
+    margin: 0;
+    padding: 0;
+}
+body {
+    font-family: helvetica,arial,verdana,sans-serif;
+}
+table {
+    border-collapse: collapse;
+    text-align: center;
+}
+input {
+    font-family: sans-serif;
+    font-size: 16px;
+    color : black;
+}
+input[type="button"] {
+    margin-left: 1px;
+    margin-right: 9px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+input[type="submit"] {
+    margin-left: 1px;
+    margin-right: 9px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+input[type="file"] {
+    background-color: #F0F0F0;
+    margin-left: 1px;
+    margin-right: 9px;
+    padding-right: 10px;
+}
+input[type="checkbox"] {
+    margin-left: 3px;
+    margin-right: 9px;
+}
+input[type="radio"] {
+    margin-right: 9px;
+}
+.radio_en {
+    margin-left: 3px;
+    margin-right: 3px;
+}
+.radio_en_label {
+    margin-right: 9px;
+}
+input[type="text"] {
+    border: 1px solid #D0D0D0;
+    margin-left: 2px;
+    margin-right: 6px;
+    padding: 2px;
+}
+
+input[type="text"][readonly="readonly"] {
+    border: 0 none #D0D0D0;
+    font-size: 16px;
+    margin-right: 6px;
+}
+input[type="password"] {
+    border: 1px solid #D0D0D0;
+    margin-left: 2px;
+    margin-right: 6px;
+    padding: 2px;
+}
+textarea {
+    margin: 2px;
+    padding: 2px;
+}
+select {
+    border: 1px solid #D0D0D0;
+    font-size: 16px;
+    margin: 2px 6px 2px 2px;
+     color : black;
+}
+a {
+    outline: medium none;
+}
+li {
+    color: #000000;
+    font-size: 16px;
+    line-height: 24px;
+}
+.msg_type_mark {
+    color: red;
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 9px;
+}
+.outer-bg {
+    background-color: #F5F5F5;
+}
+.inner-bg {
+    background-color: #FFFFFF;
+}
+.banner .ban_logo {
+    width: 1202px;
+}
+.banner .ban_info {
+    width: 1202px;
+}
+.banner .banner_shadow {
+    width: 1202px;
+}
+.ban_logo {
+    background: url("pictures/banner_logo.png") repeat scroll 0 0 transparent;
+    height: 71px;
+}
+.ban_info {
+    background-color: #1B489C;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-collapse: separate;
+    border-spacing: 0;
+    height: 41px;
+}
+.model {
+    background-color: #1B489C;
+    border-radius: 12px 12px 12px 12px;
+    color: #FFFFFF;
+    font-size: 20px;
+    text-align: center;
+    width: 181px;
+}
+.padding {
+    background-color: #1B489C;
+    width: 30px;
+}
+.description {
+    background-color: #1B489C;
+    color: #FFFFFF;
+    font-weight: bold;
+    text-align: left;
+    width: 750px;
+}
+.buttons {
+    background-color: #F1F1F1;
+    border-bottom: 1px solid #1B489C;
+    border-left: 1px none #1B489C;
+    border-right: 1px solid #1B489C;
+    border-style: none solid solid none;
+    color: #000000;
+    font-weight: bold;
+    padding: 10px;
+    width: 12%;
+}
+.buttons:nth-child(4) {
+    border-top-left-radius: 10px;
+}
+.buttons:last-child {
+    border-top-right-radius: 10px;
+}
+.buttons:nth-child(4) {
+    border-bottom-left-radius: 10px;
+}
+.buttons:last-child {
+    border-bottom-right-radius: 10px;
+}
+.buttons:nth-child(4) {
+    border-left-style: solid;
+}
+.buttons img {
+    cursor: pointer;
+}
+.buttons:hover {
+    background-color: #9FDCFF;
+    cursor: pointer;
+}
+.scan_result:hover{
+	background-color: #9FDCFF;
+    cursor: pointer;	
+}
+.banner_shadow {
+    background: url("pictures/banner_shadow.png") no-repeat scroll 0 0 transparent;
+    height: 20px;
+}
+.function .menu {
+    width: 1202px;
+}
+.function {
+    background-color: white;
+    border-color: #1B489C;
+    border-left: 1px solid #1B489C;
+    border-radius: 12px 12px 12px 12px;
+    border-right: 1px solid #1B489C;
+    border-style: solid;
+    border-top: 1px solid #1B489C;
+    width: 1202px;
+}
+.menu_blank {
+    height: 34px;
+    width: 195px;
+}
+.menu_bg {
+    height: 486px;
+    text-align: left;
+    vertical-align: top;
+}
+.menu_major {
+    background-color: #1B489C;
+    font-size: 16px;
+    font-weight: 600;
+    height: auto;
+    padding-bottom: 6px;
+    padding-left: 15px;
+    padding-top: 6px;
+}
+.menu_major_on {
+    color: #FFFFFF;
+}
+.menu_major_off {
+    color: #FFFFFF;
+}
+.menu_minor {
+    border-bottom: 1px solid #9FDCFF;
+    font-size: 16px;
+    padding-left: 45px;
+}
+.menu_minor:hover {
+    background-color: #9FDCFF;
+    cursor: pointer;
+}
+.datahighlight {
+    background-color: #9FDCFF;
+    cursor: pointer;
+}
+.menu_minor_on {
+    background-color: #9FDCFF;
+    color: #000000;
+    height: auto;
+    padding-bottom: 4px;
+    padding-top: 4px;
+}
+.menu_minor_off {
+    background-color: #FFFFFF;
+    color: #000000;
+    height: auto;
+    padding-bottom: 4px;
+    padding-top: 4px;
+}
+.ctx-container {
+    border-left: 1px solid #1B489C;
+    text-align: left;
+    vertical-align: top;
+}
+.ctx-iframe {
+    height: 540px;
+    overflow: auto;
+    width: 100%;
+}
+.ctx-merge-iframe {
+    height: 350px;
+    overflow: auto;
+    width: 100%;
+}
+.ctx-head-padding {
+    height: 20px;
+    width: 100%;
+}
+.ctx-head {
+    height: 12px;
+}
+.ctx-body {
+    padding-left: 40px;
+    padding-right: 38px;
+}
+.ctx-blank {
+    height: 45px;
+}
+.ctx-foot {
+    height: 20px;
+}
+.bottommargin {
+    margin-bottom: 20px;
+}
+.ecm-tbl {
+    width: 100%;
+}
+.ecm-tbl div {
+    display: inline;
+}
+.ecm-tbl th {
+    font-size: 18px;
+    font-weight: normal;
+    height: 40px;
+    padding-left: 10px;
+    text-align: left;
+}
+.ecm-tbl .onepx {
+    border-right: 1px solid #FFFFFF;
+}
+.ecm-tbl .tbl-name {
+    padding-left: 10px;
+    text-align: left;
+    padding-top:0px;
+    padding-bottom:0px;
+    vertical-align : middle;    
+}
+.ecm-tbl .tbl-value {
+    padding-left: 10px;
+    text-align: left;
+    padding-top:0px;
+    padding-bottom:0px;
+    vertical-align : middle;
+}
+.ecm-tbl .tbl-grey {
+    background-color: #EEEEEE;
+    padding-left: 6px;
+    vertical-align : middle;
+}
+.ecm-tbl .tbl-grey-15px {
+    background-color: #EEEEEE;
+    padding-left: 6px;
+}
+.ecm-tbl .tbl-middle {
+    padding-left: 6px;
+}
+.ecm-tbl .margin-indent {
+    margin-left: 1em;
+}
+.ecm-tbl .margin-indent:before {
+    content: "- ";
+}
+.ecm-tbl .margin-indent1_4 {
+    margin-left: 1.4em;
+}
+.ecm-tbl .margin-indent1_6 {
+    margin-left: 1.6em;
+}
+.ecm-tbl .margin-indent3 {
+    margin-left: 2.5em;
+}
+.ecm-tbl .margin-indent3:before {
+    content: "- ";
+}
+.ecm-tbl .float-align {
+    float: right;
+}
+.tbl-blank {
+    border-top: 1px solid #1B489C;
+    height: 0px;
+}
+.tbl-name {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 16px;
+    height: 27px;
+}
+.tbl-value {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 16px;
+    height: 27px;
+}
+.tbl-grey {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 16px;
+    height: 27px;
+}
+.tbl-grey-15px {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 15px;
+    height: 27px;
+    line-height: 19px;
+}
+.tbl-middle {
+    border-bottom: 1px solid #EEEEEE;
+    color: #000000;
+    font-size: 16px;
+    height: 27px;
+}
+.tbl-alighTop {
+    border-bottom: 1px solid #EEEEEE;
+    padding-left: 8px;
+    text-align: left;
+    vertical-align: top;
+}
+.striped {
+    background-color: #F0F0F0;
+}
+.caution_padding {
+    padding-left: 10px;
+}
+.button1 {
+    background: url("./images/overlay.png") repeat-x scroll left center #00AFF0;
+    border: 1px solid #63CEF6;
+    border-radius: 4px 4px 4px 4px;
+    box-shadow: 0 0 0 rgba(22, 142, 199, 0.5) inset;
+    color: #FFFFFF;
+    cursor: pointer;
+    font: 16px tahoma,arial,sans-serif;
+    height: 30px;
+    margin: 10px 20px 20px 0;
+    min-width: 100px;
+    padding: 3px 8px 6px;
+    width: 100px;
+}
+.buttonPM {
+    background: url("./images/overlay.png") repeat-x scroll left center #00AFF0;
+    border: 1px solid #63CEF6;
+    border-radius: 4px 4px 4px 4px;
+    box-shadow: 0 0 0 rgba(22, 142, 199, 0.5) inset;
+    color: #FFFFFF;
+    cursor: pointer;
+    font: 16px tahoma,arial,sans-serif;
+    height: 30px;
+    min-width: 100px;
+    padding: 3px 8px 6px;
+    width: 100px;
+}
+.button1:hover {
+    background: url("./images/but_mouseover.png") repeat-x scroll center top #00AFF0;
+    border: 1px solid #3E97CE;
+    color: #FFFFFF;
+}
+.button1:active {
+    background: url("./images/but_mouseover2.png") repeat-x scroll center top #00AFF0;
+    border: 1px solid #3E97CE;
+    color: #FFFFFF;
+    position: relative;
+    top: 0;
+}
+.button2 {
+    background: url("./images/overlay.png") repeat-x scroll left center #00AFF0;
+    border: 1px solid #63CEF6;
+    border-radius: 4px 4px 4px 4px;
+    box-shadow: 0 0 0 rgba(22, 142, 199, 0.5) inset;
+    color: #FFFFFF;
+    cursor: pointer;
+    font: 16px tahoma,arial,sans-serif;
+    height: 30px;
+    margin: 10px 20px 20px 0;
+    min-width: 100px;
+    padding: 3px 8px 6px;
+    width: 200px;
+}
+.desc_style {
+    font-size: 12px;
+    text-align: center;
+    vertical-align: middle;
+}
+.div1 {
+    display: inline;
+}
+.quater_Smaller {
+    font-size: 80%;
+}
+.popbox {
+    background: none repeat scroll 0 0 #EEEFEB;
+    box-shadow: 0 0 5px 0 #A4A4A4;
+    color: #000000;
+    display: none;
+    margin: 0;
+    padding: 10px;
+    position: absolute;
+    width: 400px;
+    z-index: 99999;
+}
+.input-disabled{
+    background-color:black;
+    border:1px solid #ABADB3;
+    padding:2px 1px;
+}
+
+ select:disabled {
+    background-color : #CDCDCD;
+    color : gray;
+}
+
+ input:disabled {
+    background-color : #CDCDCD;
+    color : gray;
+}
+
+#wifi_scan_result td {
+	font-size: 16px;
+}
+ </STYLE>
+<script>
+	function guess_wifi_signal(info)
+	{
+		var icon, scale;
+		scale = (100/((info.quality_max)?info.quality_max:100) * ((info.quality)?info.quality:0))
+
+		if(info.bssid == "" && info.bssid == "00:00:00:00:00:00")
+		{
+			icon = "<%=resource%>/icons/signal-none.png";
+		}
+		else if(scale < 15)
+		{
+			icon = "<%=resource%>/icons/signal-0.png";
+		}
+		else if(scale < 35)
+		{
+			icon = "<%=resource%>/icons/signal-0-25.png";
+		}
+		else if(scale < 55)
+		{
+			icon = "<%=resource%>/icons/signal-25-50.png";
+		}
+		else if(scale < 75)
+		{
+			icon = "<%=resource%>/icons/signal-50-75.png";
+		}
+		else
+		{
+			icon = "<%=resource%>/icons/signal-75-100.png";
+		}
+		return icon;
+	}
+
+	function percent_wifi_signal(info)
+	{
+		var qc = info.quality || 0;
+		var qm = info.quality_max || 0;
+		if(info.bssid != "" && qc > 0 && qm > 0)
+		{
+			return Math.floor((100/qm)*qc)
+		}
+		else
+		{
+			return 0;
+		}
+	}
+	function format_wifi_encryption(info)
+	{
+        var wpa_str;
+		if(info.wep)
+		{
+			return "WEP"
+		}
+		else if(info.wpa > 0 )
+		{
+            wpa_str = (info.wpa == 3)?String.format("<%:mixed WPA/WPA2 - %s%>", info.auth_suites):(info.wpa == 2)?("WPA2 -"+info.auth_suites):("WPA -"+info.auth_suites);
+            switch(info.wpa){
+                case 1:
+                    wpa_str = ("WPA -"+info.auth_suites);
+                    break;
+                case 2:
+                    wpa_str = ("WPA2 -"+info.auth_suites);
+                    break;                    
+                case 3:
+                    wpa_str = String.format("<%:mixed WPA/WPA2 - %s%>", info.auth_suites);
+                    break;
+                case 4:
+                    wpa_str = "WPA";
+                    break;
+                case 5:
+                    wpa_str = "WPA2";
+                    break;
+                case 6:
+                    wpa_str = "WPA/WPA2";
+                    break;
+            }
+			//return String.format("<abbr title='<%:Pairwise%>: %s / <%:Group%>: %s'>%s</abbr>",
+			//info.pair_ciphers, info.group_ciphers, wpa_str)
+            return String.format("<abbr>%s</abbr>",wpa_str)
+		}
+		else if(info.enabled)
+		{
+			return "<%:unknown%>"
+		}
+		else
+		{
+            return "<%:None%>"
+		}
+	}
+<% if string.find(netid,"wifix") ~= nil and uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+var s=""; 
+var wifi0_len=0;
+
+function repeater_get_wifi0_data(){
+    //2.4G
+    XHR.get('<%=luci.dispatcher.build_url("admin", "network", "wireless_scan")%>',{device:'wifi0', tmpOpmode:'<%=tmpOpmode%>'},
+            function(x, info){
+                if(info == "null" || info == "undefined")
+                { 
+                    document.getElementById('wifi_scan_result').innerHTML="<%:Please check your wireless interface%> : <%=dev%>";
+                    return;
+                }
+                else
+                {
+                    wifi0_len = info.st.length;
+                    
+                    var t, k;
+                    s += '<tr><td class="title" colspan="7" id="mytitle"><%:Site Survey%></td></tr>';
+if (functionlist.SUPPORT_SCAN_RESULT_SHOW_TYPE == 1){
+                    s += '<tr"><td style="background:#EEEEEE"><%:BSSID%></td><td style="background:#EEEEEE"><%:SSID%></td><td style="background:#EEEEEE"><%:Channel%></td><td style="background:#EEEEEE"><%:Signal Level%></td><td style="background:#EEEEEE"><%:Type%></td><td style="background:#EEEEEE"><%:Security%></td><td style="background:#EEEEEE"><%:Mode%></td><td style="background:#EEEEEE"></td></tr>';
+
+}else{
+                    s += '<tr"><td style="background:#EEEEEE"><%:BSSID%></td><td style="background:#EEEEEE"><%:SSID%></td><td style="background:#EEEEEE"><%:Channel%></td><td style="background:#EEEEEE"><%:Signal Level%></td><td style="background:#EEEEEE"><%:Security%></td><td style="background:#EEEEEE"><%:Mode%></td><td style="background:#EEEEEE"></td></tr>';
+}
+
+
+                    for(var i=0;i<info.st.length;i++){
+                        t = info.st[i];
+                        s += '<tr>';
+if (functionlist.SUPPORT_SCAN_RESULT_SHOW_TYPE == 1){
+                        s += String.format('<td>%s</td><td>%s</td><td>%s</td><td>%s dBm</td><td>%s</td><td>%s</td><td>%s</td>',
+                                t.bssid,((t.ssid)?t.ssid:""),t.channel,t.signal,t.wlmode,format_wifi_encryption(t.encryption),t.mode);
+}else{
+                        s += String.format('<td>%s</td><td>%s</td><td>%s</td><td>%s dBm</td><td>%s</td><td>%s</td>',
+                                t.bssid,((t.ssid)?t.ssid:""),t.channel,t.signal,format_wifi_encryption(t.encryption),t.mode);    
+}
+                        s += String.format('<td class="cbi-value-field" style="width:40px">' +
+                                '<form id='+(i+1)+' action="<%=REQUEST_URI%>" method="post">' +
+                                '<input type="hidden" name="device" value="%s" />' +
+                                '<input type="hidden" name="join" value="%s" />' +
+                                '<input type="hidden" name="mode" value="%s" />' +
+                                '<input type="hidden" name="bssid" value="%s" />' +
+                                '<input type="hidden" name="channel" value="%s" />' +
+                                '<input type="hidden" name="wpa_version" value="%s" />' +
+                                '<input type="hidden" name="wep" value="%s" />' +
+                                '<input type="hidden" name="clbridge" value="%s" />'+
+                                '<input type="hidden" name="netid" value="%s" />'+
+                                '<input type="hidden" name="tmpOpmode" value="%s" />',
+                                'wifi0',(t.ssid).replace(/\"/g,"&quot;"),t.mode,t.bssid,t.channel,((t.encryption.wpa)?t.encryption.wpa:0),((t.encryption.wep)?t.encryption.wep:0), ((info.iw_type == "wl")?1:0),'<%=netid%>','<%=tmpOpmode%>');
+                        for(k in t.encryption.auth_suites)
+                        {
+                            s += '<input type="hidden" name="wpa_suites" value="'+t.encryption.auth_suites[k]+'" />';
+                        }
+                        for(k in t.encryption.group_ciphers)
+                        {
+                            s += '<input type="hidden" name="wpa_group" value="'+t.encryption.group_ciphers[k]+'" />';
+                        }
+                        for(k in t.encryption.pair_ciphers)
+                        {
+                            s += '<input type="hidden" name="wpa_pairwise" value="'+t.encryption.pair_ciphers[k]+'" />';
+                        }
+                        s += '</form>';
+                        s += '</td>';
+                        s += '</tr>';
+                    }
+                }
+            }
+    );
+}
+
+function repeater_get_wifi1_data(){
+//5G
+XHR.get('<%=luci.dispatcher.build_url("admin", "network", "wireless_scan")%>',{device:'wifi1', tmpOpmode:'<%=tmpOpmode%>'},
+            function(x, info){
+                if(info == "null" || info == "undefined")
+                { 
+                    document.getElementById('wifi_scan_result').innerHTML="<%:Please check your wireless interface%> : <%=dev%>";
+                    return;
+                }
+                else
+                {
+                    var t, k;
+                  
+                    for(var i=0;i<info.st.length;i++){
+                        t = info.st[i];
+                        s += '<tr>';
+if (functionlist.SUPPORT_SCAN_RESULT_SHOW_TYPE == 1){
+                        s += String.format('<td>%s</td><td>%s</td><td>%s</td><td>%s dBm</td><td>%s</td><td>%s</td><td>%s</td>',
+                                t.bssid,((t.ssid)?t.ssid:""),t.channel,t.signal,t.wlmode,format_wifi_encryption(t.encryption),t.mode);
+}else{
+                        s += String.format('<td>%s</td><td>%s</td><td>%s</td><td>%s dBm</td><td>%s</td><td>%s</td>',
+                                t.bssid,((t.ssid)?t.ssid:""),t.channel,t.signal,format_wifi_encryption(t.encryption),t.mode);    
+}
+                        s += String.format('<td class="cbi-value-field" style="width:40px">' +
+                                '<form id='+(wifi0_len+1)+' action="<%=REQUEST_URI%>" method="post">' +
+                                '<input type="hidden" name="device" value="%s" />' +
+                                '<input type="hidden" name="join" value="%s" />' +
+                                '<input type="hidden" name="mode" value="%s" />' +
+                                '<input type="hidden" name="bssid" value="%s" />' +
+                                '<input type="hidden" name="channel" value="%s" />' +
+                                '<input type="hidden" name="wpa_version" value="%s" />' +
+                                '<input type="hidden" name="wep" value="%s" />' +
+                                '<input type="hidden" name="clbridge" value="%s" />'+
+                                '<input type="hidden" name="netid" value="%s" />'+
+                                '<input type="hidden" name="tmpOpmode" value="%s" />',
+                                'wifi1',(t.ssid).replace(/\"/g,"&quot;"),t.mode,t.bssid,t.channel,((t.encryption.wpa)?t.encryption.wpa:0),((t.encryption.wep)?t.encryption.wep:0), ((info.iw_type == "wl")?1:0),'<%=netid%>','<%=tmpOpmode%>');
+                        for(k in t.encryption.auth_suites)
+                        {
+                            s += '<input type="hidden" name="wpa_suites" value="'+t.encryption.auth_suites[k]+'" />';
+                        }
+                        for(k in t.encryption.group_ciphers)
+                        {
+                            s += '<input type="hidden" name="wpa_group" value="'+t.encryption.group_ciphers[k]+'" />';
+                        }
+                        for(k in t.encryption.pair_ciphers)
+                        {
+                            s += '<input type="hidden" name="wpa_pairwise" value="'+t.encryption.pair_ciphers[k]+'" />';
+                        }
+                        s += '</form>';
+                        s += '</td>';
+                        s += '</tr>';
+                        wifi0_len++;
+                    }                
+                   $( "#wifi_scan_result" ).html(s);
+                }
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+                $('#step_hint').show();
+                $('#back').show();
+<% end %>
+                $('#repeat_scan').show();
+            }
+    );
+ }
+
+$(function() {
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" and uci:get("system","firmware","first_login") == "1" then %>   
+    document.getElementById('menu_right_style').style.display = "none";
+<% end %>
+	repeater_get_wifi0_data();
+	setTimeout(repeater_get_wifi1_data, 3000);
+	$('#wifi_scan_result').delegate('tr', 'mouseenter', function() {
+		$(this).addClass('datahighlight');
+	});
+	$('#wifi_scan_result').delegate('tr', 'mouseleave', function() {
+		$(this).removeClass('datahighlight');
+	});
+	$("#wifi_scan_result").delegate("tr", "click", function(event) {
+		var index = ($("#wifi_scan_result tr").index($(this)) - 1);
+		$( "#"+index ).submit();
+	}); 
+});
+
+<% else %>
+	XHR.get('<%=luci.dispatcher.build_url("admin", "network", "wireless_scan")%>',{device:'<%=dev%>', tmpOpmode:'<%=tmpOpmode%>'},
+			function(x, info){
+				if(info == "null" || info == "undefined")
+				{ 
+					document.getElementById('wifi_scan_result').innerHTML="<%:Please check your wireless interface%> : <%=dev%>";
+					return;
+				}
+				else
+				{
+					var s="", t, k;
+					s += '<tr><td class="title" colspan="7"><%:Site Survey%></td></tr>';
+if (functionlist.SUPPORT_SCAN_RESULT_SHOW_TYPE == 1){
+                    s += '<tr"><td style="background:#EEEEEE"><%:BSSID%></td><td style="background:#EEEEEE"><%:SSID%></td><td style="background:#EEEEEE"><%:Channel%></td><td style="background:#EEEEEE"><%:Signal Level%></td><td style="background:#EEEEEE"><%:Type%></td><td style="background:#EEEEEE"><%:Security%></td><td style="background:#EEEEEE"><%:Mode%></td><td style="background:#EEEEEE"></td></tr>';
+
+}else{
+                    s += '<tr"><td style="background:#EEEEEE"><%:BSSID%></td><td style="background:#EEEEEE"><%:SSID%></td><td style="background:#EEEEEE"><%:Channel%></td><td style="background:#EEEEEE"><%:Signal Level%></td><td style="background:#EEEEEE"><%:Security%></td><td style="background:#EEEEEE"><%:Mode%></td><td style="background:#EEEEEE"></td></tr>';
+}
+
+
+					for(var i=0;i<info.st.length;i++){
+						t = info.st[i];
+						// repeater mode don't support enterprise, t.encryption.wpa=4/5/6 means enterprise.
+						if ( '<%=tmpOpmode%>' == "sta_ap" && t.encryption.wpa >= 4 )
+						{
+							continue;
+						}
+						s += '<tr>';
+if (functionlist.SUPPORT_SCAN_RESULT_SHOW_TYPE == 1){
+						s += String.format('<td>%s</td><td>%s</td><td>%s</td><td>%s dBm</td><td>%s</td><td>%s</td><td>%s</td>',
+								t.bssid,(SpecHTML(t.ssid)?SpecHTML(t.ssid):""),t.channel,t.signal,t.wlmode,format_wifi_encryption(t.encryption),t.mode);
+}else{
+                        s += String.format('<td>%s</td><td>%s</td><td>%s</td><td>%s dBm</td><td>%s</td><td>%s</td>',
+                                t.bssid,(SpecHTML(t.ssid)?SpecHTML(t.ssid):""),t.channel,t.signal,format_wifi_encryption(t.encryption),t.mode);
+}
+						s += String.format('<td class="cbi-value-field" style="width:40px">' +
+								'<form id='+(i+1)+' action="<%=REQUEST_URI%>" method="post">' +
+								'<input type="hidden" name="device" value="%s" />' +
+								'<input type="hidden" name="join" value="%s" />' +
+								'<input type="hidden" name="mode" value="%s" />' +
+								'<input type="hidden" name="bssid" value="%s" />' +
+								'<input type="hidden" name="channel" value="%s" />' +
+								'<input type="hidden" name="wpa_version" value="%s" />' +
+								'<input type="hidden" name="wep" value="%s" />' +
+								'<input type="hidden" name="clbridge" value="%s" />'+
+                                '<input type="hidden" name="netid" value="%s" />'+
+                                '<input type="hidden" name="tmpOpmode" value="%s" />',
+                            	'<%=dev%>',(t.ssid).replace(/\"/g,"&quot;"),t.mode,t.bssid,t.channel,((t.encryption.wpa)?t.encryption.wpa:0),((t.encryption.wep)?t.encryption.wep:0), ((info.iw_type == "wl")?1:0),'<%=netid%>','<%=tmpOpmode%>');
+						for(k in t.encryption.auth_suites)
+						{
+							s += '<input type="hidden" name="wpa_suites" value="'+t.encryption.auth_suites[k]+'" />';
+						}
+						for(k in t.encryption.group_ciphers)
+						{
+							s += '<input type="hidden" name="wpa_group" value="'+t.encryption.group_ciphers[k]+'" />';
+						}
+						for(k in t.encryption.pair_ciphers)
+						{
+							s += '<input type="hidden" name="wpa_pairwise" value="'+t.encryption.pair_ciphers[k]+'" />';
+						}
+						// if(info.iw_mode == "Client")
+						// {
+						//		s += '<input class="cbi-button cbi-button-apply" type="submit" value="<%:Join Network%>" />';
+						// }
+						s += '</form>';
+						s += '</td>';
+						s += '</tr>';
+					}
+					// if(info.iw_mode == "Client"){
+                        if('<%=tmpOpmode%>'.indexOf("sta")>-1){
+					       $(function() {
+					 			$('#wifi_scan_result').delegate('tr', 'mouseenter', function() {
+								    $(this).addClass('datahighlight');
+								});
+
+								$('#wifi_scan_result').delegate('tr', 'mouseleave', function() {
+								    $(this).removeClass('datahighlight');
+								});	
+						       $("#wifi_scan_result").delegate("tr", "click", function(event) {
+						       		var index = ($("#wifi_scan_result tr").index($(this)) - 1);
+						       		$( "#"+index ).submit();
+								});      		
+					       	
+						});							
+					}
+					//document.getElementById('wifi_scan_result').innerHTML=s;
+                    $( "#wifi_scan_result" ).html(s);
+				}
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+                $('#back').show();
+<% end %>
+				$('#repeat_scan').show();
+			}
+	);
+<% end %>
+</script>
+
+
+<!--h2><a id="content" name="content"><%:Join Network: Wireless Scan%></a></h2-->
+<div style="padding: 12px 38px 0 40px;">
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" then %>
+    <div id="step_hint" class="cbi-map" style="display: none">
+        <h3><%:STEP 1: Select your Access Point/Wireless Router%></h3>
+        <ul><li><%:Please select one from the list to proceed.%></li>
+        <li><%:If your Access Point/Wireless Router is not found on the list, please press "Repeat Scan" again to get updated list.%></li>
+        <li><%:If you have enabled "Hidden SSID" or "Do not broadcast beacon" on your Access Point/Wireless Router, you will have to enter correct SSID on the next page.%></li></ul>
+    </div>
+<% end %>
+	<div class="cbi-map">
+		<fieldset class="cbi-section">
+			<table >
+				<tbody id="wifi_scan_result">
+				<tr>
+					<td style="background: #FFFfff;"><img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" /> <%:Scanning%> ...</td>
+				</tr>
+				</tbody>
+			</table>
+		</fieldset>
+	</div>
+	<div class="cbi-page-actions left">
+		<form class="inline" action="<%=REQUEST_URI%>" method="get">
+			<input type="hidden" name="device" value="<%=utl.pcdata(dev)%>" />
+	        <input type="hidden" name="tmpOpmode" value="<%=tmpOpmode%>" />
+	        <input type="hidden" name="netid" value="<%=netid%>" />
+            <input type="hidden" name="title" value="<%=luci.http.formvalue("title") or translate("Site Survey")%>" />
+<% if uci:get('functionlist','functionlist','SUPPORT_AP_RP_SETUP_WIZARD') == "1" and uci:get("system","firmware","first_login") == "1" then %>
+            <input id="back" style="display:none; width: auto;" class="cbi-button cbi-button-save" type="submit" name="back" value="<%:Back%>" />
+<% end %>
+			<input id="repeat_scan" style="display:none; width: auto;" class="cbi-button cbi-button-save" type="submit" value="<%:Repeat scan%>" />
+		</form>
+	</div>
+</div>
+</html>

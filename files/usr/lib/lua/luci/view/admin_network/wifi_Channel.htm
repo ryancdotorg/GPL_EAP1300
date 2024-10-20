@@ -1,0 +1,1005 @@
+<html>
+<%
+        local cbi = require "luci.cbi"
+        local tpl = require "luci.template"
+        local ntm = require "luci.model.network"  
+        local uci = require "luci.model.uci".cursor() 
+        ntm.init(uci) 
+
+        local disabled_radio2G = "1"
+        local disabled_radio5G = "1"
+        local disabled_radio52G = "1"
+        local wifi_status = {}
+        uci:foreach("wireless", "wifi-iface",
+            function(s)
+if uci:get('functionlist','functionlist','SUPPORT_WLAN24G') == '1' then --[[ #### WLAN24G feature ### --]]
+    WLAN24G="1"
+                 if s.device == "wifi0" and (s.mode_display == "ap" or (s.mode_display == "wds_ap" and s.nawds == "0")) then
+                    if s.disabled == "0" then
+                        disabled_radio2G = "0"
+                    end
+                    if s.status == "1" then
+                        wifi_status["2G"] = tostring(wifi_status["2G"]) == "nil" and s[".name"] or wifi_status["2G"]..","..s[".name"]
+                    end
+                 end
+end --[[ #### WLAN24G feature ### --]]                 
+if uci:get('functionlist','functionlist','SUPPORT_WLAN5G') == '1' then --[[ #### WLAN5G feature ### --]]
+    WLAN5G="1"
+                 if s.device == "wifi1" and (s.mode_display == "ap" or (s.mode_display == "wds_ap" and s.nawds == "0")) then
+                    if s.disabled == "0" then
+                        disabled_radio5G = "0"
+                    end
+                    if s.status == "1" then
+                        wifi_status["5G"] = tostring(wifi_status["5G"]) == "nil" and s[".name"] or wifi_status["5G"]..","..s[".name"]
+                    end
+                 end
+end --[[ #### WLAN5G feature ### --]]                 
+if uci:get('functionlist','functionlist','SUPPORT_WLAN5G_2') == '1' then --[[ #### WLAN5G_2 feature ### --]]
+                WLAN52G="1"
+                 if s.device == "wifi2" and (s.mode_display == "ap" or (s.mode_display == "wds_ap" and s.nawds == "0")) then
+                    if s.disabled == "0" then
+                        disabled_radio52G = "0"
+                    end
+                    if s.status == "1" then
+                        wifi_status["52G"] = tostring(wifi_status["52G"]) == "nil" and s[".name"] or wifi_status["52G"]..","..s[".name"]
+                    end
+                 end
+        	htmode_52g = luci.http.formvalue("htmode_52g")
+end --[[ #### WLAN5G_2 feature ### --]]
+        end)
+
+        local htmode = luci.http.formvalue("htmode")
+        local domain = luci.util.exec("setconfig -g 4 | awk {'printf $1'}")
+%>
+<style>
+.cbi-button[disabled] {
+    background-color: #f5f5f5;
+    border-color: #ddd;
+    opacity: 0.65;
+}
+.cbi-button{
+    margin-top:10px;
+    width:250px !important;
+}
+.button-selected{
+    margin-top:10px;
+    -moz-border-bottom-colors: none;
+    -moz-border-image: none;
+    -moz-border-left-colors: none;
+    -moz-border-right-colors: none;
+    -moz-border-top-colors: none;
+    background-repeat: no-repeat;
+    background-color: #CDCDCD;
+    border-color: #CCCCCC #CCCCCC #BBBBBB;
+    border-radius: 4px 4px 4px 4px;
+    border-style: solid;
+    border-width: 1px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: #333333;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 16px;
+    line-height: normal;
+    padding: 5px 14px 6px;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
+    width:250px !important;
+    height: auto;
+}
+</style>
+<meta charset="utf-8">
+<link rel="stylesheet" href="<%=media%>/cascade.css">
+<script src="/luci-static/web_ECB_FANCY/jquery-1.10.1.min.js"></script>
+<script src="/luci-static/web_ECB_FANCY/common.js"></script>
+<script type="text/javascript" src="/luci-static/resources/cbi.js"></script>
+<script>
+<% if WLAN52G=="1" then --[[ #### WLAN5G_2 feature ### --]] %>
+var idchange={
+"all2G":"24_all",
+"none2G":"24_none",
+"group2G_1":"24_G1",
+"group2G_2":"24_G2",
+"group2G_3":"24_G3",
+"group2G_4":"24_G4",
+"all5G":"5_all",
+"none5G":"5_none",
+"group5G_1":"5_G1",
+"group5G_2":"5_G2",
+"group5G_3":"5_G2A",
+"group5G_4":"5_G3",
+"all52G":"52_all",
+"none52G":"52_none",
+"group52G_1":"52_G1",
+"group52G_2":"52_G2",
+"group52G_3":"52_G2A",
+"group52G_4":"52_G3"
+}
+<%else%>
+var idchange={
+"all2G":"24_all",
+"none2G":"24_none",
+"group2G_1":"24_G1",
+"group2G_2":"24_G2",
+"group2G_3":"24_G3",
+"group2G_4":"24_G4",
+"all5G":"5_all",
+"none5G":"5_none",
+"group5G_1":"5_G1",
+"group5G_2":"5_G2",
+"group5G_3":"5_G2A",
+"group5G_4":"5_G3"
+}
+<%end%>
+if (window.opener.$("input[name='save_auto_chan']").val() == "0"){
+    var chan_data2G = {
+        opmode:window.opener.$('select[name$="wifi0.opmode"]').val(),
+        disabled:window.opener.disabled2G,
+        ChannelEnable:'<%=uci:get("wireless","wifi0","channel_config_enable")%>',
+        ChannelStatus:'<%=uci:get("wireless","wifi0","channel_config_status") or "1"%>',
+        channel_config_group:'<%=uci:get("wireless","wifi0","channel_config_group")%>',
+        Channel:'<%=uci:get("wireless","wifi0","channel")%>',
+        ChannelList:'<%=uci:get("wireless","wifi0","channel_config_list")%>',
+        ExtChannel:window.opener.$('select[name$="wifi0.ext_channel"]').val()
+    }
+    var chan_data5G = {
+        opmode:window.opener.$('select[name$="wifi1.opmode"]').val(),
+        nochannel:window.opener.$("input:hidden[name='cbid.wireless.wifi1.nochannel']").val(),
+        disabled:window.opener.disabled5G,
+        ChannelEnable:'<%=uci:get("wireless","wifi1","channel_config_enable")%>',
+        ChannelStatus:'<%=uci:get("wireless","wifi1","channel_config_status") or "1"%>',
+        channel_config_group:'<%=uci:get("wireless","wifi1","channel_config_group")%>',
+        Channel:'<%=uci:get("wireless","wifi1","channel")%>',
+        ChannelList:'<%=uci:get("wireless","wifi1","channel_config_list")%>'
+	}
+    <% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    var chan_data52G = {
+        opmode:window.opener.$('select[name$="wifi2.opmode"]').val(),
+        nochannel:window.opener.$("input:hidden[name='cbid.wireless.wifi2.nochannel']").val(),
+        disabled:window.opener.disabled52G,
+        ChannelEnable:'<%=uci:get("wireless","wifi2","channel_config_enable")%>',
+        ChannelStatus:'<%=uci:get("wireless","wifi2","channel_config_status") or "1"%>',
+        channel_config_group:'<%=uci:get("wireless","wifi2","channel_config_group")%>',
+        Channel:'<%=uci:get("wireless","wifi2","channel")%>',
+        ChannelList:'<%=uci:get("wireless","wifi2","channel_config_list")%>'
+    }
+    <% end %>
+}
+else{
+    var chan_data2G = {
+        opmode:window.opener.$('select[name$="wifi0.opmode"]').val(),
+        disabled:window.opener.disabled2G,
+        ChannelEnable:window.opener.$("input[name='wireless.wifi0.channel_config_enable']").val(),
+        Channel:window.opener.$("input[name='wireless.wifi0.channel']").val(),
+        ChannelList:window.opener.$("input[name='wireless.wifi0.channel_config_list']").val(),
+        ChannelStatus:window.opener.$("input[name='wireless.wifi0.channel_config_status']").val(),
+        channel_config_group:window.opener.$("input[name='wireless.wifi0.channel_config_group']").val(),
+        ExtChannel:window.opener.$('select[name$="wifi0.ext_channel"]').val()
+    }
+    var chan_data5G = {
+        opmode:window.opener.$('select[name$="wifi1.opmode"]').val(),
+        disabled:window.opener.disabled5G,
+        nochannel:window.opener.$("input:hidden[name='cbid.wireless.wifi1.nochannel']").val(),     
+        ChannelEnable:window.opener.$("input[name='wireless.wifi1.channel_config_enable']").val(),
+        Channel:window.opener.$("input[name='wireless.wifi1.channel']").val(),
+        ChannelList:window.opener.$("input[name='wireless.wifi1.channel_config_list']").val(),
+        ChannelStatus:window.opener.$("input[name='wireless.wifi1.channel_config_status']").val(),
+        channel_config_group:window.opener.$("input[name='wireless.wifi1.channel_config_group']").val()
+    }
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    var chan_data52G = {
+        opmode:window.opener.$('select[name$="wifi2.opmode"]').val(),
+        nochannel:window.opener.$("input:hidden[name='cbid.wireless.wifi2.nochannel']").val(),
+        disabled:window.opener.disabled52G,
+        ChannelEnable:window.opener.$("input[name='wireless.wifi2.channel_config_enable']").val(),
+        Channel:window.opener.$("input[name='wireless.wifi2.channel']").val(),
+        ChannelList:window.opener.$("input[name='wireless.wifi2.channel_config_list']").val(),
+        ChannelStatus:window.opener.$("input[name='wireless.wifi2.channel_config_status']").val(),
+        channel_config_group:window.opener.$("input[name='wireless.wifi2.channel_config_group']").val()
+    }
+<% end %>
+}
+
+
+var is_form_submit = "0";
+var channel_t={};
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+function ajax_getChannelList(countryCode,green_wifi0,green_wifi1,green_wifi2){
+    var url, container, data;
+    url = '<%=luci.dispatcher.build_url("admin/network/ajax_getChannelList")%>';
+    data = {countryCode:countryCode,green_wifi0:green_wifi0,green_wifi1:green_wifi1,green_wifi2:green_wifi2};
+    $.ajax({
+		async: false,
+        type : "GET",
+        url:url,
+        data:data,
+        dataType:"json",
+        error:function(){
+            // ajax_getChannelList(countryCode);
+        },
+        success:function(result){
+            //console.log(result);
+            var channel_now = jQuery.parseJSON(result); 
+            for (var key in channel_now) {
+            var obj = channel_now[key];
+                for (var prop in obj) {
+<% if uci:get('functionlist','functionlist','SUPPORT_WLAN_EXTENSION_CHANNEL') == '1' and uci:get('functionlist','functionlist','SUPPORT_SENAOWRT_GUI_FORMAT') == '1' then %>
+                    var htmode_2g = window.opener.$('select[name="cbid.wireless.wifi0.hwmode"]').val(); 
+                    /* 
+                       1. when wlan mode == 11b, accept all channel list
+                       2. when wlan mode != 11b, reject 11B Only channel
+                    */                     
+                    if(key=="ChInfo2G" && htmode_2g!="11b"){
+                        obj[prop]["ht40"] = obj[prop]["ht40"].replace(/\s/g, '');
+                        //  Upper Channel.
+                        if (chan_data2G["ExtChannel"] == 0){
+                            if((obj[prop]["ht40"] != "U") && (obj[prop]["ht40"] != "UL"))
+                                continue;
+                        }
+                        //  Lower Channel.
+                        else {
+                            if((obj[prop]["ht40"] != "L") && (obj[prop]["ht40"] != "UL"))
+                                continue;
+                        }
+                    }
+<% end %>
+                    if(key=="ChInfo5G_2")
+                        key="ChInfo52G";
+                    if(key=="ChInfo2G" || (key=="ChInfo5G" && chan_data5G["nochannel"] == 0) )
+                    {
+                        if (obj[prop]["<%=htmode%>"] === undefined || obj[prop]["<%=htmode%>"] == "1"){
+                            var s = String.format(
+                                '<button type=\'button\' class="cbi-button" name="%s%s" value="%s">%s</button>&nbsp&nbsp&nbsp',key,obj[prop]["Value"],obj[prop]["Value"],obj[prop]["Channel"]
+                            )
+                            $("td[name='"+key+"']").append(s);
+                             channel_t[key] = (channel_t[key]==null) ? obj[prop]["Value"] : channel_t[key]+","+obj[prop]["Value"];
+                        }
+                    }
+                    else if(key=="ChInfo52G" && chan_data52G["nochannel"] == 0)
+                    {
+                        if (obj[prop]["<%=htmode_52g%>"] === undefined || obj[prop]["<%=htmode_52g%>"] == "1"){
+                            var s = String.format(
+                                '<button type=\'button\' class="cbi-button" name="%s%s" value="%s">%s</button>&nbsp&nbsp&nbsp',key,obj[prop]["Value"],obj[prop]["Value"],obj[prop]["Channel"]
+                            )
+                        $("td[name='"+key+"']").append(s);
+                            channel_t[key] = (channel_t[key]==null) ? obj[prop]["Value"] : channel_t[key]+","+obj[prop]["Value"];
+                        }
+                    }
+
+    			}
+			}
+        }
+    });
+}
+<%else%>
+function ajax_getChannelList(countryCode,green_wifi0,green_wifi1){
+    var url, container, data;
+    url = '<%=luci.dispatcher.build_url("admin/network/ajax_getChannelList")%>';
+    data = {countryCode:countryCode,green_wifi0:green_wifi0,green_wifi1:green_wifi1};
+    $.ajax({
+        async: false,
+        type : "GET",
+        url:url,
+        data:data,
+        dataType:"json",
+        error:function(){
+            // ajax_getChannelList(countryCode);
+        },
+        success:function(result){
+            //console.log(result);
+            var channel_now = jQuery.parseJSON(result); 
+            for (var key in channel_now) {
+            var obj = channel_now[key];
+                for (var prop in obj) {
+<% if uci:get('functionlist','functionlist','SUPPORT_WLAN_EXTENSION_CHANNEL') == '1' and uci:get('functionlist','functionlist','SUPPORT_SENAOWRT_GUI_FORMAT') == '1' then %>
+                    var htmode_2g = window.opener.$('select[name="cbid.wireless.wifi0.hwmode"]').val(); 
+                    /* 
+                       1. when wlan mode == 11b, accept all channel list
+                       2. when wlan mode != 11b, reject 11B Only channel
+                    */                     
+                    if(key=="ChInfo2G" && htmode_2g!="11b"){
+                        obj[prop]["ht40"] = obj[prop]["ht40"].replace(/\s/g, '');
+                        //  Upper Channel.
+                        if (chan_data2G["ExtChannel"] == 0){
+                            if((obj[prop]["ht40"] != "U") && (obj[prop]["ht40"] != "UL"))
+                                continue;
+                        }
+                        //  Lower Channel.
+                        else {
+                            if((obj[prop]["ht40"] != "L") && (obj[prop]["ht40"] != "UL"))
+                                continue;
+                        }
+                    }
+<% end %>
+                    if (obj[prop]["<%=htmode%>"] === undefined || obj[prop]["<%=htmode%>"] == "1"){
+                        if(obj[prop]["Value"] == "52" || obj[prop]["Value"] == "56"|| obj[prop]["Value"] == "60"||obj[prop]["Value"] == "64"||obj[prop]["Value"] == "100"||obj[prop]["Value"] == "104"||obj[prop]["Value"] == "108"||obj[prop]["Value"] == "112"||obj[prop]["Value"] == "116"||obj[prop]["Value"] == "120"||obj[prop]["Value"] == "124"||obj[prop]["Value"] == "128"||obj[prop]["Value"] == "132"||obj[prop]["Value"] == "136"||obj[prop]["Value"] == "140")
+                        {
+                            var s = String.format(
+                                '<button type=\'button\' class="cbi-button" name="%s%s" value="%s">%s (DFS)</button>&nbsp&nbsp&nbsp',key,obj[prop]["Value"],obj[prop]["Value"],obj[prop]["Channel"]
+                            )
+                        }
+                        else
+                        {
+                            var s = String.format(
+                                '<button type=\'button\' class="cbi-button" name="%s%s" value="%s">%s</button>&nbsp&nbsp&nbsp',key,obj[prop]["Value"],obj[prop]["Value"],obj[prop]["Channel"]
+                            )
+                        }
+                        $("td[name='"+key+"']").append(s);
+                    channel_t[key] = (channel_t[key]==null) ? obj[prop]["Value"] : channel_t[key]+","+obj[prop]["Value"];
+                    }
+    			}
+			}
+        }
+    });
+}
+<%end%>
+var ButtonRule = (function(){
+    var init = function(radio,country_change_chan,opmode,none,status,group,ChannelEnable,ChannelList,Channel){
+        //--------- init -------------------
+        var all_flag = 0 ;
+	if(Channel!="" || (Channel=="" && status=="1")){none = 0;}
+	if(status=="2"){none = 1;}
+<% if uci:get('functionlist','functionlist','SUPPORT_REPEATER_MODULE') == '1' then %>
+        if(opmode == "sta" || opmode == "wds_sta" || opmode == "sta_ap"){
+<% else %>
+        if(opmode == "sta" || opmode == "wds_sta"){
+<% end %>
+            $("button[name='none"+radio+"']").triggerHandler('click');
+            $("button[name='none"+radio+"'],button[name='all"+radio+"'],button[name^='group"+radio+"'],button[name^='ChInfo"+radio+"']").attr("class","cbi-button").attr("disabled",true);
+        }
+        else{
+            if (country_change_chan == "0"){
+                switch(opmode) {
+                    case "wds_ap":
+                    case "wds_bridge":
+                        $("button[name^='all"+radio+"'],button[name^='none"+radio+"'],button[name^='group"+radio+"']").attr("class","cbi-button").attr("disabled",true);
+                        $("button[name^='ChInfo"+radio+"']:first-child").trigger('click');
+                        break;
+                    default:
+                        $("button[name='all"+radio+"']").trigger('click');
+                        break;
+                } 
+            }
+            else{
+                if (none == "1"){
+                    if(opmode == "wds_bridge" || opmode == "wds_ap"){
+                        $("button[name^='all"+radio+"'],button[name^='none"+radio+"'],button[name^='group"+radio+"']").attr("class","cbi-button").attr("disabled",true);
+                        $("button[name^='ChInfo"+radio+"']:first-child").trigger('click');
+                    }
+                    else{
+                        $("button[name='none"+radio+"']").trigger('click');
+                    }
+                }
+                else{
+                    if(opmode == "wds_bridge" || opmode == "wds_ap"){
+                        $("button[name^='all"+radio+"'],button[name^='none"+radio+"'],button[name^='group"+radio+"']").attr("class","cbi-button").attr("disabled",true);
+                    }
+                    if (status == "1"){
+                        if(opmode == "wds_bridge" || opmode == "wds_ap"){
+                            $("button[name^='ChInfo"+radio+"']:first-child").trigger('click');
+                            all_flag = 1;
+                        }
+                        else{
+                            $("button[name='all"+radio+"']").trigger('click');
+                            all_flag = 1;
+                        }                    
+                    }
+                    else if (status = "4" && Channel != "auto"){
+                        ChannelList=Channel;
+                    }
+                    if (ChannelList != "" && all_flag == 0){
+                        if((opmode == "wds_bridge" || opmode == "wds_ap") && ChannelList.split(",").length != 1){
+                           $("button[name^='ChInfo"+radio+"']:first-child").trigger('click');
+                        }
+                        else{
+                            var hasgroup = 0;
+                            if (opmode != "wds_bridge" && opmode != "wds_ap"){
+                                if (group != "" && group != "0"){   
+                                    $("button[name='group"+radio+"_"+group+"']").trigger('click');
+                                    var hasgroup = 1;
+                                }
+                            }
+                            if (hasgroup == 0){
+                                var ChannelListIndex = ChannelList.split(',')
+                                for(j=0;j<ChannelListIndex.length;j++){
+                                    $("button[name^='ChInfo"+radio+"']").filter(function(){
+                                        return  $(this).attr("value") == ChannelListIndex[j]}).triggerHandler('click');
+                                }            
+                            } 
+                        }                                  
+                    }
+                }
+                //---------- if channel all not support , choose all -------------------
+                if ($("td[name^='all_none"+radio+"']").find(':visible.button-selected').length + $("td[name^='Group"+radio+"']").find(':visible.button-selected').length + $("td[name^='ChInfo"+radio+"']").find(':visible.button-selected').length == 0){
+                    switch(opmode) {
+                        case "wds_ap":
+                        case "wds_bridge":
+                            $("button[name^='all"+radio+"'],button[name^='none"+radio+"'],button[name^='group"+radio+"']").attr("class","cbi-button").attr("disabled",true);
+                            $("button[name^='ChInfo"+radio+"']:first-child").trigger('click');
+                            break;
+                        default:
+                            $("button[name='all"+radio+"']").trigger('click');
+                            break;
+                    }                        
+                }
+            }
+        }
+    },
+
+    AllButton = function(all,none,group,channel){
+        //------ ALL button ---------
+        all.on('click',function(){
+            if ($(this).attr("class") == "cbi-button"){             
+                none.attr("class","cbi-button");
+                group.attr("class","cbi-button");
+                channel.attr("class","cbi-button");
+                //channel.attr("disabled",false);
+                //none.attr("disabled",false);
+                //group.attr("disabled",false);                
+            }
+            else{
+                none.attr("class","cbi-button");
+                group.attr("class","cbi-button");
+                //none.attr("class","cbi-button").attr("disabled",true);
+                //group.attr("class","cbi-button").attr("disabled",true);
+                //channel.attr("disabled",true);
+                channel.attr("class","button-selected");
+            }
+        });
+    },
+
+    NoneButton = function(opmode,all,none,group,channel){
+        //------ None button ---------
+        none.on('click',function(){
+            all.attr("class","cbi-button");
+            group.attr("class","cbi-button");
+            channel.attr("class","cbi-button");
+            if ($(this).attr("class") == "button-selected"){                
+                if (opmode != "wds_bridge" && opmode != "wds_ap"){
+                    //all.attr("class","cbi-button").attr("disabled",true);
+                    //group.attr("class","cbi-button").attr("disabled",true);
+                }
+                //channel.attr("class","cbi-button").attr("disabled",true);
+            }
+            else{
+                if (opmode != "wds_bridge" && opmode != "wds_ap"){
+                    //all.attr("disabled",false);
+                    //group.attr("disabled",false);
+                }
+                //channel.attr("disabled",false);
+            }
+        });
+    },
+
+    GroupButton = function(all,none,group,channel){
+       //------ Group button ---------
+        group.on('click',function(){
+            all.attr("class","cbi-button");
+            none.attr("class","cbi-button");
+            channel.attr("class","cbi-button");
+
+            group.not(this).each(function(){
+                $(this).attr("class","cbi-button");
+            })
+
+            if ($(this).attr("name").match("^group2G")) {
+                //---------channel disable-------------
+                if ($(this).attr("class") == "button-selected") {
+                    //all.attr("disabled",true);
+                    //none.attr("disabled",true);
+                    //$('button[name^="ChInfo2G"]').attr("disabled",true);
+                }
+                else{
+                    //all.attr("disabled",false);
+                    //none.attr("disabled",false);
+                    //$('button[name^="ChInfo2G"]').attr("disabled",false);
+                }
+                GroupBtnChangeChan2G($(this));
+            }
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+            else if ($(this).attr("name").match("^group52G")) {
+                if ($(this).attr("class") == "button-selected") {
+                    //all.attr("disabled",true);
+                    //none.attr("disabled",true);
+                    //$('button[name^="ChInfo5G"]').attr("disabled",true);
+                }
+                else{
+                    //all.attr("disabled",false);
+                    //none.attr("disabled",false);                    
+                    //$('button[name^="ChInfo5G"]').attr("disabled",false);
+                }              
+                GroupBtnChangeChan52G($(this));
+            }
+<%end%>
+            else{
+                if ($(this).attr("class") == "button-selected") {
+                    //all.attr("disabled",true);
+                    //none.attr("disabled",true);
+                    //$('button[name^="ChInfo5G"]').attr("disabled",true);
+                }
+                else{
+                    //all.attr("disabled",false);
+                    //none.attr("disabled",false);
+                    //$('button[name^="ChInfo5G"]').attr("disabled",false);
+                }              
+                GroupBtnChangeChan5G($(this));
+            }
+
+        });
+    },
+
+    GroupBtnChangeChan2G = function(element){
+        //------------ 2.4G -------------  
+        var GroupChannelList = element.val().split(',')
+        if(element.attr("class") == "button-selected"){
+            for(j=0;j<GroupChannelList.length;j++){
+                $('button[name^="ChInfo2G"]').filter(function(){
+                    return  $(this).attr("value") == GroupChannelList[j]}).triggerHandler('clickFake');
+            }            
+        }    
+    },
+
+    GroupBtnChangeChan5G = function(element){
+        //------------ 5G ---------------
+        if(element.attr("class") == "button-selected"){
+            if(element.attr("name") == "group5G_1"){
+                $('button[name^="ChInfo5G"]').filter(function(){
+                    return  parseInt($(this).attr("value"),10) >=36 && parseInt($(this).attr("value"),10) <=48}).trigger('clickFake');
+            }
+            else if(element.attr("name") == "group5G_2"){
+                $('button[name^="ChInfo5G"]').filter(function(){
+                    return  parseInt($(this).attr("value"),10) >=52 && parseInt($(this).attr("value"),10) <=64}).trigger('clickFake');
+            }
+            else if(element.attr("name") == "group5G_3"){
+                $('button[name^="ChInfo5G"]').filter(function(){
+                    return  parseInt($(this).attr("value"),10) >=100 && parseInt($(this).attr("value"),10) <=140}).trigger('clickFake');
+            }            
+            else{
+                $('button[name^="ChInfo5G"]').filter(function(){ 
+                    return  parseInt($(this).attr("value"),10) >=149 }).trigger('clickFake');
+            }
+        }
+    },
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    GroupBtnChangeChan52G = function(element){
+        //------------ 52G ---------------       
+        if(element.attr("class") == "button-selected"){
+            if(element.attr("name") == "group52G_1"){
+                $('button[name^="ChInfo52G"]').filter(function(){
+                    return  parseInt($(this).attr("value"),10) >=36 && parseInt($(this).attr("value"),10) <=48}).trigger('clickFake');
+            }
+            else if(element.attr("name") == "group52G_2"){
+                $('button[name^="ChInfo52G"]').filter(function(){
+                    return  parseInt($(this).attr("value"),10) >=52 && parseInt($(this).attr("value"),10) <=64}).trigger('clickFake');
+            }
+            else if(element.attr("name") == "group52G_3"){
+                $('button[name^="ChInfo52G"]').filter(function(){
+                    return  parseInt($(this).attr("value"),10) >=100 && parseInt($(this).attr("value"),10) <=140}).trigger('clickFake');
+            }
+            else{
+                $('button[name^="ChInfo52G"]').filter(function(){ 
+                    return  parseInt($(this).attr("value"),10) >=149 }).trigger('clickFake');
+            }
+        }                    
+    },
+<%end%>
+    ChannelButton = function(radio,opmode,channel_t,groupset,all,none,group,channel){
+        if (opmode == "wds_bridge" || opmode == "wds_ap"){
+            $("button[name^='ChInfo"+radio+"']").click(function(){
+                $("button[name^='ChInfo"+radio+"']").not(this).each(function(){
+                    $(this).attr("class","cbi-button");
+                });
+            })
+        }
+        else{
+            $("button[name^='ChInfo"+radio+"']").click(function(){
+                var channel_selected="";
+                $("button[name^='ChInfo"+radio+"']").each(function(){
+                    if ($(this).attr("class") == "button-selected"){
+                        channel_selected = (channel_selected=="") ? $(this).val() : channel_selected+","+$(this).val();
+                    }
+                });
+
+                for(i=1;i<=Object.keys(groupset).length;i++){
+                    if (channel_selected == groupset[i]){
+                        $("button[name='group"+radio+"_"+i+"']").attr("class","button-selected");
+                        break;
+                    }
+                    else{
+                        group.attr("class","cbi-button");
+                    }
+                };
+                (channel_selected == channel_t) ? all.attr("class","button-selected"): all.attr("class","cbi-button");
+                none.attr("class","cbi-button");
+            });
+        }
+    },
+
+    SubmitButton = function(radio,opmode){
+        $("button:hidden").attr("class") == "cbi-button" ;
+<% if uci:get('functionlist','functionlist','SUPPORT_REPEATER_MODULE') == '1' then %>
+        if (opmode == "sta" || opmode == "wds_sta" || opmode == "sta_ap"){
+<% else %>
+        if (opmode == "sta" || opmode == "wds_sta"){
+<% end %>
+        }
+        else{
+            if($("button[name='all"+radio+"']").attr("class") == "button-selected"){  // All
+                $("input[name='channel_enable"+radio+"']").val("0");
+                $("input:enabled[name='channel_list"+radio+"']").val("auto");
+                $("input[name='channel_status"+radio+"']").val("1");
+            }
+            else{
+                var channel_list = "";
+                $("input[name='channel_status"+radio+"']").val("4");
+                $("button[name^='ChInfo"+radio+"']").filter(function(){
+                    if ($(this).attr("class") == "button-selected"){
+                        channel_list += (channel_list == "") ? $(this).val() : ","+$(this).val();
+                    }
+                });
+                
+                $("input:enabled[name='channel_list"+radio+"']").val(channel_list);
+                if (channel_list.split(",").length == 1){
+                    $("input[name='channel_enable"+radio+"']").val("0");
+                    $("input[name='channel"+radio+"']").val(channel_list);
+                }
+                else{
+                    $("input[name='channel_enable"+radio+"']").val("1");
+                    $("input[name='channel"+radio+"']").val("auto");
+                }
+            };
+            if($("button[name='none"+radio+"']").attr("class") == "button-selected"){  // NONE
+                $("input[name='disable_radio"+radio+"']").val("1");
+                $("input[name='channel_status"+radio+"']").val("2");
+            }
+            else{
+                $("input[name='disable_radio"+radio+"']").val("0");
+            }
+
+            $("button[name^='group"+radio+"']").each(function(){        //GROUP
+                if ($(this).attr("class") == "button-selected"){
+                    $("input[name='channel_status"+radio+"']").val("3");
+                    $("input[name='channel_group"+radio+"']").val($(this).attr("name").split("_")[1]);
+               }
+            })
+        }
+    };
+
+    return{
+        init:init,
+        AllButton:AllButton,
+        NoneButton:NoneButton,
+        GroupButton:GroupButton,
+        ChannelButton:ChannelButton,
+        SubmitButton:SubmitButton
+    };   
+
+}());
+
+$(function()
+{
+<% if selfclose_flag == "1" then %>
+	var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+	if(isSafari){setTimeout("window.close();",500);}
+<% end %> 
+
+    var htmode_2g = window.opener.$('select[name="cbid.wireless.wifi0.hwmode"]').val();
+    var country_change_chan = window.opener.$("input[name='country_change_chan']").val();
+    var green0 = (window.opener.$('input[type="checkbox"][name$="wifi0.obeyregpower"]').is(':checked')) ? "1" : "0";
+    var green1 = (window.opener.$('input[type="checkbox"][name$="wifi1.obeyregpower"]').is(':checked')) ? "1" : "0";
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    var green2 = (window.opener.$('input[type="checkbox"][name$="wifi2.obeyregpower"]').is(':checked')) ? "1" : "0";
+<%end%>    
+    if(chan_data5G["nochannel"] == 1)
+    {
+        document.getElementById('5g_title').style.display = "none";
+        document.getElementById('all_none5G').style.display = "none";
+        document.getElementById('Group5G').style.display = "none";
+        document.getElementById('ChInfo5G').style.display = "none";
+    }
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    if(chan_data52G["nochannel"] == 1)
+    {
+        document.getElementById('52g_title').style.display = "none";
+        document.getElementById('all_none52G').style.display = "none";
+        document.getElementById('Group52G').style.display = "none";
+        document.getElementById('ChInfo52G').style.display = "none";
+    }
+	ajax_getChannelList(window.opener.$("select[name$=country]").val(),green0,green1,green2);
+
+<%else%>
+	ajax_getChannelList(window.opener.$("select[name$=country]").val(),green0,green1);
+<%end%>
+    //JAPAN support channel 14 only for 11b
+	if(window.opener.$('select[name="cbid.wireless.wifi0.country"]').val() == '392'){
+		if(htmode_2g != '11b')
+            $("button[name='ChInfo2G14']").hide();
+        else
+            $("button[name='ChInfo2G14']").show();
+    }
+
+    //--------- 2.4G group button ---------
+    if($('button[name="ChInfo2G13"]').length>0){
+        var group2G = {"1":"1,6,11","2":"1,4,8,11","3":"1,7,13","4":"1,5,9,13"};
+    }
+    else{
+        var group2G = {"1":"1,6,11","2":"1,4,8,11","3":"1,7","4":"1,5,9"};
+    }
+
+    for(i=1;i<=Object.keys(group2G).length;i++){
+        $("td[name='Group2G']").append('<button type=\'button\' name="group2G_'+i+'" class="cbi-button" value="'+group2G[i]+'">'+group2G[i]+'</button>&nbsp&nbsp&nbsp')
+    };
+    
+    //--------- 5G group button ---------
+    group_object = {"1":{start:36,end:48,val:"U-NII-1"},"2":{start:52,end:64,val:"U-NII-2A"},"3":{start:100,end:140,val:"U-NII-2B"},"4":{start:149,end:165,val:"U-NII-3"}}
+
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    for(i=3;i<=4;i++){
+        for (j=group_object[""+i+""].start;j<=group_object[""+i+""].end;j++)
+        {
+            if($("button[value='"+j+"']").length){
+                $("td[name='Group5G']").append('<button type=\'button\' name="group5G_'+i+'" class="cbi-button" value="'+group_object[""+i+""].val+'">'+group_object[""+i+""].val+'</button>&nbsp&nbsp&nbsp');
+                break;
+            }
+        }
+    }
+    for(i=1;i<=2;i++){
+        for (j=group_object[""+i+""].start;j<=group_object[""+i+""].end;j++)
+        {
+            if($("button[value='"+j+"']").length){
+            $("td[name='Group52G']").append('<button type=\'button\' name="group52G_'+i+'" class="cbi-button" value="'+group_object[""+i+""].val+'">'+group_object[""+i+""].val+'</button>&nbsp&nbsp&nbsp');
+                break;
+            }
+        }
+    }
+    var selectObject = {"all2G":$('button[name="all2G"]'),"none2G":$('button[name="none2G"]'),"group2G":$('button[name^="group2G_"]'),"channel2G":$('button[name^="ChInfo2G"]'),"all5G":$('button[name="all5G"]'),"none5G":$('button[name="none5G"]'),"group5G":$('button[name^="group5G_"]'),"channel5G":$('button[name^="ChInfo5G"]'),"all52G":$('button[name="all52G"]'),"none52G":$('button[name="none52G"]'),"group52G":$('button[name^="group52G_"]'),"channel52G":$('button[name^="ChInfo52G"]')} 
+<%else%>
+    for(i=1;i<=4;i++){
+        for (j=group_object[""+i+""].start;j<=group_object[""+i+""].end;j++)
+        {
+            if($("button[value='"+j+"']").length){
+                $("td[name='Group5G']").append('<button type=\'button\' name="group5G_'+i+'" class="cbi-button" value="'+group_object[""+i+""].val+'">'+group_object[""+i+""].val+'</button>&nbsp&nbsp&nbsp');
+                break;
+            }
+        }
+    }
+
+    var selectObject = {"all2G":$('button[name="all2G"]'),"none2G":$('button[name="none2G"]'),"group2G":$('button[name^="group2G_"]'),"channel2G":$('button[name^="ChInfo2G"]'),"all5G":$('button[name="all5G"]'),"none5G":$('button[name="none5G"]'),"group5G":$('button[name^="group5G_"]'),"channel5G":$('button[name^="ChInfo5G"]')} 
+<%end%>
+    //----- button click change class ----- 
+    $('button').on('click',function(){
+        ($(this).attr("class") == "cbi-button") ? $(this).attr("class","button-selected") : $(this).attr("class","cbi-button");
+	});
+
+    $('button').on('clickFake',function(){
+        ($(this).attr("class") == "cbi-button") ? $(this).attr("class","button-selected") : $(this).attr("class","cbi-button");
+    });
+
+    ButtonRule.AllButton(selectObject["all2G"],selectObject["none2G"],selectObject["group2G"],selectObject["channel2G"]);
+    ButtonRule.NoneButton(chan_data2G["opmode"],selectObject["all2G"],selectObject["none2G"],selectObject["group2G"],selectObject["channel2G"]);
+    ButtonRule.GroupButton(selectObject["all2G"],selectObject["none2G"],selectObject["group2G"],selectObject["channel2G"]);
+    ButtonRule.AllButton(selectObject["all5G"],selectObject["none5G"],selectObject["group5G"],selectObject["channel5G"]);
+    ButtonRule.NoneButton(chan_data5G["opmode"],selectObject["all5G"],selectObject["none5G"],selectObject["group5G"],selectObject["channel5G"]);
+    ButtonRule.GroupButton(selectObject["all5G"],selectObject["none5G"],selectObject["group5G"],selectObject["channel5G"]);
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    ButtonRule.AllButton(selectObject["all52G"],selectObject["none52G"],selectObject["group52G"],selectObject["channel52G"]);
+    ButtonRule.NoneButton(chan_data52G["opmode"],selectObject["all52G"],selectObject["none52G"],selectObject["group52G"],selectObject["channel52G"]);
+    ButtonRule.GroupButton(selectObject["all52G"],selectObject["none52G"],selectObject["group52G"],selectObject["channel52G"]);
+<%end%>
+    ButtonRule.init("2G",country_change_chan,chan_data2G["opmode"],chan_data2G["disabled"],chan_data2G["ChannelStatus"],chan_data2G["channel_config_group"],chan_data2G["ChannelEnable"],chan_data2G["ChannelList"],chan_data2G["Channel"]);
+
+    var group5G = {"1":"","2":"","3":"","4":""};
+    $('button[name^="ChInfo5G"]').filter(function(){
+            if ($(this).attr("value") <= 48){
+               group5G["1"] += (group5G["1"] == "") ? $(this).val() : ","+$(this).val();
+            }
+            else if ($(this).attr("value") >= 52 && $(this).attr("value") <= 64){
+               group5G["2"] += (group5G["2"] == "") ? $(this).val() : ","+$(this).val();
+            }
+            else if ($(this).attr("value") >= 100 && $(this).attr("value") <= 140){
+               group5G["3"] += (group5G["3"] == "") ? $(this).val() : ","+$(this).val();
+            }            
+            else if ($(this).attr("value") >= 149){
+                group5G["4"] += (group5G["4"] == "") ? $(this).val() : ","+$(this).val();
+            }
+        });
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    var group52G = {"1":"","2":"","3":"","4":""};
+    $('button[name^="ChInfo52G"]').filter(function(){
+            if ($(this).attr("value") <= 48){
+               group52G["1"] += (group52G["1"] == "") ? $(this).val() : ","+$(this).val();
+            }
+            else if ($(this).attr("value") >= 52 && $(this).attr("value") <= 64){
+               group52G["2"] += (group52G["2"] == "") ? $(this).val() : ","+$(this).val();
+            }
+            else if ($(this).attr("value") >= 100 && $(this).attr("value") <= 140){
+               group52G["3"] += (group52G["3"] == "") ? $(this).val() : ","+$(this).val();
+            }
+            else if ($(this).attr("value") >= 149){
+                group52G["4"] += (group52G["4"] == "") ? $(this).val() : ","+$(this).val();
+            }
+        });
+<%end%>
+    ButtonRule.init("5G",country_change_chan,chan_data5G["opmode"],chan_data5G["disabled"],chan_data5G["ChannelStatus"],chan_data5G["channel_config_group"],chan_data5G["ChannelEnable"],chan_data5G["ChannelList"],chan_data5G["Channel"]);
+    ButtonRule.ChannelButton("2G",chan_data2G["opmode"],channel_t["ChInfo2G"],group2G,selectObject["all2G"],selectObject["none2G"],selectObject["group2G"],selectObject["channel2G"]);
+    ButtonRule.ChannelButton("5G",chan_data5G["opmode"],channel_t["ChInfo5G"],group5G,selectObject["all5G"],selectObject["none5G"],selectObject["group5G"],selectObject["channel5G"]);
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+    ButtonRule.init("52G",country_change_chan,chan_data52G["opmode"],chan_data52G["disabled"],chan_data52G["ChannelStatus"],chan_data52G["channel_config_group"],chan_data52G["ChannelEnable"],chan_data52G["ChannelList"],chan_data52G["Channel"]);    
+    ButtonRule.ChannelButton("52G",chan_data52G["opmode"],channel_t["ChInfo52G"],group52G,selectObject["all52G"],selectObject["none52G"],selectObject["group52G"],selectObject["channel52G"]);
+<%end%>
+    //--------- submit -------------------
+    $("input[name='channel_submit']").click(function(){
+        ButtonRule.SubmitButton("2G",chan_data2G["opmode"]);
+        ButtonRule.SubmitButton("5G",chan_data5G["opmode"]);
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+        ButtonRule.SubmitButton("52G",chan_data52G["opmode"]);
+<%end%>
+        is_form_submit = "1";
+	$("input[name='submitFlag']").val("1");
+	$("form").submit();
+
+        window.opener.updateChanges();
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+        window.opener.updateSSIDDisable($("input[name='disable_radio2G']").val(),$("input[name='disable_radio5G']").val(),$("input[name='disable_radio52G']").val(),window.opener.enable_flag2G,window.opener.enable_flag5G,window.opener.enable_flag52G);
+<%else%>
+        window.opener.updateSSIDDisable($("input[name='disable_radio2G']").val(),$("input[name='disable_radio5G']").val(),window.opener.enable_flag2G,window.opener.enable_flag5G);
+<%end%>        
+        window.opener.country_has_changed_chan();
+        var isIE = /*@cc_on!@*/false || !!document.documentMode;
+        if (isIE){
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+            window.opener.auto_channel_setting(document.getElementsByName("wifiChannel")[0].outerHTML,window.opener.enable_flag2G,window.opener.enable_flag5G,window.opener.enable_flag52G);
+<%else%>
+            window.opener.auto_channel_setting(document.getElementsByName("wifiChannel")[0].outerHTML,window.opener.enable_flag2G,window.opener.enable_flag5G);
+<%end%>
+        }
+        else{
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+            window.opener.auto_channel_setting($("form"),window.opener.enable_flag2G,window.opener.enable_flag5G,window.opener.enable_flag52G);
+<%else%>
+            window.opener.auto_channel_setting($("form"),window.opener.enable_flag2G,window.opener.enable_flag5G);
+<%end%>
+        }
+        // window.close();
+    });
+
+    $(window).unload(function()
+    {   
+        // if(is_form_submit=="1"){
+        //     window.opener.updateChanges();
+        //     window.opener.updateSSIDDisable($("input[name='disable_radio2G']").val(),$("input[name='disable_radio5G']").val(),'<%=wifi_status["2G"]%>','<%=wifi_status["5G"]%>');
+        //     window.opener.country_has_changed_chan();
+        //     window.opener.wifi_channel_setting();
+        //     window.close();
+        // }
+        window.close();     
+    });
+
+    //---------Add myid attribute for test-----------------------
+    $('button').each(function(){
+        var orgId = ($(this).attr('name')||"");
+            $(this).attr("myid",idchange[orgId]);    
+
+            if (orgId.match(/^ChInfo2G/))
+            {
+                $(this).attr("myid","24_"+orgId.split("ChInfo2G")[1]);
+            }
+            if (orgId.match(/^ChInfo5G/))
+            {
+                $(this).attr("myid","5_"+orgId.split("ChInfo5G")[1]);
+            }
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+            if (orgId.match(/^ChInfo52G/))
+            {
+                $(this).attr("myid","52_"+orgId.split("ChInfo52G")[1]);
+            }
+<%end%>
+    });
+
+
+
+});
+
+
+<% if WLAN24G=='1' and WLAN5G=='1' then %>
+$(function(){
+    if(window.opener.$("select[name$=country]").val() == '831' || window.opener.$("select[name$=country]").val() == '829')
+    {
+        $('td[name$="Group2G"]').find("button").attr("disabled", "disabled");
+        $('td[name$="ChInfo2G"]').find("button").attr("disabled", "disabled");
+        $("button[name='all2G']").attr("disabled", "disabled");
+        $("button[name='none2G']").triggerHandler('click');
+    }
+});
+<% end %>
+</script>
+<body>
+<!--     						HTML	     			  	   -->
+<form method="post" name="wifiChannel" action='<%=luci.dispatcher.build_url("admin/network/wifi_Channel")%>' enctype="multipart/form-data">
+<input type="hidden" name="submitFlag"/>
+<!--             for controller to set config     2.4G                 -->
+<% if WLAN24G=="1" then --[[ #### WLAN24G feature ### --]] %>
+<input type="hidden" name="disable_radio2G"/>
+<input type="hidden" name="channel_enable2G"/>
+<input type="hidden" name="channel2G"/>
+<input type="hidden" name="channel_list2G"/>    <!-- Record channel list-->
+<input type="hidden" name="channel_status2G"/>
+<input type="hidden" value="0" name="channel_group2G"/>
+<%end%>
+<% if WLAN5G=="1" then --[[ #### WLAN5G feature ### --]] %>
+<input type="hidden" name="disable_radio5G"/>
+<input type="hidden" name="channel_enable5G"/>
+<input type="hidden" name="channel5G"/>
+<input type="hidden" name="channel_list5G"/>    <!-- Record channel list-->
+<input type="hidden" name="channel_status5G"/>
+<input type="hidden" value="0" name="channel_group5G"/>
+<%end%>
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+<input type="hidden" name="disable_radio52G"/>
+<input type="hidden" name="channel_enable52G"/>
+<input type="hidden" name="channel52G"/>
+<input type="hidden" name="channel_list52G"/>    <!-- Record channel list-->
+<input type="hidden" name="channel_status52G"/>
+<input type="hidden" value="0" name="channel_group52G"/>
+<%end%>
+<table style="table-layout:fixed;border-collapse:collapse;width:50%;margin-left:50px;">
+<% if WLAN24G=="1" then --[[ #### WLAN24G feature ### --]] %>
+	<th class="title" style="width:550px;">2.4GHz</th>
+<%end%>
+<% if WLAN5G=="1" then --[[ #### WLAN5G feature ### --]] %>
+	<th id ="5g_title" class="title" style="width:550px;">5GHz</th>
+<%end%>
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>    
+    <th id ="52g_title" class="title" style="width:550px;">5GHz-2</th>
+<%end%>
+    <tr>
+<% if WLAN24G=="1" then --[[ #### WLAN24G feature ### --]] %>
+        <td name="all_none2G" style="word-break:break-word; width:100px;">
+            <button type='button' name="all2G" class="cbi-button"><%:All%></button>&nbsp&nbsp
+            <button type='button' name="none2G" class="cbi-button"><%:None%></button>
+        </td>
+<%end%>
+<% if WLAN5G=="1" then --[[ #### WLAN5G feature ### --]] %>
+        <td id= "all_none5G" name="all_none5G" style="word-break:break-word; width:100px;">
+            <button type='button' name="all5G" class="cbi-button"><%:All%></button>&nbsp&nbsp
+            <button type='button' name="none5G" class="cbi-button"><%:None%></button>
+        </td>
+<%end%>
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+        <td id= "all_none52G" name="all_none52G" style="word-break:break-word; width:100px;">
+            <button type='button' name="all52G" class="cbi-button"><%:All%></button>&nbsp&nbsp
+            <button type='button' name="none52G" class="cbi-button"><%:None%></button>
+        </td>
+<%end%>
+    </tr>
+    <tr>
+<% if WLAN24G=="1" then --[[ #### WLAN24G feature ### --]] %>
+        <td name="Group2G" style="word-break:break-word; width:100px;"></td>
+<%end%>
+<% if WLAN5G=="1" then --[[ #### WLAN5G feature ### --]] %>
+        <td id= "Group5G" name="Group5G" style="word-break:break-word; width:100px;"></td>
+<%end%>
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+        <td id= "Group52G" name="Group52G" style="word-break:break-word; width:100px;"></td>
+<%end%>        
+    </tr>
+	<tr>
+<% if WLAN24G=="1" then --[[ #### WLAN24G feature ### --]] %>
+		<td name="ChInfo2G" style="word-break:break-word; width:100px;"></td>
+<%end%>
+<% if WLAN5G=="1" then --[[ #### WLAN5G feature ### --]] %>
+		<td id= "ChInfo5G" name="ChInfo5G" style="word-break:break-word; width:100px;"></td>
+<%end%>        
+<% if WLAN52G=="1" then --[[ #### WLAN52G feature ### --]] %>
+        <td id= "ChInfo52G" name="ChInfo52G" style="word-break:break-word; width:100px;"></td>
+<%end%>
+	</tr>
+</table>
+<br><br>
+<div class="cbi-page-actions" style="margin-left:50px">
+<!--input class="cbi-button cbi-button-apply" type="submit" name="cbi.apply" value="Save &#38; Apply" /-->
+	<input style="width:auto;" class="cbi-button-save" name="channel_submit" type="button" myid="button_ch_save" value="<%:Save%>"/>&nbsp;<span class="btn_desc"><%:Save current setting(s)%></span>
+<!--input class="cbi-button cbi-button-reset" type="reset" value="Reset" /-->
+</div>
+</form>
+</body>
+</html>
+

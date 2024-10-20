@@ -1,0 +1,19 @@
+{
+	"wireless": {
+		"clients": [
+			{
+				"mac_addr": 1,
+                "ifname": "a"
+			},
+			{
+				"mac_addr": 2,
+                "ifname": "b"
+			},
+			{
+				"mac_addr": 3,
+                "ifname": "c"
+			}
+		]
+	}
+}
+

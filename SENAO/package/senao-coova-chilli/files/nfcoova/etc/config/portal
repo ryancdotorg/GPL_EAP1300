@@ -1,0 +1,42 @@
+config portal 'general'
+    option enable '0'
+    option radiusPort '1812'
+    option radiusSecret 'testing123'
+    option accountingEnable '0'
+    option accountingPort '1813'
+    option accountingSecret 'testing123'
+    option accountingInterval '0'
+    option sessionTimeoutEnable '0'
+    option sessionTimeout '60'
+    option idleTimeoutEnable '0'
+    option idleTimeout '0'
+    option uamformat 'sn.captivePortal.login'
+    option localAuth 'sn.captivePortal.auth'
+    option port '80'
+    option externalServer ''
+    option httpsEnable '0'
+    option userurl ''
+    option walledGardenEnable '0'
+    option walledGardenPages ''
+    option loginType '0'
+    option authType '0'
+    option vlantag '0'
+    option networkId ''
+    option goneTimeoutEnable '0'
+    option goneTimeout '0'
+
+config portal 'ssid_1'
+
+config portal 'ssid_2'
+
+config portal 'ssid_3'
+
+config portal 'ssid_4'
+
+config portal 'ssid_5'
+
+config portal 'ssid_6'
+
+config portal 'ssid_7'
+
+config portal 'ssid_8'

@@ -1,0 +1,50 @@
+#!/bin/sh /etc/rc.common
+START=90
+
+append_eth_vid()
+{
+	for eif in $1
+	do
+		if [ -n "$2" ]
+		then
+			eth_vlanifs="${eth_vlanifs} ${eif}.${2}"
+		fi
+	done
+	echo ${eth_vlanifs:-$1}
+}
+
+
+start() {
+    if [ -f /etc/config/apcontroller ]
+    then
+        echo capwap will start lldp by itself.
+    else
+        local func_enable_bonding=$(uci -q get network.lacp.lacp_enable)
+        if [ $func_enable_bonding -eq 1 ]; then
+            local lan_ifnames="bond0"
+        else
+            local lan_ifnames=$(uci -q get /rom/etc/config/network.lan.ifname)
+        fi
+
+        local mgmtvlan_en=$(uci -q get network.sys.WLANVLANEnable)
+        if [ ${mgmtvlan_en:-0} -eq 1 ]
+        then
+            local mgmtvlan_id=$(uci -q get network.sys.ManagementVLANID)
+            lan_ifnames=$(append_eth_vid "$lan_ifnames" $mgmtvlan_id)
+        fi
+
+        for ifname in $lan_ifnames
+        do
+            lldpd -i $ifname
+        done
+    fi
+}
+
+stop() {
+    if [ -f /etc/config/apcontroller ]
+    then
+        echo capwap will stop lldp by itself.
+    else
+        killall lldpd
+    fi
+}

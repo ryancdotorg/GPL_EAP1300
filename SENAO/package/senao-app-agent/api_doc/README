@@ -1,0 +1,31 @@
+
+Requirement:
+
+1. npm
+2. node
+3. aglio
+
+Install:
+
+1. apt-get install npm
+2. curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+3. apt-get install nodejs
+4. npm install -g aglio
+
+Usage:
+
+1. make
+2. make show (open API document html in firefox)
+
+Reference:
+
+1. https://apiblueprint.org
+	- A powerful high-level API description language for APIs.
+2. https://github.com/apiaryio/api-blueprint/tree/master/examples
+	- api-blueprint examples
+3. markdown.tw
+	- Markdown example
+
+For ubuntu 15.04 :
+If you get the error message in step 2, try to install another version as follow,
+"curl -sL https://deb.nodesource.com/setup_5.x | sudo -E bash -"

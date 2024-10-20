@@ -1,0 +1,99 @@
+genconfig() {
+    modelname=$(uci get sysProductInfo.model.modelName)
+
+    allow_interface=br-lan,br-app
+    if [ -e /etc/init.d/lsp ]
+    then
+        allow_interface=${allow_interface},br-lsp
+    fi
+
+	local reflector=no
+	local configs
+	local enabled=$(uci -q get avahi-daemon.avahi.reflector_enable)
+
+	if [ "$enabled" = "1" ]; then
+		reflector=yes
+		for configs in $(foreach avahi-daemon reflector-rule); do
+			local from
+			local vlan_pool
+			#option to '31'
+			#option from '32-34,38'
+			local to=$(uci -q get avahi-daemon.$configs.to)
+			local froms=$(uci -q get avahi-daemon.$configs.from)
+
+			# froms='32-34,38'
+			froms=$(echo ${froms//,/ })
+			# froms='32-34 38'
+			for from in $froms; do
+				if [ "$from" != "${from/-/}" ]; then
+					local start=${from%-*}
+					local end=${from#*-}
+					vlan_pool="$vlan_pool `seq $start $end`"
+					# remove \n
+					vlan_pool=`echo $vlan_pool`
+				else
+					vlan_pool="$vlan_pool $from"
+				fi
+			done
+
+			vlan_pool="$vlan_pool $to"
+		done
+
+		local var
+		for var in $vlan_pool; do
+			local vlan_network=vlan$var
+			allow_interface=${allow_interface},$vlan_network
+		done
+	fi
+
+    cat << EOF > /tmp/etc/avahi/avahi-daemon.conf
+[server]
+host-name=$modelname
+#domain-name=local
+use-ipv4=yes
+use-ipv6=yes
+check-response-ttl=no
+use-iff-running=no
+allow-interfaces=$allow_interface
+
+[publish]
+publish-addresses=yes
+publish-hinfo=yes
+publish-workstation=no
+publish-domain=yes
+#publish-dns-servers=192.168.1.1
+#publish-resolv-conf-dns-servers=yes
+
+[reflector]
+enable-reflector=$reflector
+reflect-ipv=$reflector
+
+[rlimits]
+#rlimit-as=
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=30
+rlimit-stack=4194304
+rlimit-nproc=3
+EOF
+}
+
+genBonjourService() {
+    systemname=$(uci get system.@system[0].SystemName)
+    systemname=${systemname//</&lt;}
+    mac_addr=$(ifconfig br-lan |grep HWaddr |awk  {'printf $5'})
+    ipv6_addr_app=$(ifconfig br-app | grep "Scope:Link" | awk {'printf $3'} | awk -F'/' {'print $1'})
+
+    cat << EOF > /tmp/etc/avahi/services/bonjour.service
+<service-group>
+<name>$systemname</name>
+<service>
+<type>_http._tcp</type>
+<port>80</port>
+<txt-record>mac=${mac_addr:-NULL}</txt-record>
+<txt-record>app_ipv6=${ipv6_addr_app:-NULL}</txt-record>
+</service>
+</service-group>
+EOF
+}

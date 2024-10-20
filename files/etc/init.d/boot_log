@@ -1,0 +1,10 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+boot() {
+	if [ -f /usr/sbin/snlogger ]; then
+		#add boot log
+		snlogger "event.info 1.0" "ap_sys_info_bootup,reason='system bootup'"
+	fi
+}

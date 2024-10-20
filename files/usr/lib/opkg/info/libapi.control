@@ -1,0 +1,9 @@
+Package: libapi
+Version: 1.3-10-g0025b57
+Depends: libc, liblua, libuci, libpcre, libjson-c, fcgi, senao-linkmon, libubus, ubox
+Source: SENAO/package/libapi
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 125091
+Description:  API Library (include lua plugin).

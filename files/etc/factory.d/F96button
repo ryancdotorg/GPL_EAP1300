@@ -1,0 +1,44 @@
+#!/bin/sh /etc/rc.common
+# (C) 2008 openwrt.org
+
+FACTORY=96
+
+########################################################
+# Definition
+########################################################
+BTN_DEF="/etc/factory.d/btn.def"
+
+if [ -e $BTN_DEF ]; then
+    . $BTN_DEF
+else
+    echo "$BTN_DEF is not exist!";
+    exit 1;
+fi
+
+BTN_CFG="/etc/factory.d/btn.cfg"
+
+if [ -e $BTN_CFG ]; then
+    . $BTN_CFG
+else
+    echo "$BTN_CFG is not exist!";
+    exit 1;
+fi
+
+########################################################
+# start
+########################################################
+start() {
+    [ -e $BTN_GPIO_PATH ] && {
+        index=0;
+        for btn_gpio in $BTN_GPIO; do
+            index=$(($index + 1));
+            if [ ! -e $BTN_GPIO_PATH/gpio$btn_gpio ]; then
+                echo $btn_gpio > $BTN_GPIO_EXPORT;
+            fi
+            active_low=`echo $ACTV_LOW|cut -d " " -f $index`;
+            echo $active_low > $BTN_GPIO_PATH/gpio$btn_gpio/active_low;
+            echo in > $BTN_GPIO_PATH/gpio$btn_gpio/direction;
+        done
+        }
+}
+

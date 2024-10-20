@@ -1,0 +1,35 @@
+<? # -*- mode: shell-script -*-
+
+. /etc/chilli/fbwifi-libs.sh
+
+section_name=$(fbwifi_get_section_name $CONFIG_NAME)
+
+fbwifi_tokens_dir=$fbwifi_tmp_dir/$CONFIG_NAME/$fbwifi_tokens_path
+token=$(cat $fbwifi_tokens_dir/${REMOTE_MAC} 2>/dev/null || echo "null")
+if [ "$token" = "null" ]
+then
+    captive="true"
+else
+    captive="false"
+fi
+
+printf "HTTP/1.1 200 OK\r\n"
+printf 'Content-Type: application/json\r\n'
+
+fbwifi_header_add_allow_origin $CONFIG_NAME $HTTP_ORIGIN
+
+fbwifi_include_urls_config $CONFIG_NAME
+
+user_portal_url="${fbwifi_captive_portal_url:-$(fbwifi_get_login_page $CONFIG_NAME)}"
+venue_info_url="${fbwifi_capport_venue_info_url:-$(fbwifi_get_venue_page $CONFIG_NAME)}"
+
+printf 'Connection: close\r\n'
+printf "\r\n"
+
+echo '{'
+echo "	\"captive\": $captive,"
+echo "	\"user-portal-url\": \"$user_portal_url\","
+echo "	\"venue-info-url\": \"$venue_info_url\""
+echo '}'
+
+?>

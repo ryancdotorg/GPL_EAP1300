@@ -1,0 +1,44 @@
+#!/bin/sh
+
+ver_path="/lib/wifi/sn_wifi_version/version-"
+
+if [ ! -d "/lib/wifi/sn_wifi_version" ]; then
+    echo "version files NOT exist!" > /dev/console
+    return
+fi
+
+echo "| WIFI feature      | Version    |" > /dev/console
+echo "|-------------------+------------|" > /dev/console
+
+version=$(cat "$ver_path"backgroundscan)
+echo "| backgroundscan    | $version   |" > /dev/console
+
+version=$(cat "$ver_path"bandsteering)
+echo "| band-steering     | $version   |" > /dev/console
+
+version=$(cat "$ver_path"chanspec)
+echo "| chan-spec         | $version   |" > /dev/console
+
+version=$(cat "$ver_path"hotspot2)
+echo "| hotspot2          | $version   |" > /dev/console
+
+version=$(cat "$ver_path"meshnawds)
+echo "| mesh/nawds        | $version   |" > /dev/console
+
+version=$(cat "$ver_path"scanningradio)
+echo "| scanning-radio    | $version   |" > /dev/console
+
+version=$(cat "$ver_path"senao11k)
+echo "| senao-11k         | $version   |" > /dev/console
+
+version=$(cat "$ver_path"senao11r)
+echo "| senao-11r         | $version   |" > /dev/console
+
+version=$(cat "$ver_path"senaonasport)
+echo "| senao-nasport     | $version   |" > /dev/console
+
+version=$(cat "$ver_path"wificommon)
+echo "| wifi-common       | $version   |" > /dev/console
+
+version=$(cat "$ver_path"wpa3)
+echo "| wpa3              | $version   |" > /dev/console

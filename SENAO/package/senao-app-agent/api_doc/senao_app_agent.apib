@@ -1,0 +1,3323 @@
+FORMAT: 1A
+HOST: http://192.168.0.1:9090/json
+
+# senao-app-agent API GuideLine
+
+>**VERSION**: version_date_sha
+
+This document describes the mesh network management APIs that are implemented for smartphone app and the "app_client" tool to manage EnGenius mesh network devices.
+
+**JSON API Definition**
+
+*URL format: http://[device’s ip address]:9090/json/[API name]*
+
+# Group Basic
+
+## POST /Login
+Log in the device such that the user can manage it.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device. |
+| AdminPassword | The administrator password for logging in this device. |
+| LoginResult | Result of Login. <br>**OK**：Login successfully.<br>**ERROR**：Fail to login.<br>**ERROR_FULL_ACCOUNT**：The number of allowed accounts exceeds its maximum. |
+| WiFiChannel | The channel of 5G wireless. |
+| CountryCode | The wireless deivice country code. |
+| MeshID | The ID of this mesh network. |
+| MeshKey | The key of this mesh network. |
+| ModelType | Identify the model type.<br> **0** : Normal<br>**1** : MESH |
+| MeshRole | Device’s role in mesh network. <br>**server**<br>**slave**|
+| ModelName | The model name of the device. |
+| UID | The UID of the device. |
+| FirmwareVersion | The firmware version of the device. |
+| srv_type | The senao-openapi-server is enabled or not. |
+
++ Request (application/json)
+        {
+                "AdminUsername" : "admin",
+                "AdminPassword" : "string"
+                "APPType" : integer
+        }
++ Response 200 (application/json)
+        {
+            "LoginResult"："string",
+            "WiFiChannel" : integer,
+            "CountryCode" : integer,
+            "MeshID" : "stirng",
+            "MeshKey" : "stirng",
+            "ModelType" : integer,
+            "MeshRole" : "stirng",
+            "ModelName"："string",
+            "UID"："string",
+            "FirmwareVersion"："string",
+            "srv_type" : integer
+        }
+
+
+## POST /ForceLogin
+Kick the original user out and log in the device such that the user can manage it.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device. |
+| AdminPassword | The administrator password for logging in this device. |
+| LoginResult | Result of Login. <br>**OK**：Login successfully.<br>**ERROR**：Fail to login.<br>**ERROR_FULL_ACCOUNT**：The number of allowed accounts exceeds its maximum. |
+| WiFiChannel | The channel of 5G wireless. |
+| CountryCode | The wireless deivice country code. |
+| MeshID | The ID of this mesh network. |
+| MeshKey | The key of this mesh network. |
+| ModelType | Identify the model type.<br> **0** : Normal<br>**1** : MESH |
+| MeshRole | Device’s role in mesh network. <br>**server**<br>**slave**|
+| ModelName | The model name of the device. |
+| UID | The UID of the device. |
+| FirmwareVersion | The firmware version of the device. |
+
++ Request (application/json)
+        {
+                "AdminUsername" : "admin",
+                "AdminPassword" : "string"
+                "APPType" : integer
+        }
++ Response 200 (application/json)
+        {
+            "LoginResult"："string",
+            "WiFiChannel" : integer,
+            "CountryCode" : integer,
+            "MeshID" : "stirng",
+            "MeshKey" : "stirng",
+            "ModelType" : integer,
+            "MeshRole" : "stirng",
+            "ModelName"："string",
+            "UID"："string",
+            "FirmwareVersion"："string"
+        }
+
+
+## POST /Logout
+Log out the device.
+
+| Parameter | Description |
+| - | - |
+| LogoutResult | Result of Logout.  <br>**OK**：Logout successfully.<br>**ERROR**：The mobile device does not logout the device. |
+
++ Request (application/json)
+
+        {
+                "APPType" : integer
+        }
+
++ Response 200 (application/json)
+        {
+                "LogoutResult"："string"
+        }
+
+## GET /FlushAllLoginAccount
+Flush all accounts who log in the device.
+
+| Parameter | Description |
+| - | - |
+| FlushAllLoginAccountResult | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+
++ Response 200 (application/json)
+        {
+                "FlushAllLoginAccountResult"："string"
+        }
+
+
+## GET /GetWifiInfo
+Use this command to get wifi (guest) SSID and Key information.
+
+GetSCWifiInfo = GetWifiInfo.
+
+| Parameter | Description |
+| - | - |
+| GetWifiInfoResult | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+| regularDomain | Regular Domain.<br>**0** : FCC<br>**1** : ETSI<br>**2** : INTERNATION |
+| WifiSsid | 2.4G Wireless ssid name. |
+| WifiKey | Wireless WPA2 AES key. |
+| WirelessGuestNetworkStatus | Wireless guest network status. |
+| WifiGuestSsid | 2.4G Wireless guest ssid name. |
+| WifiGuestKey | Wireless guest WPA2 AES key. |
+| Wifi24gBandwith | Wireless 24g Bandwidth value. |
+| Wifi24gChannel | Wireless 24g Channel value<br>(auto or fixed channel) |
+| Wifi24gEncrType | Wireless 24g Encryption Type.<br>none = Disable<br>psk+ccmp = WPA /AES<br>psk+tkip = WPA / TKIP<br>psk+tkip+ccmp = WPA / Both (TKIP+AES)<br>psk2+ccmp = WPA2 /AES<br>psk2+tkip = WPA2 / TKIP<br>psk2+tkip+ccmp = WPA2 / Both (TKIP+AES) |
+| Wifi24gGuestEncrType | Wireless 24g Guest Encryption Type.<br>none = Disable<br>psk+ccmp = WPA /AES<br>psk+tkip = WPA / TKIP<br>psk+tkip+ccmp = WPA / Both (TKIP+AES)<br>psk2+ccmp = WPA2 /AES<br>psk2+tkip = WPA2 / TKIP<br>psk2+tkip+ccmp = WPA2 / Both (TKIP+AES) |
+| Wifi5gBandwith | Wireless 5g Bandwidth value. |
+| Wifi5gChannel | Wireless 5g Channel value<br>(fixed channel) |
+| Wifi5gEncrType | Wireless 5g Encryption Type.<br>none = Disable<br>psk+ccmp = WPA /AES<br>psk+tkip = WPA / TKIP<br>psk+tkip+ccmp = WPA / Both (TKIP+AES)<br>psk2+ccmp = WPA2 /AES<br>psk2+tkip = WPA2 / TKIP<br>psk2+tkip+ccmp = WPA2 / Both (TKIP+AES) |
+| Wifi5gGuestEncrType | Wireless 5g Guest Encryption Type.<br>none = Disable<br>psk+ccmp = WPA /AES<br>psk+tkip = WPA / TKIP<br>psk+tkip+ccmp = WPA / Both (TKIP+AES)<br>psk2+ccmp = WPA2 /AES<br>psk2+tkip = WPA2 / TKIP<br>psk2+tkip+ccmp = WPA2 / Both (TKIP+AES) |
+| Wifi5g2Bandwith | Wireless 5g-2 Bandwidth value. |
+| Wifi5g2Channel | Wireless 5g-2 Channel value<br>(fixed channel) |
+| Wifi5g2EncrType | Wireless 5g-2 Encryption Type.<br>none = Disable<br>psk+ccmp = WPA /AES<br>psk+tkip = WPA / TKIP<br>psk+tkip+ccmp = WPA / Both (TKIP+AES)<br>psk2+ccmp = WPA2 /AES<br>psk2+tkip = WPA2 / TKIP<br>psk2+tkip+ccmp = WPA2 / Both (TKIP+AES) |
+| Wifi5g2GuestEncrType | Wireless 5g-2 Guest Encryption Type.<br>none = Disable<br>psk+ccmp = WPA /AES<br>psk+tkip = WPA / TKIP<br>psk+tkip+ccmp = WPA / Both (TKIP+AES)<br>psk2+ccmp = WPA2 /AES<br>psk2+tkip = WPA2 / TKIP<br>psk2+tkip+ccmp = WPA2 / Both (TKIP+AES) |
+| MeshBackhaul | Should be 0, 10, 20, 30, 40, 50<br> 0 = Dedicated<br> 10 - 50 = Shared ratio |
+| 5GRadioStatus | Depending on country, 1st bit is 5g high band, 2nd bit is 5g low band. <br> "00" = Dual band product, only one 5G radio<br> "01" = Support 5G-2 Low Band only<br> "10" = Support 5G-1 High Band only<br> "11" = Support both 5G High and Low Band |
+| SupportSeparateSsid | Support set separate SSID name if band steering is disabled.<br>**0**：Not support.<br>**1**：Support. |
+| Bandsteer | Band Steering setting.<br>**0**：Disabled.<br>**1**：Force 5 GHz.<br>**2**：Prefer 5 GHz.<br>**3**：Band Balance. |
+| Wifi5g1Ssid | 5G-1 Wireless ssid name. |
+| Wifi5g2Ssid | 5G-2 Wireless ssid name for Tri-band only. |
+| GuestNetwork5g1SSID | 5G-1 Wireless guest ssid name. |
+| GuestNetwork5g2SSID | 5G-2 Wireless guest ssid name for Tri-band only. |
+
++ Response 200 (application/json)
+
+	{
+		"GetWifiInfoResult"："string",
+		"regularDomain" : interger,
+		"WifiSsid" : "string",
+		"WifiKey" : "string",
+		"WirelessGuestNetworkStatus" : "string",
+		"WifiGuestSsid" : "string",
+		"WifiGuestKey" : "string",
+		"Wifi24gBandwith": " string",
+		"Wifi24gChannel": " string",
+		"Wifi24gEncrType": "string",
+		"Wifi24gGuestEncrType": "string",
+		"Wifi5gBandwith": " string",
+		"Wifi5gChannel": " string",
+		"Wifi5gEncrType": " string",
+		"Wifi5gGuestEncrType": " string",
+		"Wifi5g2Bandwith": " string",
+		"Wifi5g2Channel": " string",
+		"Wifi5g2EncrType": " string",
+		"Wifi5g2GuestEncrType": " string",
+		"MeshBackhaul": interger,
+		"5GRadioStatus": " string"
+		"SupportSeparateSsid": boolean,
+		"Bandsteer": interger,
+		"Wifi5g1Ssid" : "string",
+		"Wifi5g2Ssid" : "string",
+		"GuestNetwork5g1SSID" : "string",
+		"GuestNetwork5g2SSID" : "string"
+	}
+
+
+## POST /SetWifiInfo
+Use this command to set wifi (guest) relative information.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device.<br>Admin username is “admin”. |
+| AdminPassword | The administrator password for logging in this device. |
+| SSID | 2.4G Wireless SSID name. |
+| Password | Wireless WPA2-AES key. |
+| GuestNetworkSwitch | Wireless guest network status. |
+| GuestNetworkSSID | Wireless guest network ssid. |
+| GuestNetworkPassword | Wireless guest network WPA2-AES key. |
+| Wifi24gBandwith | Wireless 2.4G Bandwidth. |
+| Wifi24gChannel | Wireless 2.4G Channel. |
+| Wifi24gEncrType | Wireless 2.4G Encryption Type. |
+| Wifi24gGuestEncrType | Wireless 2.4G Guest Encryption Type. |
+| Wifi5gBandwith | Wireless 5G Bandwidth. |
+| Wifi5gChannel | Wireless 5G Channel. |
+| Wifi5gEncrType | Wireless 5G Encryption Type. |
+| Wifi5gGuestEncrType | Wireless 5G Guest Encryption Type. |
+| Wifi5g2Bandwith | Wireless 5G-2 Bandwidth. |
+| Wifi5g2Channel | Wireless 5G-2 Channel. |
+| Wifi5g2EncrType | Wireless 5G-2 Encryption Type. |
+| Wifi5g2GuestEncrType | Wireless 5G-2 Guest Encryption Type. |
+| SetWifiInfoResult | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+| MeshBackhaulMode | <br>**0** : Dedicated<br>**10** : Share ratio 10%<br>**20** : Share ratio 20%<br>**30** : Share ratio 30%<br>**40** : Share ratio 40%<br>**50** : Share ratio 50% |
+| Bandsteer | Band Steering setting.<br>**0**：Disabled.<br>**1**：Force 5 GHz.<br>**2**：Prefer 5 GHz.<br>**3**：Band Balance. |
+| Wifi5g1Ssid | 5G-1 Wireless ssid name. |
+| Wifi5g2Ssid | 5G-2 Wireless ssid name for Tri-band only. |
+| GuestNetwork5g1SSID | 5G-1 Wireless guest ssid name. |
+| GuestNetwork5g2SSID | 5G-2 Wireless guest ssid name for Tri-band only. |
+
++ Request (application/json)
+
+	{
+		"AdminUsername" : "admin",
+		"AdminPassword" : "string",
+		"SSID" : "string",
+		"Password" : "string",
+		"GuestNetworkSwitch" : integer,
+		"GuestNetworkSSID" : "string",
+		"WifiGuestKey" : "string",
+		"Wifi24gBandwith" : "string",
+		"Wifi24gChannel" : "string",
+		"Wifi24gEncrType" : "string",
+		"Wifi24gGuestEncrType" : "string",
+		"Wifi5gBandwith" : "string",
+		"Wifi5gChannel" : "string",
+		"Wifi5gEncrType" : "string",
+		"Wifi5gGuestEncrType" : "string",
+		"Wifi5g2Bandwith" : "string",
+		"Wifi5g2Channel" : "string",
+		"Wifi5g2EncrType" : "string",
+		"Wifi5g2GuestEncrType" : "string",
+		"MeshBackhaulMode": interger,
+		"Bandsteer": interger,
+		"Wifi5g1Ssid" : "string",
+		"Wifi5g2Ssid" : "string",
+		"GuestNetwork5g1SSID" : "string",
+		"GuestNetwork5g2SSID" : "string"
+	}
+
++ Response 200 (application/json)
+
+	{
+		"SetWifiInfoResult" : "string"
+	}
+
+
+## GET /GetWifiOptList
+Use this command to get wifi (guest) option list information.
+
+| Parameter | Description |
+| - | - |
+| GetWifiOptListResult | Result of GetWifiOptList.<br>**OK**：GetWifiOptListResult successfully.<br>**ERROR**：Fail to GetWifiOptListResult. |
+| Wifi24gChannelList | Wireless 2.4g Channel List.<br>Ex: auto,1,2,3,4,5,6,7,8,9,10,11,12,13. |
+| Wifi24gChannelList | Wireless 2.4g Bandwidth List.<br>Ex: HT20,HT20_40,HT40.<br>HT20 = 20 MHz<br>HT20_40 = 20 MHz / 40 MHz<br>HT40 = 40 MHz |
+| Wifi24gEncrTypeList | Wireless 2.4g Encryption Type List.<br>Ex: none,psk2+ccmp<br>Define reference to GetWifiInfo |
+| Wifi24gGuestEncrTypeList | Wireless 2.4g GuestNetwork Encryption Type List.<br>Ex: none,psk2+ccmp<br>Define reference to GetWifiInfo |
+| Wifi5gChannelList | Wireless 5g Channel List.<br>Ex: 36,40,44,48 |
+| Wifi5gChannelListAll | Wireless 5g Channel List of all Bandwidths.<br>Ex: 36,40,44,48 |
+| Wifi5gBandwidthList | Wireless 5g Bandwidth List.<br>Ex: HT20,HT20_40,HT40<br>HT20 = 20 MHz<br>HT40 = 40 MHz<br>HT80 = 80 MHz |
+| Wifi5gEncrTypeList | Wireless 5g Encryption Type List.<br>Ex: none,psk2+ccmp<br>Define reference to GetWifiInfo |
+| Wifi5gGuestEncrTypeList | Wireless 5g GuestNetwork Encryption Type List.<br>Ex: none,psk2+ccmp<br>Define reference to GetWifiInfo |
+| Wifi5g2ChannelList | Wireless 5g-2 Channel List.<br>Ex: 36,40,44,48 |
+| Wifi5g2ChannelListAll | Wireless 5g-2 Channel List of all Bandwidths.<br>Ex: 36,40,44,48 |
+| Wifi5g2BandwidthList | Wireless 5g-2 Bandwidth List.<br>Ex: HT20,HT20_40,HT40<br>HT20 = 20 MHz<br>HT40 = 40 MHz<br>HT80 = 80 MHz |
+| Wifi5g2EncrTypeList | Wireless 5g-2 Encryption Type List.<br>Ex: none,psk2+ccmp<br>Define reference to GetWifiInfo |
+| Wifi5g2GuestEncrTypeList | Wireless 5g-2 GuestNetwork Encryption Type List.<br>Ex: none,psk2+ccmp<br>Define reference to GetWifiInfo |
+| Wifi5gChannelListAll | List all 5G channel list in every HT mode. |
+| Wifi24gChannelListAll | List all 24G channel list in every HT mode. |
+
++ Response 200 (application/json)
+	{
+		"GetWifiOptListResult":"string",
+		"Wifi24gChannelList":"string",
+		"Wifi24gBandwidthList":"string",
+		"Wifi24gEncrTypeList":"string",
+		"Wifi24gGuestEncrTypeList":"string",
+		"Wifi5gChannelList":"string",
+		"Wifi5gBandwidthList":"string",
+		"Wifi5gEncrTypeList":"string",
+		"Wifi5gGuestEncrTypeList":"string",
+		"Wifi5gChannelListAll":
+		{
+			"HT20": "string",
+			"HT40": "string",
+			"HT80": "string"
+		},
+		"Wifi5g2ChannelList":"string",
+		"Wifi5g2BandwidthList":"string",
+		"Wifi5g2EncrTypeList":"string",
+		"Wifi5g2GuestEncrTypeList":"string",
+		"Wifi5g2ChannelListAll":
+		{
+			"HT20": "string",
+			"HT40": "string",
+			"HT80": "string"
+		},
+		"Wifi24gChannelListAll":
+		{
+			"HT20"："string",
+			"HT20_40"："string",
+			"HT40"："string"
+		}
+	}
+
+
+## GET /GetSystemInformationWithIP
+Use this command to get system information.
+
+| Parameter | Description |
+| - | - |
+| GetSystemInformationWithIP | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+| ExternalIP | External IP address. |
+| MainIP | Main IP address. |
+| FwVersion | Firmware version. |
+| UpTime | Device boot time. |
+| ProductCode | Product code. |
+| AutoFWUpgrade | Auto firmware upgrade status. |
+
++ Request
+	This command doesn’t need input parameters.
++ Response 200 (application/json)
+	{
+		"GetSystemInformationWithIPResult":"string",
+		"ExternalIP":"string",
+		"MainIP":"string",
+		"FwVersion":"string",
+		"UpTime":"string",
+		"ProductCode":"string",
+		"AutoFWUpgrade":"string"
+	}
+
+
+## GET /MeshConnectedHistory
+Use this command to get mesh network connected devices history.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device.<br>Admin username is “admin”. |
+| AdminPassword | The administrator password for logging in this device. |
+| MeshConnectedHistoryResult | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+| Object array <br>{<br>“Mac”:”string”,<br>“Location”:”string”<br>} | Has been Connect devices history. |
+
++ Request (application/json)
+	{
+		"AdminUsername" : "admin",
+		"AdminPassword" : "string"
+	}
++ Response 200 (application/json)
+	{
+		"HasBeenConnectInfo":"string",
+		"HasBeenConnect":
+		"[
+			{
+				"Mac":"string",
+				"Location":"string"
+			}
+			...
+		]"
+	}
+
+
+## GET /RebootAllDevices
+Using for restarting all devices of mesh network.
+
+| Parameter | Description |
+| - | - |
+| RebootAllDevicesResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Response 200 (application/json)
+	{
+		"RebootAllDevicesResult":"string"
+	}
+
+
+## GET /ResetAllDevices
+Using for resetting all devices of mesh network.
+
+| Parameter | Description |
+| - | - |
+| ResetAllDevicesResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Response 200 (application/json)
+	{
+		"ResetAllDevicesResult":"string"
+	}
+
+
+## POST /SetAccountPassword
+Use this command to set account password.
+
+| Parameter | Description |
+| - | - |
+| CurrentPassword | The password for logging in this device. |
+| Password | The new password for logging in this device. |
+| SetAccountPasswordResult | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+
++ Request (application/json)
+	{
+		"CurrentPassword"："string",
+		"Password"："string"
+	}
++ Response 200 (application/json)
+	{
+		"SetAccountPasswordResult" : "string"
+	}
+
+
+## GET /GetAPWanAllSettings
+Use this command to get internet wan function.
+
+| Parameter | Description |
+| - | - |
+| GetAPWanAllSettingsResult | Result. <br>**OK**：Success.<br>**ERROR**：Failure. |
+| RoutingMode | <br>**0**：Router mode.<br>**1**：Bridge mode |
+| WanType | WAN connection type. <br>**DHCP**<br>**Static IP**<br>**PPPoE**<br>**PPTP**<br>**L2TP** |
+| IPAddress | WAN IP address. |
+| SubnetMask | Subnet mask IP address. |
+| Gateway | Gateway IP address. |
+| DNS | The DNS primary and secondary settings for this router. |
+| Username | PPPoE user name. |
+| Password | PPPoE password. |
+| ConnectionType | PPPoE connection type. <br>**0**：Keep connection.<br>**1**：Automatic connection.<br>**2**：Manual connection. |
+| AutoDetection | **0**：Turn off automatic Detection.<br>**1**：Turn on automatic Detection. |
+| IPType |**0**：DHCP.<br>**1**：Static. |
+| ServerGateway | Server Gateway IP address. |
+
++ Request
+	This command doesn’t need input parameters.
+
++ Response 200 (application/json)
+	{
+		"GetAPWanAllSettingsResult" : "string",
+		"RoutingMode" : integer,
+		"WanType" : "string",
+		"Username" : "string",
+		"Password" : "string",
+		"ConnectionType" : integer,
+		"IPAddress" : "string",
+		"SubnetMask" : "string",
+		"Gateway" : "string",
+		"AutoDetection" : "string",
+		"DNS"："string" :
+		{
+			"Primary"："string",
+			"Secondary"："string"
+		},
+	   "IPType":"string",
+   		"ServerGateway":"string"
+	}
+
+
+## POST /SetAPWanAllSettings
+Use this command to set internet wan function.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device.<br>Admin username is “admin”. |
+| AdminPassword | The administrator password for logging in this device. |
+| RoutingMode | <br>**0**：Router mode.<br>**1**：Bridge mode |
+| WanType | WAN connection type. <br>**DHCP**<br>**Static IP**<br>**PPPoE**<br>**PPTP**<br>**L2TP** |
+| IPAddress | WAN IP address. |
+| SubnetMask | Subnet mask IP address. |
+| Gateway | Gateway IP address. |
+| DNS | The DNS primary and secondary settings for this router. |
+| Username | PPPoE user name. |
+| Password | PPPoE password. |
+| ConnectionType | PPPoE connection type. <br>**0**：Keep connection.<br>**1**：Automatic connection.<br>**2**：Manual connection. |
+| AutoDetection | **0**：Turn off automatic Detection.<br>**1**：Turn on automatic Detection. |
+| IPAddressType | Static IP address. |
+| ServerGateway | PPTP or L2TP's server |
+| SetAPWanAllSettingsResult | Result. <br>**OK**：success.<br>**ERROR**：Failure. |
+
++ Request (application/json)
+	{
+		"AdminUsername"："admin",
+		"AdminPassword"："string",
+		"RoutingMode"：integer,
+		"WanType"："string",
+		"Username"："string",
+		"Password"："string",
+		"ConnectionType"：integer,
+		"IPAddress"："string",
+		"SubnetMask"："string",
+		"Gateway"："string",
+		"AutoDetection"：integer,
+		"DNS"："string" :
+		{
+			"Primary"："string",
+			"Secondary"："string"
+		}.
+		"IPAddressType":"string",
+		"ServerGateway":"string"
+	}
++ Response 200 (application/json)
+	{
+		"SetAPWanAllSettingsResult" : "string"
+	}
+
+
+## GET /GetMeshNodeSimplifyInfo
+Use this command to get the information of MESH NODEs who are alive.
+
+| Parameter | Description |
+| - | - |
+| GetMeshNodeSimplifyInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure. |
+| DeviceType | Device’s type.  <br>**1**：Router.<br>**2**：AP-Server.<br>**3**：AP-Client.<br>**4**：AP-Camera. |
+| DeviceName | The location information of the MESH device. |
+| MeshRole | The role of the device in this MESH network. |
+| LANIPAddress | The LAN IP address of the device. |
+| MacAddress | The MAC address of the device. |
+| UID | The UID of the device. |
+| MaxRSSI | The maximum RSSI of the device. |
+| WiFiStatus | The wireless function is enabled or not. |
+| DevicesConnectedNumber | The number of the wireless clients who are connected to this device. |
+| LedStatus | The LED is work or not. |
+| FullFwVersion | The firmware version of this device. |
+
++ Request (application/json)
+
+    There is no content for Request.
+
++ Response 200 (application/json)
+	{
+		"GetMeshNodeSimplifyInfoResult": "string",
+		"MeshNodesList":
+		[
+			{
+				"DeviceType": integer,
+				"DeviceName": "string",
+				"MeshRole": "string",
+				"LANIPAddress": "string",
+				"MacAddress": "string",
+				"UID": "string",
+				"MaxRSSI": integer,
+				"WiFiStatus": integer,
+				"DevicesConnectedNumber": integer,
+				"LedStatus": integer,
+				"FullFwVersion": "string"
+			},
+			… … …
+		]
+	}
+
+
+## GET /UpdateMeshNodesInfo
+Using this command to update the MESH devices' information.
+
+| Parameter | Description |
+| - | - |
+| UpdateMeshNodesInfoResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br> |
+
++ Request
+	This command doesn’t need input parameters.
++ Response 200 (application/json)
+	{
+		"UpdateMeshNodesInfoResult":"string"
+	}
+
+
+## GET /GetSNNumber
+Using this command to get decices' serial number.
+
+| Parameter | Description |
+| - | - |
+| GetSNNumberResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br> |
+
++ Request
+	This command doesn’t need input parameters.
++ Response 200 (application/json)
+	{
+		"GetSNNumberResult":"string"
+		"VenderName":"string"
+		"SerialNumber":"string"
+		"MeshDeviceLocation":"string"
+	}
+
+
+## GET /GetInternetStatus
+Using this command to get master's internet connecting status.
+
+| Parameter | Description |
+| - | - |
+| GetInternetStatusResult | Result<br>**OK**：Success.<br> |
+| InternetStatus | InternetStatus' status.  <br>**1**：Online.<br>**0**：Offline.<br> |
+
++ Request
+	This command doesn’t need input parameters.
++ Response 200 (application/json)
+	{
+		"GetInternetStatusResult":"string",
+		"InternetStatus":：integer
+	}
+
+## POST /SetCountryCode
+Use this command to set country code.
+
+| Parameter | Description |
+| - | - |
+| Country | The countrycode you want to set. |
+| SetCountryCodeResult | Result.<br>**OK**：Success.<br>**ERROR**：Failure. |
+
++ Request (application/json)
+	{
+		"Country"："string"
+	}
++ Response 200 (application/json)
+	{
+		"SetCountryCodeResult" : "string"
+	}
+
+
+## POST /DoManualFirmwareUpgrade
+Use this command to do manual firmware upgrade in mesh network.
+
+| Request Parameter | Description |
+| - | - |
+| TargetMeshIP | The IP address of the target device(s) in the same MESH. |
+| Action | The action of manual-firmware upgrade. <br>**1**：Notice master to check new firmware and redirect this notification to all slaves.<br>**2**：Get all devices' checked result.<br>**3**：Notice master to download new firmware and redirect this notification to all slaves.<br>**4**：Get devices' downloaded result.<br>**5**：Notice master to do firmware upgrade and redirect this notification to all slaves. |
+
+| Response parameter | Description |
+| - | - |
+| DoManualFirmwareUpgradeResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_NO_INTERNET_STR**：No internet connected. |
+| ResponseAction | The response of action. <br>**1**：Notice master to check new firmware and redirect this notification to all slaves.<br>**2**：Get all devices' checked result.<br>**3**：Notice master to download new firmware and redirect this notification to all slaves.<br>**4**：Get all devices' downloaded result.<br>**5**：Notice master to do firmware upgrade and redirect this notification to all slaves. |
+| CheckResult | The result of device check server firmware. <br>**1**：The device can be updated.<br>**0**：The device cannot be updated.|
+| DownloadResult | The result of device download server firmware. <br>**1**：The device has downloaded the server's firmware image.<br>**0**：The device doesn't finish firmware image download.|
+| Mac | The MAC address of the device. |
+| IP | The IP address of the device. |
+| OpMode | The Operation Mode of the device. |
+
++ Request (application/json)
+	Action 1,3,5:
+	{
+		"TargetMeshIP"："string1,string2,...",
+		"Action"：integer,
+	}
+
+	Action 2,4:
+	{
+		"TargetMeshIP"："",
+		"Action"：integer,
+	}
+
++ Response 200 (application/json)
+	Action 1,3,5:
+
+	{
+		"DoManualFirmwareUpgradeResult" : "string",
+		"ResponseAction" : integer
+	}
+
+	Action 2:
+
+	{
+		"DoManualFirmwareUpgradeResult" : "string",
+		"ResponseAction" : integer,
+		"DeviceList" : [
+			{
+				"CheckResult"： "string",
+				"Mac"："string",
+				"IP"："string",
+				"OpMode"：integer,
+			},
+			… … …
+		]
+	}
+
+	Action 4:
+
+	{
+		"DoManualFirmwareUpgradeResult" : "string",
+		"ResponseAction" : integer,
+		"DeviceList" : [
+			{
+				"DownloadResult"： "string",
+				"Mac"："string",
+				"IP"："string",
+			},
+			… … …
+		]
+	}
+
+# Group Basic - For Sitecom
+
+
+## POST /SetSCWifiInfo
+Use this command to set wifi (guest) relative information.
+
++ Request (application/json)
+	{
+		"AdminUsername" : "admin",
+		"AdminPassword" : "string"
+	}
++ Response 200 (application/json)
+	{
+		"SetSCWifiInfoResult" : "string"
+	}
+
+
+## GET /GetSCStatus
+Use this command to get system status information.
+
+| Parameter | Description |
+| - | - |
+| GetSCStatusResult | Result of GetSCStatus.<br>**OK**：GetSCStatusResult successfully.<br>**ERROR**：Fail to GetSCStatusResult. |
+| ExternalIP | External IP address. |
+| MainIP | Main IP address. |
+| FwVersion | Firmware version. |
+| UpTime | Device boot time. |
+| ProductCode | Product code. |
+| AutoFWUpgrade | Auto firmware upgrade status. |
+
++ Response 200 (application/json)
+	{
+		"GetSCStatusResult":"string",
+		"ExternalIP":"string",
+		"MainIP":"string",
+		"FwVersion":"string",
+		"UpTime":"string",
+		"ProductCode":"string",
+		"AutoFWUpgrade":"string"
+	}
+
+
+## POST /SetSCFWAutoUpgrade
+Use this command to set automatic firmware upgrade.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device.<br>Admin username is “admin”. |
+| AdminPassword | The administrator password for logging in this device. |
+| FwAutoUpgrade | Auto firmware upgrade status. |
+| SetSCFWAutoUpgradeResult | Result of SetSCFWAutoUpgradeResult.<br>**OK**：SetSCWifiInfo successfully.<br>**ERROR**：Fail to SetSCWifiInfoResult. |
+
++ Request (application/json)
+	{
+		"AdminUsername" : "admin",
+		"AdminPassword" : "string",
+		"FwAutoUpgrade" : integer
+	}
++ Response 200 (application/json)
+	{
+		"SetSCAccountPasswordResult" : "string"
+	}
+
+
+## GET /GetSCMeshNodesInfo
+Use this command to get the MESH device’s basic information.
+
+| Parameter | Description |
+| - | - |
+| GetSCMeshNodesInfoResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+| DeviceType | Device type. |
+| DeviceName | Device location name. |
+| MeshRole | Device role. |
+| LANIPAddress | Lan IP address. |
+| MacAddress | Mac address. |
+| MaxRSSI | Device connect RSSI Number. |
+| WiFiStatus | Device wireless status. |
+| DevicesConnectedNumber | Device connected Number. |
+| LedStatus | Device led status. |
+
++ Response 200 (application/json)
+	{
+		"GetSCMeshNodesInfoResult" : "string",
+		"MeshNodesList" : [
+			{
+				"DeviceType"： "string",
+				"DeviceName"："string",
+				"MeshRole"："string",
+				"LANIPAddress"："string",
+				"MacAddress"："string",
+				"MaxRSSI" : Integer,
+				"WiFiStatus" : integer,
+				"DevicesConnectedNumber" : integer,
+				"LedStatus":integer
+			},
+			… … …
+		]
+	}
+
+
+## POST /SetSCAccountPassword
+Use this command to set account password.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device.<br>Admin username is “admin”. |
+| AdminPassword | The administrator password for logging in this device. |
+| CurrentPassword | The administrator current password for logging in this device. |
+| Password | The administrator want set password for logging in this device. |
+| SetSCAccountResult | Result of SetSCAccountResult.<br>**OK**：SetSCAccountResult successfully.<br>**ERROR**：Fail to SetSCAccountResult. |
+
++ Request (application/json)
+	{
+		"AdminUsername"："admin",
+		"AdminPassword"："string",
+		"CurrentPassword"："string",
+		"Password"："string"
+	}
++ Response 200 (application/json)
+	{
+		"SetSCAccountResult" : "string"
+	}
+
+
+## POST /SetSCWanSettings
+Use this command to set internet wan function.
+
+| Parameter | Description |
+| - | - |
+| AdminUsername | The administrator username for logging in this device.<br>Admin username is “admin”. |
+| AdminPassword | The administrator password for logging in this device. |
+| RoutingMode | <br>**0**：Router mode.<br>**1**：Bridge mode |
+| WanType | WAN connection type. <br>**DHCP**<br>**Static IP**<br>**PPPoE**<br>**PPTP**<br>**L2TP** |
+| IPAddress | WAN IP address. |
+| SubnetMask | Subnet mask IP address. |
+| Gateway | Gateway IP address. |
+| DNS | The DNS primary and secondary settings for this router. |
+| Username | PPPoE user name. |
+| Password | PPPoE password. |
+| ConnectionType | PPPoE connection type. <br>**0**：Keep connection.<br>**1**：Automatic connection.<br>**2**：Manual connection. |
+| AutoDetection | **0**：Turn off automatic Detection.<br>**1**：Turn on automatic Detection. |
+| SetSCWanSettingsResult | Result of SetSCWanSettingsResult. <br>**OK**SetSCWanSettingsResult successfully.<br>**ERROR**：Fail to SetSCWanSettingsResult. |
+
++ Request (application/json)
+	{
+		"AdminUsername"："admin",
+		"AdminPassword"："string",
+		"RoutingMode"：integer,
+		"WanType"："string",
+		"Username"："string",
+		"Password"："string",
+		"ConnectionType"：integer,
+		"IPAddress"："string",
+		"SubnetMask"："string",
+		"Gateway"："string",
+		"AutoDetection"：integer,
+		"DNS"："string" : 
+		{
+			"Primary"："string",
+			"Secondary"："string"
+		}
+	}
++ Response 200 (application/json)
+	{
+		"SetSCWanSettingsResult" : "string"
+	}
+
+
+## GET /GetSCWanSettings
+Use this command to get internet wan function.
+
+| Parameter | Description |
+| - | - |
+| GetSCWanSettingsResult | Result of GetSCWanSettingsResult. <br>**OK**：GetSCWanSettingsResult successfully.<br>**ERROR**：Fail to GetSCWanSettingsResult. |
+| RoutingMode | <br>**0**：Router mode.<br>**1**：Bridge mode |
+| WanType | WAN connection type. <br>**DHCP**<br>**Static IP**<br>**PPPoE**<br>**PPTP**<br>**L2TP** |
+| IPAddress | WAN IP address. |
+| SubnetMask | Subnet mask IP address. |
+| Gateway | Gateway IP address. |
+| DNS | The DNS primary and secondary settings for this router. |
+| Username | PPPoE user name. |
+| Password | PPPoE password. |
+| ConnectionType | PPPoE connection type. <br>**0**：Keep connection.<br>**1**：Automatic connection.<br>**2**：Manual connection. |
+| AutoDetection | **0**：Turn off automatic Detection.<br>**1**：Turn on automatic Detection. |
+
++ Response 200 (application/json)
+	{
+		"GetSCWanSettingsResult" : "string",
+		"RoutingMode" : integer,
+		"WanType" : "string",
+		"Username" : "string",
+		"Password" : "string",
+		"ConnectionType" : integer,
+		"IPAddress" : "string",
+		"SubnetMask" : "string",
+		"Gateway" : "string",
+		"AutoDetection" : "string",
+		"DNS"："string" : 
+		{
+			"Primary"："string",
+			"Secondary"："string"
+		}
+	}
+
+
+## POST /ExecuteSCFirmwareUpgrade
+Use this command to execute the functionalities of auto firmware upgrade.
+
+| Parameter | Description |
+| - | - |
+| Action | The action of auto-firmware upgrade. <br>**0**：Enable/Disabled auto firmware upgrade.<br>**1**：Check new firmware on server.<br>**2**：Check the result of new firmware on server.<br>**3**：Download new firmware from server.<br>**4**：Check the downloading status.<br>**5**：Execute firmware upgrade. |
+| EnableAutoFirmwareUpgrade | Enable/Disable auto firmware upgrade. |
+| ExecuteSCFirmwareUpgradeResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_PROCESS_IS_RUNNING**：The downloading is in process. |
+| NewFirmware | If there is a new firmware on server. |
+| DownloadStatus | The percentage of downloading process. |
+| FileSize | The file size of the firmware. |
+
++ Request (application/json)
+	{
+		"Action"：integer,
+		"EnableAutoFirmwareUpgrade"：boolean,
+	}
++ Response 200 (application/json)
+	{
+		"ExecuteSCFirmwareUpgradeResult" : "string",
+		"NewFirmware" : boolean,
+		"DownloadStatus" : integer,
+		"FileSize" : "string"
+	}
+
+## GET /UpdateSCMeshNodesInfo
+Using this command to update the MESH devices' information.
+
+| Parameter | Description |
+| - | - |
+| UpdateSCMeshNodesInfoResult | Result<br>**OK**：Success.<br>**ERROR**：Failure.<br> |
+
++ Request
+	This command doesn’t need input parameters.
++ Response 200 (application/json)
+	{
+		"UpdateSCMeshNodesInfoResult":"string"
+	}
+
+
+
+
+
+
+
+
+
+
+# Group Mesh
+
+## POST /mesh/SetMeshDeviceByWizard
+This command is used in wizard function for unConfigured mesh device that supports setting device’s mesh profile and the Internet settings.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| SystemOperationMode | The device’s role in mesh network. <br>**1**：Router<br>**2**：AP |
+| SystemUserName | The administrator username of this device. |
+| SystemPassword | The administrator password of this device. |
+| OperatingMeshBand | Operating band of mesh network. <br>**Disabled**：Mesh function is disabled.<br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Band | Wireless radio band. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| SSID | The Service Set Identifier of wireless. |
+| Key | The encryption key of wireless. |
+| ConnectionType | WAN connection type. <br>**DHCP**：Dynamic Host Configuration Protocol.<br>**Static IP**：Static Internet Protocol.<br>**PPPoE**：Point-to-Point Protocol over Ethernet. |
+| IPAddress | WAN IP address. |
+| SubnetMask | Subnet mask IP address. |
+| Gateway | Gateway IP address. |
+| DNS | The primary and secondary DNS. |
+| UserName | User name for PPPoE. |
+| Password | Password for PPPoE. |
+| SetMeshDeviceByWizardResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_SYSTEM_OP_MODE**：Unknown system operation mode.<br>**ERROR_BAND**：Unknown wireless band.<br>**ERROR_CONNECTION_TYPE**：Unknown connection type.<br>**ERROR_IP_ADDRESS**：Illegal IP address. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"SystemOperationMode"：integer,
+		"SystemUserName"："string",
+		"SystemPassword"："string",
+		"OperatingMeshBand" : "string",
+		"WirelessSettings"：
+		[
+			{
+				"Band"："string",
+				"SSID"："string",
+				"Key"："string"
+			},
+			{
+				"Band"："string",
+				"SSID"："string",
+				"Key"："string"
+			}
+		],
+		"InternetSettings"：
+		{
+			"ConnectionType"："string",
+			"IPAddress"："string",
+			"SubnetMask"："string",
+			"Gateway"："string",
+			"DNS"：
+			{
+				"Primary"："string",
+				"Secondary"："string"
+			},
+			"UserName"："string",
+			"Password"："string"
+		}
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshDeviceByWizardResult":"string"
+	}
+
+
+## POST /mesh/SetMeshNetworkProfile
+Using this command to edit mesh network profile settings.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| ActionType | Identify that the action is used for. <br>**0**：Delete mesh network profile for the device that indicated its IP address in TargetMeshIP field.<br>**1**：Set for new mesh device.<br>**2**：Change mesh network settings for all devices of the mesh group, and the Broadcast field must set as “1” for broadcast. |
+| Broadcast | Whether the device have to broadcast this packet or not. |
+| TargetMeshIP | The IP address of the target device which is in the same MESH. |
+| OperatingMeshBand | Operating band of mesh network. <br>**Disabled**：Mesh function is disabled.<br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Band | Wireless radio band. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| MeshID | The Mesh’s ID. |
+| Channel | The wireless channel. |
+| Key | The key of wireless. |
+| SetMeshNetworkProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_BAND**：Unknown wireless band.<br>**ERROR_ACTION_TYPE**：Unknown action type. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"ActionType" : integer,
+		"Broadcast" : boolean,
+		"TargetMeshIP" : "string",
+		"OperatingMeshBand" : "string",
+		"MeshWirelessSettings"：
+		{
+			"Band"："string",
+			"MeshID"：integer,
+			"Channel"：integer,
+			"Key"："string"
+		}
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshNetworkProfileResult":"string"
+	}
+
+
+## POST /mesh/GetMeshBroadcastSettingStatus
+Using this command to get the status of the API who is sending setting packet to the MESH members.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetAPI | The name of the API whose status of broadcasting is desired. |
+| GetMeshBroadcastSettingStatusResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The broadcasting is in process. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetAPI" : "string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshBroadcastSettingStatusResult":"string"
+	}
+
+
+## POST /mesh/GetMeshDeviceList
+Using this command to get all mesh devices’ connected information from one device.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshDeviceListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| DeviceType | Device’s type. <br>**1**：Router.<br>**2**：AP.<br>**3**：AP-Camera. |
+| DeviceName | The device’s hostname. |
+| DeviceLocation | The device’s location. |
+| ModelName | The name of the device’s model. |
+| IPAddress | The IP address of the device. |
+| LANIPAddress | The LAN IP address of the device. |
+| WifiStrength | The wireless strength of the device. |
+| MacAddress | The device’s MAC address. |
+| UID | The device’s UID. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshDeviceListResult"："string",
+		"MeshDevices"：
+		 [
+			{
+				"DeviceType"：integer,
+				"DeviceName" : "string",
+				"DeviceLocation" : "string",
+				"ModelName"："string",
+				"IPAddress"："string",
+				"LANIPAddress"："string",
+				"WifiStrength"：integer,
+				"MacAddress" : "string",
+				"UID" : "string"
+			},
+			…
+		]
+	}
+
+
+## POST /mesh/GetMeshDeviceClientList
+Using this command to get all mesh devices’ clients from one device.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshDeviceClientListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| MeshClientList[] MeshDeviceClientList | The entire network nodes in this MESH environment. |
+| PrimaryMAC | The MESH device’s wireless MAC. |
+| ClientList | The clients under the MESH device. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshDeviceClientListResult"："string",
+		"MeshDeviceClientList"：
+		 [
+			{
+				"PrimaryMAC"："string",
+				"ClientList"：
+				[
+					"string",
+					"string",
+					…
+				]
+			},
+			…
+		]
+	}
+
+
+## POST /mesh/InviteNewMeshDevice
+Using this command to trigger the mesh device to continuously sending the special beacon that includes mesh SSID, security settings, and channel information in "IE" for 3 minutes. In that time, the EnGenius mesh devices whose mesh status is unconfigured receive the special beacon, they will change its mesh settings and join the mesh network.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Broadcast | Whether the device have to broadcast this packet or not. |
+| InviteNewMeshDeviceResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Broadcast"：boolean
+	}
+
++ Response 200 (application/json)
+	{
+		"InviteNewMeshDeviceResult"："string"
+	}
+
+
+## POST /mesh/SetMeshDeviceName
+Using this command to set the MESH device’s name.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The old administrator username of the mesh network. |
+| MeshAdminPassword | The old administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the target device which is in the same MESH. |
+| MeshDeviceName | The MESH device’s name. |
+| MeshDeviceLocation | The MESH device’s location. |
+| SetMeshDeviceNameResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshIP"："string",
+		"MeshDeviceName"："string",
+		"MeshDeviceLocation"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshDeviceNameResult"："string"
+	}
+
+
+## POST /mesh/ApplyMeshNetworkSettings
+Using this command to trigger device to do system reload for new mesh network settings.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Broadcast | Whether the device have to broadcast this packet or not. |
+| ApplyMeshNetworkSettingsResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Broadcast"：boolean
+	}
+
++ Response 200 (application/json)
+	{
+		"ApplyMeshNetworkSettingsResult"："string"
+	}
+
+
+## POST /mesh/GetMeshDeviceWirelessSettings
+Using this command to get the device’s wireless settings. 
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the target device which is in the same MESH. |
+| SSIDID | The SSID number whose wireless information is desired. |
+| GetMeshDeviceWirelessSettingsResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| OperatingMeshBand | Operating band of mesh network. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Band | Wireless radio band. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Enabled | Specifies whether the wireless band is enabled. |
+| SSID | The Service Set Identifier of wireless. |
+| SSIDBroadcast | Specifies whether the device is broadcasting the wireless network name (SSID) for network detection. |
+| MacAddress | The MAC address of the wireless interface. |
+| ChannelWidth | The width of the channel. <br>**0**：Automatic.<br>**1**：20 MHz channel width.<br>**2**：40 MHz channel width. |
+| Channel | The wireless channel. |
+| SecurityEnabled | Specifies whether wireless security is enabled. |
+| SecurityType | The type of wireless security. <br>**WEP-OPEN**：Wired Equivalent Privacy (WEP) wireless security in Open mode.<br>**WEP-SHARED**：Wired Equivalent Privacy (WEP) wireless security in Shared mode.<br>**WEP-AUTO**：Wired Equivalent Privacy (WEP) wireless security in automatic mode.<br>**WPA-PSK**：Wi-Fi Protected Access (WPA) wireless security with a passphrase.<br>**WPA-RADIUS**：Enterprise level Wi-Fi Protected Access (WPA) wireless security.<br>**WPA2-PSK**：Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase.<br>**WPA2-RADIUS**：Enterprise level Wi-Fi Protected Access 2 (WPA2) wireless security.<br>**WPA1ORWPA2-PSK**：Wi-Fi Protected Access (WPA) or Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase.<br>**WPA1ORWPA2-RADIUS**：Enterprise level Wi-Fi Protected Access (WPA) or Wi-Fi Protected Access 2 (WPA2) wireless security. |
+| Encryption | Encryption method being used. <br>**WEP-64**：64 bits Wireless Encryption Protocol.<br>**WEP-128**：128 bits Wireless Encryption Protocol.<br>**AES**：Advanced Encryption Standard.<br>**TKIP**：Temporal Key Integrity Protocol.<br>**TKIPORAES**：Advanced Encryption Standard or Temporal Key Integrity Protocol. |
+| Key | The key of wireless. |
+| RadiusIP | The RADIUS server’s IP address. |
+| RadiusPort | The RADIUS server port number. |
+| RadiusSecret | Shared secret to use with first set of RADIUS servers. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshIP"：boolean,
+		"SSIDID"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshDeviceWirelessSettingsResult"："string",
+		"OperatingMeshBand" : "string",
+		"WirelessSettings"：
+		[
+			{
+				"Band"："string",
+				"Enabled"：boolean,
+				"SSID"："string",
+				"SSIDBroadcast"：boolean,
+				"MacAddress"："string",
+				"ChannelWidth"：integer,
+				"Channel"：integer,
+				"SecurityEnabled"：boolean,
+				"SecurityType"："string",
+				"Encryption"："string",
+				"Key"："string",
+				"RadiusIP"："string",
+				"RadiusPort"：integer,
+				"RadiusSecret"："string"
+			},
+			{
+				"Band"："string",
+				"Enabled"：boolean,
+				"SSID"："string",
+				"SSIDBroadcast"：boolean,
+				"MacAddress"："string",
+				"ChannelWidth"：integer,
+				"Channel"：integer,
+				"SecurityEnabled"：boolean,
+				"SecurityType"："string",
+				"Encryption"："string",
+				"Key"："string",
+				"RadiusIP"："string",
+				"RadiusPort"：integer,
+				"RadiusSecret"："string"
+			}
+		]
+	}
+
+
+## POST /mesh/SetMeshDeviceWirelessSettings
+Using this command to set up device’s wireless settings. 
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the target device which is in the same MESH. |
+| OperatingMeshBand | Operating band of mesh network. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Band | Wireless radio band. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Enabled | Specifies whether the wireless band is enabled. |
+| SSID | The Service Set Identifier of wireless. |
+| SSIDID | The target SSID number. |
+| SSIDBroadcast | Specifies whether the device is broadcasting the wireless network name (SSID) for network detection. |
+| ChannelWidth | The width of the channel. <br>**0**：Automatic.<br>**1**：20 MHz channel width.<br>**2**：40 MHz channel width. |
+| Channel | The wireless channel. |
+| SecurityEnabled | Specifies whether wireless security is enabled. |
+| Type | The type of wireless security. <br>**WEP-OPEN**：Wired Equivalent Privacy (WEP) wireless security in Open mode.<br>**WEP-SHARED**：Wired Equivalent Privacy (WEP) wireless security in Shared mode.<br>**WEP-AUTO**：Wired Equivalent Privacy (WEP) wireless security in automatic mode.<br>**WPA-PSK**：Wi-Fi Protected Access (WPA) wireless security with a passphrase.<br>**WPA-RADIUS**：Enterprise level Wi-Fi Protected Access (WPA) wireless security.<br>**WPA2-PSK**：Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase.<br>**WPA2-RADIUS**：Enterprise level Wi-Fi Protected Access 2 (WPA2) wireless security.<br>**WPA1ORWPA2-PSK**：Wi-Fi Protected Access (WPA) or Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase.<br>**WPA1ORWPA2-RADIUS**：Enterprise level Wi-Fi Protected Access (WPA) or Wi-Fi Protected Access 2 (WPA2) wireless security. |
+| Encryption | Encryption method being used. <br>**WEP-64**：64 bits Wireless Encryption Protocol.<br>**WEP-128**：128 bits Wireless Encryption Protocol.<br>**AES**：Advanced Encryption Standard.<br>**TKIP**：Temporal Key Integrity Protocol.<br>**TKIPORAES**：Advanced Encryption Standard or Temporal Key Integrity Protocol. |
+| Key | The key of wireless. |
+| RadiusIP | The RADIUS server’s IP address. |
+| RadiusPort | The RADIUS server port number. |
+| RadiusSecret | Shared secret to use with first set of RADIUS servers. |
+| SetMeshDeviceWirelessSettingsResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_BAND**：Unknown wireless band.<br>**ERROR_TYPE_NOT_SUPPORTED**：Unknown security type.<br>**ERROR_ENCRYPTION_NOT_SUPPORTED**：Unknown encryption type.<br>**ERROR_ILLEGAL_KEY_VALUE**：Illegal key.<br>**ERROR_BAD_RADIUS_VALUES**：Illegal RADIUS setting. |
+
++ Request (application/json)
+{
+	"MeshAdminUsername"："string",
+	"MeshAdminPassword"："string",
+	"TargetMeshIP"："string",
+	"OperatingMeshBand" : "string",
+	"WirelessSettings"：
+	[
+		{
+			"Band"："string",
+			"Enabled"：boolean,
+			"SSID"："string",
+			"SSIDID"：integer,
+			"SSIDBroadcast"：boolean,
+			"ChannelWidth"：integer,
+			"Channel"：integer,
+			"SecurityEnabled"：boolean,
+			"Type"："string",
+			"Encryption"："string",
+			"Key"："string",
+			"RadiusIP"："string",
+			"RadiusPort"：integer,
+			"RadiusSecret"："string"
+		},
+		{
+			"Band"："string",
+			"Enabled"：boolean,
+			"SSID"："string",
+			"SSIDID"：integer,
+			"SSIDBroadcast"：boolean,
+			"ChannelWidth"：integer,
+			"Channel"：integer,
+			"SecurityEnabled"：boolean,
+			"Type"："string",
+			"Encryption"："string",
+			"Key"："string",
+			"RadiusIP"："string",
+			"RadiusPort"：integer,
+			"RadiusSecret"："string"
+		}
+	]
+}
+
++ Response 200 (application/json)
+	{
+		"SetMeshDeviceWirelessSettingsResult"："string"
+	}
+
+
+## POST /mesh/SetMeshDeviceLEDAction
+Using this command to change the device’s LED behavior that is controlled by GPIO. 
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the target device which is in the same MESH. |
+| LEDType | The LED on device. <br>**0**：Power LED.<br>**1**：2.4G wireless LED.<br>**2**：5G wireless LED.<br>**3**：WPS LED.<br>**4**：ALL LEDs that can be controlled by GPIO. |
+| Action | The Action of the LED. <br>**0**：LED ON.<br>**1**：LED OFF.<br>**2**：LED blinking. |
+| ActionTimer | Set a timer for the action.<br>Timer unit is second. The LED status will be back original state after action. |
+| SetMeshDeviceLEDActionResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.Led or action is error.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshIP"："string",
+		"LEDType"：integer,
+		"Action"：integer,
+		"ActionTimer"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshDeviceLEDActionResult"："string"
+	}
+
+
+## POST /mesh/GetMeshDeviceStatus
+Using this command to get basic information of the device.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the target device which is in the same MESH. |
+| GetMeshDeviceStatusResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| OperationMode | The device’s operation mode. |
+| VendorName | The name of the device’s manufacture. |
+| ModelName | The name of the device’s model. |
+| ModelDescription | A brief description of the device. |
+| ProductSN | The device’s serial number. |
+| HardwareVersion | The device’s hardware version. |
+| FirmwareVersion | The device’s firmware version. |
+| WanMacAddress | The device’s WAN MAC address. |
+| LanMacAddress | The device’s LAN MAC address. |
+| WlanMacAddress | The device’s primary WLAN MAC address. |
+| IPAddress | The device’s IP address of LAN. |
+| SubnetMask | The device’s subnet mask of LAN. |
+| DHCPServerEnabled | The device’s DHCP server status. |
+| DHCPServerStartIP | The starting IP address of DHCP server. |
+| DHCPServerEndIP | The ending IP address of DHCP server. |
+| Type | The device’s WAN type. |
+| IPAddress | The device’s IP address of WAN. |
+| SubnetMask | The device’s subnet mask of WAN. |
+| MacAddress | The device’s WAN MAC address. |
+| Gateway | The device’s Gateway IP address. |
+| UserName | The device’s user name for PPPoE. |
+| Password | The device’s password for PPPoE. |
+| Band | Wireless radio band. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| Enabled | Specifies whether the wireless band is enabled. |
+| SSID | The Service Set Identifier of wireless. |
+| SSIDBroadcast | Specifies whether the device is broadcasting the wireless network name (SSID) for network detection. |
+| MacAddress | The MAC address of the wireless interface. |
+| ChannelWidth | The width of the channel. <br>**0**：Automatic.<br>**1**：20 MHz channel width.<br>**2**：40 MHz channel width. |
+| Channel | The wireless channel. |
+| SecurityEnabled | Specifies whether wireless security is enabled. |
+| WPSEnabled | Specifies whether WPS is enabled. |
+| SecurityType | The type of wireless security. <br>**WEP-OPEN**：Wired Equivalent Privacy (WEP) wireless security in Open mode.<br>**WEP-SHARED**：Wired Equivalent Privacy (WEP) wireless security in Shared mode.<br>**WEP-AUTO**：Wired Equivalent Privacy (WEP) wireless security in automatic mode.<br>**WPA-PSK**：Wi-Fi Protected Access (WPA) wireless security with a passphrase.<br>**WPA-RADIUS**：Enterprise level Wi-Fi Protected Access (WPA) wireless security.<br>**WPA2-PSK**：Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase.<br>**WPA2-RADIUS**：Enterprise level Wi-Fi Protected Access 2 (WPA2) wireless security.<br>**WPA1ORWPA2-PSK**：Wi-Fi Protected Access (WPA) or Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase.<br>**WPA1ORWPA2-RADIUS**：Enterprise level Wi-Fi Protected Access (WPA) or Wi-Fi Protected Access 2 (WPA2) wireless security. |
+| Encryption | Encryption method being used. <br>**WEP-64**：64 bits Wireless Encryption Protocol.<br>**WEP-128**：128 bits Wireless Encryption Protocol.<br>**AES**：Advanced Encryption Standard.<br>**TKIP**：Temporal Key Integrity Protocol.<br>**TKIPORAES**：Advanced Encryption Standard or Temporal Key Integrity Protocol. |
+| Key | The key of wireless. |
+| RadiusIP | The RADIUS server’s IP address. |
+| RadiusPort | The RADIUS server port number. |
+| RadiusSecret | Shared secret to use with first set of RADIUS servers. |
+| MESHEnabled | The device’s MESH status. |
+| MESHConfigured | The device’s MESH setting status. |
+| MESHDeviceName | The device’s name for MESH network. |
+| OperatingMeshBand | Operating band of MESH network. <br>**2.4GHZ**：2.4GHz wireless band.<br>**5GHZ**：5GHz wireless band. |
+| MESHConnectionType | Mesh connection type. <br>**0**：Mesh SSID.<br>**1**：Mesh ID. |
+| MeshSSID | The device’s MESH SSID. |
+| MESHID | The device’s Mesh ID for establishing mesh network. |
+| MeshChannel | The device’s MESH wireless channel. |
+| MeshMac | The MAC address of device’s MESH interface. |
+| MESHSecurityType | The type of device’s MESH wireless security. <br>**WEP-OPEN**：Wired Equivalent Privacy (WEP) wireless security in Open mode.<br>**WEP-SHARED**：Wired Equivalent Privacy (WEP) wireless security in Shared mode.<br>**WPA2-PSK**：Wi-Fi Protected Access 2 (WPA2) wireless security with a passphrase. |
+| MeshKey | The device’s MESH wireless key. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshIP"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshDeviceStatusResult"："string",
+		"OperationMode"：integer,
+		"DeviceSettings"：
+		{
+			"VendorName"："string",
+			"ModelName"："string",
+			"ModelDescription"："string",
+			"ProductSN"："string",
+			"HardwareVersion"："string",
+			"FirmwareVersion"："string",
+			"WanMacAddress"："string",
+			"LanMacAddress"："string",
+			"WlanMacAddress"："string",
+		},
+		"LanSettings"：
+		{
+			"IPAddress"："string",
+			"SubnetMask"："string",
+			"DHCPServerEnabled"：boolean,
+			"DHCPServerStartIP"："string",
+			"DHCPServerEndIP"："string"
+		},
+		"WanSettings"：
+		{
+			"Type"："string",
+			"IPAddress"："string",
+			"SubnetMask"："string",
+			"Gateway"："string",
+			"DNS"：
+			{
+				"Primary"："string",
+				"Secondary"："string",
+			},
+			"UserName"："string",
+			"Password"："string"
+		},
+		"WirelessSettings"：
+		[
+			{
+				"Band"："string",
+				"Enabled"：boolean,
+				"SSID"："string",
+				"SSIDBroadcast"：boolean,
+				"MacAddress"："string",
+				"ChannelWidth"：integer,
+				"Channel"：integer,
+				"SecurityEnabled"：boolean,
+				"WPSEnabled"：boolean,
+				"SecurityType"："string",
+				"Encryption"："string",
+				"Key"："string",
+				"RadiusIP1"："string",
+				"RadiusPort1"：integer,
+				"RadiusSecret1"："string"
+			},
+			{
+				"Band"："string",
+				"Enabled"：boolean,
+				"SSID"："string",
+				"SSIDBroadcast"：boolean,
+				"MacAddress"："string",
+				"ChannelWidth"：integer,
+				"Channel"：integer,
+				"SecurityEnabled"：boolean,
+				"WPSEnabled"：boolean,
+				"SecurityType"："string",
+				"Encryption"："string",
+				"Key"："string",
+				"RadiusIP1"："string",
+				"RadiusPort1"：integer,
+				"RadiusSecret1"："string"
+			}
+		],
+		"MeshWirelessSettings"：
+			{
+				"MESHEnabled"：boolean,
+				"MESHConfigured"：boolean,
+				"MESHDeviceName"："string",
+				"MESHOperationBand"："string",
+				"MESHConnectionType" : integer,
+				"MESHSSID"："string",
+				"MESHID" : integer,
+				"MESHChannel"：integer,
+				"MESHMac"："string",
+				"MESHSecurityType"："string",
+				"MESHKey"："string"
+		    }
+	}
+
+
+## POST /mesh/DownloadMeshDeviceFirmware
+Using this command to download a new firmware.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the device which is going to download the firmware. |
+| IP | The IP address of the target device in where the firmware exists. |
+| Port | The port number. |
+| FilePath | The file path in which the firmware exists. |
+| DownloadMeshDeviceFirmwareResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshIP"："string",
+		"IP"："string",
+		"Port"：integer,
+		"FilePath"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"DownloadMeshDeviceFirmwareResult"："string"
+	}
+
+
+## POST /mesh/DownloadMeshDeviceFirmwareStatus
+Using this command to check the downloading status of the new firmware.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshIP | The IP address of the device which is downloading the firmware. |
+| FileSize | The original file size of firmware. (in byte, no unit in the string) |
+| DownloadMeshDeviceFirmwareStatusResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The download is in process.<br>**ERROR_DOWNLOAD_FAILED**：The download is failed. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshIP"："string",
+		"FileSize"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"DownloadMeshDeviceFirmwareStatusResult"："string"
+	}
+
+
+## POST /mesh/DoMeshDeviceFirmwareUpgrade
+Using this command to execute firmware upgrade for all the devices in the MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| DoMeshDeviceFirmwareUpgradeResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"DoMeshDeviceFirmwareUpgradeResult"："string"
+	}
+
+
+## POST /mesh/DoMeshSingleDeviceFirmwareUpgrade
+Using this command to execute firmware upgrade for the received device.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| DoMeshSingleDeviceFirmwareUpgradeResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"DoMeshSingleDeviceFirmwareUpgradeResult"："string"
+	}
+
+
+## POST /mesh/RunMeshThroughputTest
+Use this command to run a throughput test.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Source | The IPv6 address of the sender device in this MESH. |
+| Destination | The IPv6 address of the receiver device in this MESH. |
+| RunMeshThroughputTestResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Source"："string",
+		"Destination"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"RunMeshThroughputTestResult"："string"
+	}
+
+
+## POST /mesh/GetMeshThroughputTestResult
+Use this command to get the throughput test result.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| RunMeshThroughputTestResultResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+| UploadThroughput | The upload throughput. |
+| DownloadThroughput | The download throughput. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Source"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshThroughputTestResultResult"："string",
+		"UploadThroughput"："string",
+		"DownloadThroughput"："string"
+	}
+
+
+## POST /mesh/RunMeshInternetSpeedTest
+Use this command to run an Internet speed test.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| RunMeshInternetSpeedTestResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"RunMeshInternetSpeedTestResult"："string"
+	}
+
+
+## POST /mesh/GetMeshInternetSpeedTestResult
+Use this command to get the Internet speed test result.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| RunMeshInternetSpeedTestResultResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The speed test is in process. |
+| UploadThroughput | The upload speed. |
+| DownloadThroughput | The download speed. |
+| UploadUnit | The upload speed unit (Mbit/s) |
+| DownloadUnit | The download speed unit (Mbit/s) |
+| Date | Last test date. The string format is YYYY/mm/dd HH:MM (2017/01/05 05:39) |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshInternetSpeedTestResultResult"："string",
+		"UploadThroughput"："string",
+		"DownloadThroughput"："string",
+		"UploadUnit"："string",
+		"DownloadUnit"："string",
+		"Date"："string"
+	}
+
+
+## POST /mesh/RunMeshPingTest
+Use this command to run a ping test.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| MeshMAC | The MAC address of the device who execute this ping test. |
+| Source | The IP/MAC address of the sender device in this MESH. |
+| Destination | The IP/MAC address of the receiver device in this MESH. |
+| NumberOfPing | The number of ping packets which the DUT will send from Source to Destination. |
+| RunMeshPingTestResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"MeshMAC"："string",
+		"Source"："string",
+		"Destination"："string",
+		"NumberOfPing"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"RunMeshPingTestResult"："string"
+	}
+
+
+## POST /mesh/GetMeshPingTestResult
+Use this command to get the ping test result.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| MeshMAC | The MAC address of the device who execute this ping test. |
+| Source | The IP/MAC address of the sender device in this MESH. |
+| RunMeshPingTestResultResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+| TestResult | The result of this ping test. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"MeshMAC"："string",
+		"Source"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshPingTestResultResult"："string",
+		"TestResult"：
+		[
+			"string",
+			...
+		]
+	}
+
+
+## POST /mesh/RunMeshTraceRoute
+Use this command to run a tracing route test.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| MeshMAC | The MAC address of the device who execute this trace route. |
+| Source | The IP/MAC address of the sender device in this MESH. |
+| Destination | The IP/MAC address of the receiver device in this MESH. |
+| RunMeshTraceRouteResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"MeshMAC"："string",
+		"Source"："string",
+		"Destination"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"RunMeshTraceRouteResult"："string"
+	}
+
+
+## POST /mesh/GetMeshTraceRouteResult
+Use this command to get the tracing route test result.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| MeshMAC | The MAC address of the device who execute this trace route. |
+| Source | The IP/MAC address of the sender device in this MESH. |
+| Destination | The IP/MAC address of the receiver device in this MESH. |
+| RunMeshTraceRouteResultResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled.<br>**ERROR_PROCESS_IS_RUNNING**：The test is in process. |
+| TestResult | The result of this trace route test. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"MeshMAC"："string",
+		"Source"："string",
+		"Destination"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshTraceRouteResultResult"："string",
+		"TestResult"：
+		[
+			"string",
+			...
+		]
+	}
+
+
+## POST /mesh/GetMeshDeviceNeighbors
+Use this command to get the MESH device’s neighbors.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshNodeInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| MeshDeviceMAC | The MESH device’s MAC address. |
+| MAC | The MAC address of the device which is connected to MeshDeviceMAC. |
+| TQ | The TQ value of the device which is connected to the MeshDeviceMAC. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+{
+	"GetMeshDeviceNeighborsResult" : "string",
+	"MeshDeviceNeighbors"：
+	[
+		{
+			"MeshDeviceMAC"："string",
+			"MeshLinkInformation"：
+			[
+				{
+					"MAC"："string",
+					"TQ"：integer
+				},
+				…
+			]
+		},
+		…
+	]
+}
+
+
+## POST /mesh/GetMeshNodeInfo
+Use this command to get the MESH device’s basic information.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshNodeInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| DeviceType | Device’s type.  <br>**1**：Router.<br>**2**：AP-Server.<br>**3**：AP-Client.<br>**4**：AP-Camera. |
+| DeviceName | The device’s hostname. |
+| LocationName | The device’s location name (rooms's name). |
+| MeshRole | The device’s role in this MESH. |
+| RootHopCount | The device’s hop count to master node. |
+| LANIPAddress | The LAN IP address of the device. |
+| LANMacAddress | The LAN(br-lan) Mac address of the device. |
+| MacAddress | The device’s MAC address. |
+| UID | The device’s  UID. |
+| MAC | The MAC address of the device which is connected to this device. |
+| RSSI | The RSSI value of the device which is connected to this device. |
+| Flag | The Flag descript that the WDS link is not connected. <br>**B**The MAC is in block list.<br>**R**The MAC is blocked by MESH robust. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshNodeInfoResult" : "string",
+		"MeshDevice"：
+		{
+			"DeviceType"：integer,
+			"DeviceName"："string",
+			"LocationName" : "string",
+			"MeshRole"："string",
+			"RootHopCount" : integer,
+			"LANIPAddress"："string",
+			"LANMacAddress"："string",
+			"MacAddress"："string"
+			"UID"："string",
+		},
+		 "Neighbors"：
+		[
+			{
+				"MAC"："string",
+				"RSSI"：integer,
+				"Flag"："string"
+			},
+			…
+		]
+	}
+
+
+## POST /mesh/GetMeshSimplePeopleInfo
+Use this command to get the simple setting of people function.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| User | The response contains user related setting or not. |
+| Client | The response contains client related setting or not. |
+| Rule | The response contains firewall rule related setting or not. |
+| GetMeshSimplePeopleInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of the user, client, or firewall rule. |
+| Name | The name of the user, client, or firewall rule. |
+| Block | The user is blocked or not. |
+| IsGuest | The client is connected from guest network or not. |
+| IP | The IP of the client. |
+| Mac | The MAC of the client. |
+| Block | The device is blocked or not. |
+| ScheduleBlock | The device is on the schedule block or not. |
+| BlockActivated | The device is blocked or not. |
+| ScheduleBlockActivated | The device is blocked by schedule or not. |
+| Status | The device is online or not. |
+| OwnerIndex | The index number of user to which device belongs. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"User"：boolean,
+		"Client"：boolean,
+		"Rule"：boolean
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshSimplePeopleInfoResult" : "string",
+		"Users"：
+		[
+			{
+				"Index"：integer,
+				"Name"："string",
+				"Block"：boolean
+				"BlockActivated"：boolean,
+				"ScheduleBlockActivated"：boolean,
+			},
+			…
+		],
+		"Clients"：
+		[
+			{
+				"Index"：integer,
+				"Name"："string",
+				"IsGuest"：boolean,
+				"IP"："string",
+				"Mac"："string",
+				"Block"：boolean,
+				"ScheduleBlock"：boolean,
+				"BlockActivated"：boolean,
+				"ScheduleBlockActivated"：boolean,
+				"Status"：boolean,
+				"OwnerIndex"：integer
+			},
+			…
+		],
+		"Rules"：
+		[
+			{
+				"Index"：integer,
+				"Name"："string",
+			},
+			…
+		]
+	}
+	
+
+## POST /mesh/GetMeshUserProfile
+Use this command to get the assigned user profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The target user’s index. |
+| GetMeshUserProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of the user. |
+| Name | The user’s name. |
+| Block | The user is blocked or not. |
+| BlockActivated | The user is blocked or not. |
+| ScheduleBlockActivated | The user is blocked by schedule or not. |
+| Devices | The index number of the bundled devices. |
+| DeviceMACs | The MAC of the bundled devices. |
+| Rules | The index number of the related firewall rules. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshUserProfileResult" : "string",
+		"Index"：integer,
+		"Name"："string",
+		"Block"：boolean,
+		"BlockActivated"：boolean,
+		"ScheduleBlockActivated"：boolean,
+		"Devices"：
+		[
+			integer,
+			…
+		],
+		"DeviceMACs"：
+		[
+			"string",
+			…
+		],
+		"Rules"：
+		[
+			integer,
+			…
+		]
+	}
+
+
+## POST /mesh/GetMeshUserProfileList
+Use this command to get the users’ profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshUserProfileListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of the user. |
+| Name | The user’s name. |
+| Block | The user is blocked or not. |
+| BlockActivated | The user is blocked or not. |
+| ScheduleBlockActivated | The user is blocked by schedule or not. |
+| Devices | The index number of the bundled devices. |
+| Rules | The index number of the related firewall rules. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshUserProfileListResult" : "string",
+		"Users"：
+		[
+			{
+				"Index"：integer,
+				"Name"："string",
+				"Block"：boolean,
+				"BlockActivated"：boolean,
+				"ScheduleBlockActivated"：boolean,
+				"Devices"：
+				[
+					integer,
+					…
+				],
+				"Rules"：
+				[
+					integer,
+					…
+				]
+			},
+			…
+		]
+	}
+
+
+## POST /mesh/SetMeshUserProfile
+Use this command to set the user’s profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of the user. |
+| Name | The user’s name. |
+| Devices | The MAC address of the related devices. |
+| Rules | The index number of the related firewall rules. |
+| SetMeshUserProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer,
+		"Name"："string",
+		"Devices"：
+		[
+			string,
+			…
+		],
+		"Rules"：
+		[
+			integer,
+			…
+		]
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshUserProfileResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshUserProfileList
+Use this command to get the users’ profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of the user. |
+| Name | The user’s name. |
+| Devices | The MAC address of the related devices. |
+| Rules | The index number of the related firewall rules. |
+| SetMeshUserProfileListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Users"：
+		[
+			"Index"：integer,
+			"Name"："string",
+			"Devices"：
+			[
+				string,
+				…
+			],
+			"Rules"：
+			[
+				integer,
+				…
+			],
+			…
+		]
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshUserProfileListResult" : "string"
+	}
+
+
+## POST /mesh/DeleteMeshUserProfile
+Use this command to delete the user’s profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of the user. |
+| DeleteMeshUserProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"DeleteMeshUserProfileResult" : "string"
+	}
+
+
+## POST /mesh/GetMeshClientProfile
+Use this command to delete the user’s profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| MAC | The target client’s MAC address. |
+| GetMeshClientProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of the connected device. |
+| Name | The connected device’s name. |
+| IP | The connected device’s IP. |
+| MAC | The connected device’s MAC. |
+| Block | The device is blocked or not. |
+| StartDate | The block starts at the assigned time. |
+| BlockTime | The total block time. |
+| ScheduleBlock | The device is on the schedule block or not. |
+| FromHour | The block applies at the assigned hour. |
+| FromMinute | The block applies at the assigned minute. |
+| ToHour | The block ends at the assigned hour. |
+| ToMinute | The block ends at the assigned minute. |
+| WeekDay | The block applies on the assigned day during the week. The string format is “Mon,Tue,Wed,Thu,Fri,Sat,Sun” |
+| Status | The device is online or not. |
+| BlockActivated | The device is blocked or not. |
+| ScheduleBlockActivated | The device is blocked by schedule or not. |
+| HighQuality | The QoS is enabled or not. |
+| Owner | The device’s owner. |
+| OwnerIndex | The index of device’s owner. |
+| OwnerBlock | The owner is blocked or not. |
+| OwnerRules | The index number of the related firewall rules which belong to the owner . |
+| Rules | The index number of the related firewall rules. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"MAC"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshClientProfileResult" : "string",
+		"Index"：integer,
+		"Name"："string",
+		"IP"："string",
+		"MAC"："string",
+		"Block"：boolean,
+		"StartDate"："string",
+		"BlockTime"："string",
+		"ScheduleBlock"：boolean,
+		"FromHour"：integer,
+		"FromMinute"：integer,
+		"ToHour"：integer,
+		"ToMinute"：integer,
+		"BlockActivated"：boolean,
+		"WeekDay"："string",
+		"Status"：boolean,
+		"BlockActivated"：boolean,
+		"ScheduleBlockActivated"：boolean,
+		"HighQuality"：boolean,
+		"Owner"："string",
+		"OwnerIndex"：integer,
+		"OwnerBlock"：boolean,
+		"OwnerRules"：
+		[
+			integer,
+			…
+		],
+		"Rules"：
+		[
+			integer,
+			…
+		]
+	}
+
+
+## POST /mesh/GetMeshClientProfileList
+Use this command to get all the connected devices’ profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshClientProfileListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of the connected device. |
+| Name | The connected device’s name. |
+| IP | The connected device’s IP. |
+| MAC | The connected device’s MAC. |
+| Block | The device is blocked or not. |
+| BlockActivated | The device is blocked or not. |
+| ScheduleBlock | The device is on the schedule block or not. |
+| ScheduleBlockActivated | The device is blocked by schedule or not. |
+| Status | The device is online or not. |
+| HighQuality | The QoS is enabled or not. |
+| Owner | The device’s owner. |
+| OwnerIndex | The index of device’s owner. |
+| OwnerRules | The index number of the related firewall rules which belong to the owner . |
+| Rules | The index number of the related firewall rules. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshClientProfileListResult" : "string",
+		"Clients"：
+		[
+			{
+				"Index"：integer,
+				"Name"："string",
+				"IP"："string",
+				"MAC"："string",
+				"Block"：boolean,
+				"BlockActivated"：boolean,
+				"ScheduleBlock"：boolean,
+				"ScheduleBlockActivated"：boolean,
+				"Status"：boolean,
+				"HighQuality"：boolean,
+				"Owner"："string",
+				"OwnerIndex"：integer,
+				"OwnerRules"：
+				[
+					integer,
+					…
+				],
+				"Rules"：
+				[
+					integer,
+					…
+				]
+			},
+			…
+		]
+	}
+
+
+## POST /mesh/SetMeshClientProfile
+Use this command to set the connected device’s profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of the connected device. |
+| Name | The connected device’s name. |
+| MAC | The connected device’s MAC. |
+| OwnerIndex | The index number of the user. |
+| HighQuality | The QoS is enabled or not. |
+| Rules | The index number of the related firewall rules. |
+| SetMeshClientProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer,
+		"Name"："string",
+		"MAC"："string",
+		"OwnerIndex"： integer,
+		"HighQuality"： boolean,
+		"Rules"：
+		[
+			integer,
+			…
+		]
+
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshClientProfileResult" : "string"
+	}
+
+
+## POST /mesh/DeleteMeshClientProfile
+Use this command to delete the connected device’s profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of the connected device. |
+| DeleteMeshClientProfileResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"DeleteMeshClientProfileResult" : "string"
+	}
+
+
+## POST /mesh/DeleteMeshClientProfileList
+Use this command to delete the connected devices’ profile under this MESH.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index numbers of the connected device. |
+| DeleteMeshClientProfileListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Indexes"：
+		[
+			integer,
+			…
+		]
+	}
+
++ Response 200 (application/json)
+	{
+		"DeleteMeshClientProfileListResult" : "string"
+	}
+
+
+## POST /mesh/GetMeshFirewallDefaultURLCategory
+Use this command to get the MESH’s default URL category of firewall.
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshFirewallDefaultURLCategoryResult | Result  <br>**OK**：Success. |
+| SocialMediaList | The target key words or URLs to be blocked. |
+| SearchEngineList | The target key words or URLs to be blocked. |
+| VideoMediaList | The target key words or URLs to be blocked. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshFirewallDefaultURLCategoryResult" : "string",
+		"SocialMediaList":
+		[
+			"string",
+			…
+		],
+		"SearchEngineList":
+		[
+			"string",
+			…
+		],
+		"VideoMediaList":
+		[
+			"string",
+			…
+		]
+	}
+
+
+## POST /mesh/GetMeshFirewallRule
+Use this command to get the MESH’s firewall rule.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshFirewallRuleResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of user. |
+| Name | The firewall rule’s name. |
+| BlockAll | Block all the internet access or not. |
+| UrlBlockEnable | The function of URL block is enabled or not. |
+| BlockItems | The target key words or URLs to be blocked. |
+| BlockSocialMediaEnable | Block social media URL or not. |
+| BlockSearchEngineEnable | Block search engine URL or not. |
+| BlockVideoMediaEnable | Block video media URL or not. |
+| BlockCustomURLEnable | Block custom URL or not. |
+| BlockSocialMediaList | The target key words or URLs to be blocked. |
+| BlockSearchEngineList | The target key words or URLs to be blocked. |
+| BlockVideoMediaList | The target key words or URLs to be blocked. |
+| BlockCustomURLList | The target key words or URLs to be blocked. |
+| ScheduleBlockEnable | The function of schedule block is enabled or not. |
+| BlockAllTime | The firewall rule always applies. |
+| FromHour | The rule applies at the assigned hour. |
+| FromMinute | The rule applies at the assigned minute. |
+| ToHour | The rule ends at the assigned hour. |
+| ToMinute | The rule ends at the assigned minute. |
+| WeekDay | The rule applies on the assigned day during the week. The string format is “Mon,Tue,Wed,Thu,Fri,Sat,Sun” |
+| Summary | The summary of the firewall rule. |
+| RelatedUsers | The index number of the user. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshFirewallRuleResult" : "string",
+		"Index"：integer,
+		"Name"："string",
+		"BlockAll"：boolean,
+		"UrlBlockEnable"：boolean,
+		"BlockItems"：
+		[
+			"string",
+			…
+		],
+		"BlockSocialMediaEnable": boolean,
+		"BlockSearchEngineEnable": boolean,
+		"BlockVideoMediaEnable": boolean,
+		"BlockCustomURLEnable": boolean,
+		"BlockSocialMediaList":
+		[
+			"string",
+			…
+		],
+		"BlockSearchEngineList":
+		[
+			"string",
+			…
+		],
+		"BlockVideoMediaList":
+		[
+			"string",
+			…
+		],
+		"BlockCustomURLList":
+		[
+			"string",
+			…
+		],
+		"ScheduleBlockEnable"：boolean,
+		"BlockAllTime"：boolean,
+		"FromHour"：integer,
+		"FromMinute"：integer,
+		"ToHour"：integer,
+		"ToMinute"：integer,
+		"WeekDay"："string",
+		"Summary"："string",
+		"RelatedUsers"：
+		[
+			integer,
+			…
+		]
+	}
+
+
+## POST /mesh/GetMeshFirewallRuleList
+Use this command to get all the MESH’s firewall rules.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshFirewallRuleListResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+| Index | The index number of user. |
+| Name | The firewall rule’s name. |
+| BlockAll | Block all the internet access or not. |
+| UrlBlockEnable | The function of URL block is enabled or not. |
+| BlockItems | The target key words or URLs to be blocked. |
+| BlockSocialMediaEnable | Block social media URL or not. |
+| BlockSearchEngineEnable | Block search engine URL or not. |
+| BlockVideoMediaEnable | Block video media URL or not. |
+| BlockCustomURLEnable | Block custom URL or not. |
+| BlockSocialMediaList | The target key words or URLs to be blocked. |
+| BlockSearchEngineList | The target key words or URLs to be blocked. |
+| BlockVideoMediaList | The target key words or URLs to be blocked. |
+| BlockCustomURLList | The target key words or URLs to be blocked. |
+| ScheduleBlockEnable | The function of schedule block is enabled or not. |
+| BlockAllTime | The firewall rule always applies. |
+| FromHour | The rule applies at the assigned hour. |
+| FromMinute | The rule applies at the assigned minute. |
+| ToHour | The rule ends at the assigned hour. |
+| ToMinute | The rule ends at the assigned minute. |
+| WeekDay | The rule applies on the assigned day during the week. The string format is “Mon,Tue,Wed,Thu,Fri,Sat,Sun” |
+| Summary | The summary of the firewall rule. |
+| RelatedUsers | The index number of the user. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshFirewallRuleListResult" : "string",
+		"Rules"：
+		[
+			{
+				"Index"：integer,
+				"Name"："string",
+				"BlockAll"：boolean,
+				"UrlBlockEnable"：boolean,
+				"BlockItems"：
+				[
+					"string",
+					…
+				],
+				"BlockSocialMediaEnable": boolean,
+				"BlockSearchEngineEnable": boolean,
+				"BlockVideoMediaEnable": boolean,
+				"BlockCustomURLEnable": boolean,
+				"BlockSocialMediaList":
+				[
+					"string",
+					…
+				],
+				"BlockSearchEngineList":
+				[
+					"string",
+					…
+				],
+				"BlockVideoMediaList":
+				[
+					"string",
+					…
+				],
+				"BlockCustomURLList":
+				[
+					"string",
+					…
+				],
+				"ScheduleBlockEnable"：boolean,
+				"BlockAllTime"：boolean,
+				"FromHour"：integer,
+				"FromMinute"：integer,
+				"ToHour"：integer,
+				"ToMinute"：integer,
+				"WeekDay"："string",
+				"Summary"："string",
+				"RelatedUsers"：
+				[
+					integer,
+					…
+				]
+			},
+			…
+		]
+	}
+
+
+## POST /mesh/SetMeshFirewallRule
+Use this command to set the MESH’s firewall rule.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of user. |
+| Name | The firewall rule’s name. |
+| BlockAll | Block all the internet access or not. |
+| UrlBlockEnable | The function of URL block is enabled or not. |
+| BlockItems | The target key words or URLs to be blocked. |
+| BlockSocialMediaEnable | Block social media URL or not. |
+| BlockSearchEngineEnable | Block search engine URL or not. |
+| BlockVideoMediaEnable | Block video media URL or not. |
+| BlockCustomURLEnable | Block custom URL or not. |
+| BlockSocialMediaList | The target key words or URLs to be blocked. |
+| BlockSearchEngineList | The target key words or URLs to be blocked. |
+| BlockVideoMediaList | The target key words or URLs to be blocked. |
+| BlockCustomURLList | The target key words or URLs to be blocked. |
+| ScheduleBlockEnable | The function of schedule block is enabled or not. |
+| BlockAllTime | The firewall rule always applies. |
+| FromHour | The rule applies at the assigned hour. |
+| FromMinute | The rule applies at the assigned minute. |
+| ToHour | The rule ends at the assigned hour. |
+| ToMinute | The rule ends at the assigned minute. |
+| WeekDay | The rule applies on the assigned day during the week. The string format is “Mon,Tue,Wed,Thu,Fri,Sat,Sun” |
+| Summary | The summary of the firewall rule. |
+| RelatedUsers | The index number of the user. |
+| SetMeshFirewallRuleResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer,
+		"Name"："string",
+		"BlockAll"：boolean,
+		"UrlBlockEnable"：boolean,
+		"BlockItems"：
+		[
+			"string",
+			…
+		]
+		"BlockSocialMediaEnable": boolean,
+		"BlockSearchEngineEnable": boolean,
+		"BlockVideoMediaEnable": boolean,
+		"BlockCustomURLEnable": boolean,
+		"BlockSocialMediaList":
+		[
+			"string",
+			…
+		],
+		"BlockSearchEngineList":
+		[
+			"string",
+			…
+		],
+		"BlockVideoMediaList":
+		[
+			"string",
+			…
+		],
+		"BlockCustomURLList":
+		[
+			"string",
+			…
+		],
+		"ScheduleBlockEnable"：boolean,
+		"BlockAllTime"：boolean,
+		"FromHour"：integer,
+		"FromMinute"：integer,
+		"ToHour"：integer,
+		"ToMinute"：integer,
+		"WeekDay"："string",
+		"Summary"："string",
+		"RelatedUsers"：
+		[
+			integer,
+			…
+		]
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshFirewallRuleResult" : "string"
+	}
+
+
+## POST /mesh/DeleteMeshFirewallRule
+Use this command to delete the MESH’s firewall rule.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of user. |
+| DeleteMeshFirewallRuleResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer
+	}
+
++ Response 200 (application/json)
+	{
+		"DeleteMeshFirewallRuleResult" : "string"
+	}
+
+## POST /mesh/BlockMeshUser
+Use this command to block the assigned user for an assigned period.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Index | The index number of user. |
+| Block | The user is blocked or un-blocked. |
+| BlockTime | The block time in second. Note that the 24/7 is represented by “*” |
+| BlockMeshUserResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Index"：integer,
+		"Block"：boolean,
+		"BlockTime"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"BlockMeshUserResult" : "string"
+	}
+
+
+## POST /mesh/BlockMeshClient
+Use this command to block the assigned client for an assigned period.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| MAC | The connected device’s MAC. |
+| Block | The client is blocked or un-blocked. |
+| BlockTime | The block time in second. Note that the 24/7 is represented by “*” |
+| ScheduleBlock | The device is on the schedule block or not. |
+| FromHour | The block applies at the assigned hour. |
+| FromMinute | The block applies at the assigned minute. |
+| ToHour | The block ends at the assigned hour. |
+| ToMinute | The block ends at the assigned minute. |
+| WeekDay | The block applies on the assigned day during the week. The string format is “Mon,Tue,Wed,Thu,Fri,Sat,Sun” |
+| BlockMeshClientResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"MAC"："string",
+		"Block"：boolean,
+		"BlockTime"："string",
+		"ScheduleBlock"：boolean,
+		"FromHour"：integer,
+		"FromMinute"：integer,
+		"ToHour"：integer,
+		"ToMinute"：integer,
+		"WeekDay"："string"
+	}
+
+
++ Response 200 (application/json)
+	{
+		"BlockMeshClientResult" : "string"
+	}
+
+
+## POST /mesh/ResetAllBlockedMeshClient
+Use this command to un-block all the client.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| ResetAllBlockedMeshClientResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_MESH_DISABLED**：MESH is disabled. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"ResetAllBlockedMeshClientResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshLedDisabled
+LED this command to set led turn off.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Brightness | The brightness of device |
+| TargetMeshMac | The target device mac |
+| SetDeviceAccountResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Brightness"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshLedDisabledResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshWifiDisabled
+Using this command to set wifi turn off.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| WifiSwitch | Wireless switch status |
+| TargetMeshMac | The target device mac |
+| SetDeviceAccountResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"WifiSwitch"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshWifiDisabledResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshWifiTriggerWps
+Using this command to trigger wifi wps.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| SetMeshWifiTriggerWpsResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshWifiTriggerWpsResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshDeviceReboot
+Using this command to control target device reboot.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| SetMeshDeviceRebootResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshDeviceRebootResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshWifiLocation
+Using this command to set device location name.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| Location | The deivce location name |
+| TargetMeshMac | The target device mac |
+| SetMeshWifiLocationResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"Location"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshWifiLocationResult" : "string"
+	}
+
+
+## POST /mesh/GetMeshBasicModeWifiInfo
+Using this command to get wifi information and led status.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| getMeshBasicModeWifiInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+| LedStatus | Led switch status |
+| WiFiStatus | Wireless switch status |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"getMeshBasicModeWifiInfoResult" : "string",
+		"LedStatus" : "string",
+		"WiFiStatus" : "string"
+	}
+
+
+## POST /mesh/DeleteMeshDevice
+Using this command to delete target device.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| SetMeshDeviceRebootResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"DeleteMeshDeviceResult" : "string"
+	}
+
+
+## POST /mesh/SetMeshDeviceUSB
+Using this command to set device usb function.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| USBSetting | First bit is samba,<br>second bit is minidlna,<br>third bit is print server<br>ex:101, 111, 001 |
+| TargetMeshMac | The target device mac |
+| SetMeshDeviceRebootResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"USBSettings"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"SetMeshDeviceUSBResult" : "string"
+	}
+
+
+## POST /mesh/GetMeshDeviceUSB
+Using this command to get device usb status.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| SetMeshDeviceRebootResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+| USBSetting | First bit is samba,<br>second bit is minidlna,<br>third bit is print server<br>ex:101, 111, 001 |
+| HiddenSSID | Status of hidden ssid. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshDeviceUSBResult" : "string",
+		"USBSettings"："string",
+		"HiddenSSID"："string"
+	}
+
+
+## POST /mesh/GetMeshDeviceUSBInfo
+Using this command to get connect usb vendor and model.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| GetMeshDeviceUSBInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+| vendor | If USB device exist, API will return the vendor name.<br>If USB device not exist, API will return empty string.<br>{ "GetMeshDeviceUSBInfoResult": "OK", "vendor": "HP", "model": "Deskjet 3070 B611 series" }
+ |
+| model | If USB device exist, API will return the model name.<br>If USB device not exist, API will return empty string.<br>{ "GetMeshDeviceUSBInfoResult": "OK", "vendor": "", "model": "" }
+ |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshDeviceUSBInfoResult" : "string",
+		"vendor"："string",
+		"model"："string",
+	}
+
+
+## POST /mesh/GetMeshHomeInfo
+Using this command to get mesh Home infomation.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| GetMeshHomeInfoResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+| WirelessStatus | The value should be 0 or 1 (On/Off) |
+| WirelessGuestNetworkStatus | The value should be 0 or 1 (On/Off) |
+| RoomsActiveNumber | The value shows how many mesh node alive (command “batctl o”) |
+| PeopleActiveNumber | The value shows how many people active |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"GetMeshHomeInfoResult" : "string",
+		"WirelessStatus"："string",
+		"WirelessGuestNetworkStatus" : "string",
+		"RoomsActiveNumber" : "integer",
+		"PeopleActiveNumber" : "integer"
+	}
+
+
+## POST /mesh/MeshResetTargetDevice
+Using this command to reset Target mesh device.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| TargetMeshMac | The target device mac |
+| MeshResetTargetDeviceResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+	{
+		"MeshAdminUsername"："string",
+		"MeshAdminPassword"："string",
+		"TargetMeshMac"："string"
+	}
+
++ Response 200 (application/json)
+	{
+		"MeshResetTargetDeviceResult" : "string"
+	}
+
+## POST /mesh/EzSetupBcastPkts
+Using this command to start EZSetup broadcast beacon behavior.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| EzSetupBcastPktsResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+
+		{
+			"MeshAdminUsername" : "string",
+			"MeshAdminPassword" : "string"
+		}
+
++ Response 200 (application/json)
+
+		{
+			"EzSetupBcastPktsResult" : "string"
+		}
+
+## POST /mesh/EzSetupGetCandidates
+Using this command to get EZSetup candidates list.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| EzSetupGetCandidatesResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong. |
+
++ Request (application/json)
+
+		{
+			"MeshAdminUsername" : "string",
+			"MeshAdminPassword" : "string"
+		}
+
++ Response 200 (application/json)
+
+		{
+			"EzSetupGetCandidatesResult" : "string",
+			"MeshNodeList" :
+			[
+				{
+					"MeshMac" : "string",
+					"BluetoothID" : "string",
+					"RegularDomain" : "string",
+					"DeviceType" : integer
+				}
+			]
+		}
+
+## POST /mesh/EzSetupAddMeshNotes
+Using this command to send profile to selected candidates.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| EzSetupAddMeshNotesResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.<br>**ERROR_PROCESS_IS_RUNNING_STR**: master got candidates and going to send mesh profile.|
+
++ Request (application/json)
+
+		{
+			"MeshAdminUsername" : "string",
+			"MeshAdminPassword" : "string",
+			"MeshNodeList" :
+			[
+				{
+					"MeshMac" : "string",
+				}
+			]
+		}
+
++ Response 200 (application/json)
+
+		{
+			"EzSetupAddMeshNotesResult" : "string",
+		}
+
+## POST /mesh/EzSetupGetFailMeshNodes
+Using this command to get fail list which mesh profile cannot be send.
+
+| Parameter | Description |
+| - | - |
+| MeshAdminUsername | The administrator username of the mesh network. |
+| MeshAdminPassword | The administrator password of the mesh network. |
+| EzSetupGetFailMeshNodesResult | Result  <br>**OK**：Success.<br>**ERROR**：Failure.<br>**ERROR_UNAUTHORIZED**：User name or password is wrong.|
+
++ Request (application/json)
+
+		{
+			"MeshAdminUsername" : "string",
+			"MeshAdminPassword" : "string"
+		}
+
++ Response 200 (application/json)
+
+		{
+			"EzSetupGetFailMeshNodesResult" : "string",
+			"FailList" :
+			[
+				"string"
+			]
+		}

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# Convert radio-based to ssid-based config.
+# if [ "$(uci get apcontroller.capwap.enable 2> /dev/null)" == "0" ]; then
+    if [ ! -n "$(uci get functionlist.functionlist.SUPPORT_COMBINED_SSID_SETTING 2> /dev/null)" ]; then
+        /sbin/converter.sh
+    fi
+# fi
+
+if [ -n "$(uci get functionlist.functionlist.SUPPORT_COMBINED_SSID_SETTING 2> /dev/null)" ]; then
+	/sbin/vlan_id_sync.sh
+fi
+
+web_gui_ver=$(uci -c /rom/etc/config get functionlist.vendorlist.WEB_GUI_VER 2>/dev/null)
+if [ ${web_gui_ver:-0} -gt 1 ]; then
+    uci set firewall.@defaults[0].forward="ACCEPT"
+    uci set firewall.@defaults[0].conntrack=1
+    uci set firewall.@zone[0].forward="ACCEPT"
+    uci set firewall.@zone[0].masq=0
+    uci set firewall.@zone[0].conntrack=1
+    uci set firewall.fwreload='include'
+    uci set firewall.fwreload.path="/etc/firewall-re.user"
+    uci set firewall.fwreload.reload=1
+    uci commit firewall
+fi
+
+cp /rom/etc/firewall.user /etc/firewall.user
+cp /rom/etc/firewall-re.user /etc/firewall-re.user
+cp /rom/etc/config/functionlist /etc/config/functionlist
+cp /rom/etc/config/ucitrack /etc/config/ucitrack
+
+exit 0

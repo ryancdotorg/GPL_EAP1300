@@ -1,0 +1,10 @@
+Package: burn
+Version: 1.0
+Depends: libc, mtd
+Source: SENAO/package/burn
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 2785
+Description:  This package can burn u-boot kernel rootfs and factory.
+ This package use mtd package to write *.bin to flash.

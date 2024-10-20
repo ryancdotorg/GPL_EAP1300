@@ -1,0 +1,33 @@
+#!/bin/sh
+
+snmpd_conf_change=0
+
+if [ -f /etc/config/ezmcloud ]; then
+
+	com2sec_secnames=$(eval "/usr/sbin/foreach snmpd com2sec secname rw")
+	for com2sec_secname in $com2sec_secnames; do
+		eval uci set snmpd."$com2sec_secname".secname="ro"
+		snmpd_conf_change=1
+	done
+
+	group_secnames=$(eval "/usr/sbin/foreach snmpd group secname rw")
+	for group_secname in $group_secnames; do
+		eval uci set snmpd."$group_secname".secname="ro"
+		snmpd_conf_change=1
+	done
+
+	# cloud model default off
+	[ $snmpd_conf_change -eq 1 ] && eval uci set snmpd.@system[0].sysEnable=0
+
+
+fi
+
+if [ "$(uci -q get system.@system[0].hostname)" != "$(uci -q get snmpd.@system[0].sysName)" ]; then
+		uci set snmpd.@system[0].sysName="$(uci -q get system.@system[0].hostname)"
+		snmpd_conf_change=1
+fi
+
+[ $snmpd_conf_change -eq 1 ] && uci commit snmpd
+
+exit 0
+

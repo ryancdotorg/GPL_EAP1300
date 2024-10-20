@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start() {
+    config_load sn_reconn
+
+    local enable
+    config_get_bool enable global enable 0
+    [ "${enable}" -gt 0 ] || return
+
+    [ -f "/proc/sn_role" ] && [ -x "/sbin/sn_reconn" ] && /sbin/sn_reconn &
+}
+
+stop() {
+    killall sn_reconn
+}

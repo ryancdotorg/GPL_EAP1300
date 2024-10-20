@@ -1,0 +1,40 @@
+--- a/sysklogd/syslogd.c
++++ b/sysklogd/syslogd.c
+@@ -987,6 +987,10 @@ static void do_syslogd(void)
+ #else
+ #define recvbuf (G.recvbuf)
+ #endif
++	char *timestamp;
++	char *msg;
++	time_t now;
++	int i;
+ 
+ 	/* Set up signal handlers (so that they interrupt read()) */
+ 	signal_no_SA_RESTART_empty_mask(SIGTERM, record_signo);
+@@ -1062,6 +1066,26 @@ static void do_syslogd(void)
+ 					continue;
+ 			}
+ 
++			msg = recvbuf;
++
++			/* Jan 18 00:11:22 msg... */
++			/* 01234567890123456 */
++			if (sz > 16 && msg[0] == '<')
++			{
++				bb_strtou(msg + 1, &msg, 10);
++				if (*msg == '>')
++					msg++;
++				if ( msg[3] == ' ' && msg[6] == ' ' && msg[9] == ':' && msg[12] == ':' && msg[15] == ' ')
++				{
++					time(&now);
++					timestamp = ctime(&now) + 4; /* skip day of week */
++					for (i = 0; i < 15; i++)
++					{
++						msg[i] = timestamp[i];
++					}
++				}
++			}
++
+ 			/* Send message to remote logger.
+ 			 * On some errors, close and set remoteFD to -1
+ 			 * so that DNS resolution is retried.

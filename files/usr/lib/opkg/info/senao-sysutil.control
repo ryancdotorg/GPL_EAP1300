@@ -1,0 +1,9 @@
+Package: senao-sysutil
+Version: 0.0.1-1
+Depends: libc, libuci, libapi, libopenssl
+Source: SENAO/package/senao-sysutil
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 18943
+Description:  API Library (include lua plugin).

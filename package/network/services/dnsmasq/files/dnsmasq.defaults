@@ -1,0 +1,4 @@
+#!/bin/sh
+cat /etc/group  |grep ^dnsmasq: || cat /rom/etc/group |grep ^dnsmasq: >> /etc/group && sync
+cat /etc/passwd  |grep ^dnsmasq: || cat /rom/etc/passwd |grep ^dnsmasq: >> /etc/passwd && sync
+cat /etc/shadow  |grep ^dnsmasq: || cat /rom/etc/shadow |grep ^shadow: >> /etc/shadow && sync

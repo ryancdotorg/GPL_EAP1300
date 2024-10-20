@@ -1,0 +1,2 @@
+config sn_reconn global
+	option enable 0

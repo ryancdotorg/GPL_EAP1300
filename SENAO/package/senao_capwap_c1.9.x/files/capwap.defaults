@@ -1,0 +1,21 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	add ucitrack apcontroller
+	set ucitrack.@apcontroller[0].init=apcontroller
+	add_list ucitrack.@network[0].affects=apcontroller
+	commit ucitrack
+	set portal.guest="portal"
+	set portal.ssid_1="portal"
+	set portal.ssid_2="portal"
+	set portal.ssid_3="portal"
+	set portal.ssid_4="portal"
+	set portal.ssid_5="portal"
+	set portal.ssid_6="portal"
+	set portal.ssid_7="portal"
+	set portal.ssid_8="portal"
+	commit portal
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

@@ -1,0 +1,57 @@
+# This file is interpreted as shell script.
+# Put your custom iptables rules here, they will
+# be executed with each firewall (re-)start.
+
+# Internal uci firewall chains are flushed and recreated on reload, so
+# put custom rules into the root chains e.g. INPUT or FORWARD or into the
+# special user chains, e.g. input_wan_rule or postrouting_lan_rule.
+#
+# INPUT  {delegate_input
+#           {input_rule,
+#            zone_lan_input,
+#               {input_lan_rule,
+#                zone_lan_src_ACCEPT}
+#            zone_guest_input
+#               {input_guest_rule,
+#                zone_guest_src_DROP}
+#            }
+#        }
+# OUTPUT {delegate_output
+#           {output_rule,
+#            zone_lan_output,
+#               {output_lan_rule,
+#                zone_lan_dest_ACCEPT}
+#            zone_guest_output
+#               {output_guest_rule,
+#               zone_guest_dest_ACCEPT}
+#           }
+#        }
+# FORWARD {delegate_forward
+#           {forwarding_rule,
+#            zone_lan_forward
+#                {forwarding_lan_rule,
+#                 zone_lan_src_ACCEPT},
+#            zone_guest_forward
+#                {forwarding_guest_rule,
+#                 zone_lan_dest_ACCEPT,
+#                 zone_guest_src_DROP
+#                }
+#           }
+#         }
+# nat: POSTROUTING { delegate_postrouting { postrouting_rule, zone_lan_postrouting {postrouting_lan_rule}, zone_guest_postrouting{postrouting_guest_rule}} }
+#
+# :forwarding_guest_rule - [0:0]
+# :forwarding_lan_rule - [0:0]
+# :forwarding_rule - [0:0]
+# :input_guest_rule - [0:0]
+# :input_lan_rule - [0:0]
+# :input_rule - [0:0]
+# :output_guest_rule - [0:0]
+# :output_lan_rule - [0:0]
+# :output_rule - [0:0]
+#
+
+# default limit-burst = 5
+# For session log
+iptables -t raw -N SN_LOGGING
+

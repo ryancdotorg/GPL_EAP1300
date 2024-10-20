@@ -1,0 +1,12 @@
+--- a/include/platform.h
++++ b/include/platform.h
+@@ -251,7 +251,9 @@ typedef signed char smallint;
+ typedef unsigned char smalluint;
+ #else
+ /* for arches where byte accesses generate larger code: */
++#ifndef smallint
+ typedef int smallint;
++#endif
+ typedef unsigned smalluint;
+ #endif
+ 

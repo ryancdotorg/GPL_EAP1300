@@ -1,0 +1,9 @@
+Package: senao-openapi-server-mod-cgi
+Version: 1.0-9-g966afb8
+Depends: libc
+Source: SENAO/package/senao-openapi-server
+Section: net
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 7992
+Description:  CGI module

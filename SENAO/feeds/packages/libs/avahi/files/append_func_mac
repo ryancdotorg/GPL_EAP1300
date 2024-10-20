@@ -1,0 +1,56 @@
+genconfig() {
+    systemname=$(uci get system.@system[0].SystemName)
+    lanmac=`setconfig -g6 |awk -F ":" '{print $4$5$6}' |tr -d " ,\n"`
+
+    allow_interface=br-lan
+    if [ -e /etc/init.d/lsp ]
+    then
+        allow_interface=${allow_interface},br-lsp
+    fi
+
+    cat << EOF > /tmp/etc/avahi/avahi-daemon.conf
+[server]
+host-name=$systemname$lanmac
+#domain-name=local
+use-ipv4=yes
+use-ipv6=no
+check-response-ttl=no
+use-iff-running=no
+allow-interfaces=$allow_interface
+
+[publish]
+publish-addresses=yes
+publish-hinfo=yes
+publish-workstation=no
+publish-domain=yes
+#publish-dns-servers=192.168.1.1
+#publish-resolv-conf-dns-servers=yes
+
+[reflector]
+enable-reflector=no
+reflect-ipv=no
+
+[rlimits]
+#rlimit-as=
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=30
+rlimit-stack=4194304
+rlimit-nproc=3
+EOF
+}
+
+genBonjourService() {
+    systemname=$(uci get system.@system[0].SystemName)
+    lanmac=`setconfig -g6 |awk -F ":" '{print $4$5$6}' |tr -d " ,\n"`
+    cat << EOF > /tmp/etc/avahi/services/bonjour.service
+<service-group>
+<name>$systemname$lanmac</name>
+<service>
+<type>_http._tcp</type>
+<port>80</port>
+</service>
+</service-group>
+EOF
+}

@@ -1,0 +1,91 @@
+#!/bin/sh
+
+debuglv=0
+
+tp_apps_init_help(){
+            printf "    %-11s - %-s\n" "-h" "Show this message"
+            printf "    %-11s - %-s\n" "-f" "Foreground mode, pause between each scripts"
+            printf "    %-11s - %-s\n" "-k level" "Echo prink level to proc"
+            printf "    %-11s - %-s\n" "-d[ddd]" "Debug level:"
+            printf "    %-11s   %-s\n" "" "0: Silent"
+            printf "    %-11s   %-s\n" "" "1: Show output"
+            printf "    %-11s   %-s\n" "" "2: Show error"
+            printf "    %-11s - %-s\n" "-c" "Debug rc.common"
+            printf "    %-11s - %-s\n" "-u" "Debug uci"
+            printf "    %-11s - %-s\n" "-s filename" "Debug script"
+            exit
+}
+
+while getopts "hdfk:cus:" option
+do
+    case "${option}" in
+        h)
+            tp_apps_init_help
+            exit
+            ;;
+        d)  debuglv=$(($debuglv+1)) ;;
+        f)  foreground=1 ;;
+        k)  echo "echo ${OPTARG} > /proc/sys/kernel/printk"
+            echo ${OPTARG} > /proc/sys/kernel/printk
+            cat /proc/sys/kernel/printk
+            exit
+            ;;
+        c)  rc_common=/etc/rc.common
+            rc_common_org=/etc/rc.common.org
+            grep "\*\*\*\$initscript" $rc_common 1>/dev/null 2>&1 && (echo "disable";mv $rc_common_org $rc_common) || (echo "enable";cp $rc_common $rc_common_org;sed -i '/^ALL_COMMANDS/i\printf "\\033[33m***$initscript $action $@\\033[0m\\n" > /dev/console' $rc_common)
+            exit
+            ;;
+        u)
+            ucipath=$(which uci)
+            uciexe=/sbin/uciexe
+            if [ ! -f $uciexe ];then
+                echo "enable"
+                mv $ucipath $uciexe
+                touch $ucipath && chmod 755 $ucipath
+                echo "#!/bin/sh" > $ucipath
+                echo "echo -e \"\\033[36m[\$(cat /proc/\$PPID/status|grep ^Name:|cut -f 2)]\$0 \"\$@\"\\033[0m\">/dev/console 2>/dev/null" >> $ucipath
+                echo "$uciexe \"\$@\"" >> $ucipath
+            else
+                echo "disable"
+                mv $uciexe $ucipath
+            fi
+            exit
+            ;;
+        s)
+            scriptname=${OPTARG}
+            head -2 ${scriptname} |grep '^echo -e.*m\[' 1>/dev/null 2>&1 && (echo "disable";sed -i '2d' ${scriptname}) || (echo "enable";sed -i '2 i\echo -e "\\r\\\\033[34m[\$(cat /proc/\$PPID/status|grep ^Name:|cut -f 2)]'$(readlink -nf ${scriptname})' $@\\\\033[0m" > /dev/console' ${scriptname})
+            exit
+            ;;
+        *)
+            tp_apps_init_help
+            exit
+            ;;
+    esac
+done
+
+
+. /lib/functions.sh
+
+run_scripts() {
+    for i in /etc/tp.d/T*; do
+        printf "\r\033[32m*** [%-s]\033[0m\n" "$i"
+        if [ "$foreground" = "1" ];then
+            read -p "Press [Enter] key to continue ..."
+        fi
+        if [ -x $1 ];then
+            if [ $debuglv -ge 2 ];then
+                $i boot
+            elif [ $debuglv -ge 1 ];then
+                $i boot 2>/dev/null
+            else
+                $i boot 1>/dev/null 2>&1
+            fi
+        fi
+    done
+}
+
+if [ "$foreground" = "1" ];then
+    run_scripts
+else
+    run_scripts&
+fi

@@ -1,0 +1,9 @@
+#!/bin/sh
+uci batch <<-EOF
+del ucitrack.@iperf3[-1]
+add ucitrack iperf3
+set ucitrack.@iperf3[0].init=iperf3
+commit ucitrack
+EOF
+
+exit 0

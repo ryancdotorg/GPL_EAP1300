@@ -1,0 +1,9 @@
+{
+    "CFG_RAM": {
+        "Action": [
+            {
+                "js_idx_act_name": "act_linkcheck2"
+            }
+        ]
+    }
+}

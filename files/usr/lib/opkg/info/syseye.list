@@ -1,0 +1,7 @@
+/usr/lib/libseipc.so.1
+/usr/sbin/syseye
+/etc/init.d/syseye
+/usr/lib/libseipc.so.1.0.0
+/etc/syseye/cfg_saved.json
+/usr/lib/libseipc.so
+/etc/syseye/cfg_ram.json

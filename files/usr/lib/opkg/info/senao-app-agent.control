@@ -1,0 +1,9 @@
+Package: senao-app-agent
+Version: 1.0-2-g53cf81f
+Depends: libc, libjson-c, libmatrixssl, libopenssl, libapi, senao-sysutil
+Source: SENAO/package/senao-app-agent
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 96280
+Description:  Senao APP agent

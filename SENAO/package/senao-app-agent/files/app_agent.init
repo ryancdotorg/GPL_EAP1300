@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start() {
+	local enable_aes=$(uci get app_agent.agent.enable_aes)
+
+	if [ $enable_aes -eq 1 ]; then
+		/usr/sbin/app_agentd -e &
+	else
+		/usr/sbin/app_agentd &
+	fi
+}
+
+stop() {
+	local pid=$(ps | grep app_agent | grep -v "grep" | awk '{print $1}')
+
+	kill -9 $pid
+}

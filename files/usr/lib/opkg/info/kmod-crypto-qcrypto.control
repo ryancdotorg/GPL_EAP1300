@@ -1,0 +1,10 @@
+Package: kmod-crypto-qcrypto
+Version: 4.4.60-1
+Depends: kernel (=4.4.60-1-00d4d08f108a4ac04f94cf3f2682d73e), kmod-crypto-manager, kmod-crypto-aes, kmod-crypto-hash, kmod-crypto-des, kmod-crypto-core
+Source: package/kernel/linux
+License: GPLv2
+Section: kernel
+Status: unknown hold not-installed
+Architecture: ipq40xx
+Installed-Size: 30878
+Description:  Qualcomm crypto CE engine

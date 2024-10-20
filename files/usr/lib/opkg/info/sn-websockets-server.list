@@ -1,0 +1,4 @@
+/etc/init.d/swd
+/usr/share/swd/swd.key.pem
+/usr/bin/swd
+/usr/share/swd/swd.pem

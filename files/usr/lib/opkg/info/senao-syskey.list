@@ -1,0 +1,6 @@
+/etc/uci-defaults/z99syskey
+/lib/syskey.sh
+/etc/init.d/syskey
+/usr/sbin/iface_mark.sh
+/etc/config/syskey
+/etc/init.d/iface_mark

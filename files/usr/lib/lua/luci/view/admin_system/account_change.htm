@@ -1,0 +1,125 @@
+<%+header%>
+<script>document.getElementById('menu_right_style').style.display = "none";
+$("#maincontent").removeClass();
+function changeInputType(field)
+{
+	var pw_value = document.getElementById(field).value;
+	if(document.getElementById(field).type == 'password')
+	  	$("#"+field+"").replaceWith("<input type=text maxlength='255' name="+field+" id="+field+" style='height:27px;'>");
+	else
+		$("#"+field+"").replaceWith("<input type=password maxlength='255' name="+field+" id="+field+" style='height:27px;'>");
+	document.getElementById(field).value = pw_value;
+}
+function savechanges(value)
+{
+	var szRet = "";
+	var admin_pw1 = document.getElementsByName("admin_pw1")[0].value;
+	var admin_pw2 = document.getElementsByName("admin_pw2")[0].value;
+	var guest_pw1 = document.getElementsByName("guest_pw1")[0].value;
+	var guest_pw2 = document.getElementsByName("guest_pw2")[0].value;
+	if (value=="1")
+	{
+		if ((validatePW(admin_pw1,"admin")) ||(checkPW1PW2(admin_pw1, admin_pw2, szRet)))
+		{
+			return false;
+		}
+		if ((validatePW(guest_pw1,"guest")) ||(checkPW1PW2(guest_pw1, guest_pw2, szRet)))
+		{
+			return false;
+		}		
+	}
+	document.getElementsByName("submitType")[0].value = value;
+	ajax_setCsrf();
+
+	return true;
+}
+function validatePW(pw, user)
+{
+	var iRet = 0;
+	if ("" == pw)
+	{
+		alert("<%:Please enter the new password!%>");
+		iRet = 1;
+	}
+	else if (pw.length < 3 || pw.length > 12)
+	{
+		alert("<%:Invalid password!%>");
+		iRet = 1;
+	}
+	/*else if (user == pw)
+	{
+		alert("<%:Invalid password!%>");
+		iRet = 1;
+	}*/
+	return iRet;
+}
+function checkPW1PW2(pw1, pw2, szRet)
+{
+	var iRet = 0;
+	if ("" == szRet)
+	{
+		if(pw2 != pw1)
+		{
+			alert("<%:Given password confirmation did not match, password not changed!%>");
+			iRet = 1;
+		}
+	}
+	return iRet;
+}
+</script>
+<form name="wifi_mesh" action="<%=REQUEST_URI%>" method="post">
+<input type="hidden" name="mesh_disable" value="1">
+<input type="hidden" id="submitType" value="1" name="submitType"/>
+<fieldset class="cbi-section">
+<div id="first_setting" class="cbi-page-actions">
+<table>
+	<tr>
+		<td colspan="2" class="title"><%:Change Device Password%><br><br><%:To ensure all users have the strongest security environment, you are strongly advised to change the passwords for both admin and guess accounts.%><br><%:Note: The new password will be applied to all devices within your Mesh Network.%></td>
+	</tr>
+	<tr class="title-option">
+	<td colspan="2"><%:ADMIN Password Setting%></td>
+	</tr>	
+	<tr class="title-option">
+		<td style="width:50%;"><%:Username%></td>
+		<td><%:admin%></td>	</tr>
+	<tr class="title-option">
+		<td style="width:50%;"><%:New Password%></td>
+		<td><input type="password" name="admin_pw1" id="admin_pw1" maxlength="255" style="height:27px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('admin_pw1')" />
+		</td>
+	</tr>
+	<tr class="title">
+		<td style="width:50%;font-size: 16px;"><%:Verify Password%></td>		
+		<td><input type="password" name="admin_pw2" id="admin_pw2" smaxlength="255" style="height:27px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('admin_pw2')" />
+		</td>
+	</tr>	
+	<tr class="title-option">
+	<td colspan="2"><%:GUEST Password Setting%></td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:50%;"><%:Username%></td>
+		<td><%:guest%></td>	</tr>
+	<tr class="title-option">
+		<td style="width:50%;"><%:New Password%></td>
+		<td><input type="password" name="guest_pw1" id="guest_pw1" maxlength="255" style="height:27px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('guest_pw1')" />
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:50%;"><%:Verify Password%></td>
+		<td><input type="password" name="guest_pw2" id="guest_pw2" maxlength="255" style="height:27px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('guest_pw2')" />
+		</td>
+	</tr>
+</table>
+
+</div>
+</fieldset>
+<div id = "next" class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" onclick="return savechanges(1)" type="submit" name="cbi.apply" value="<%:Apply%>">
+	<input class="cbi-button cbi-button-apply" onclick="return savechanges(2)" type="submit" name="cbi.next" value="<%:Skip%>">
+</div>
+
+</form>
+<%+footer%>

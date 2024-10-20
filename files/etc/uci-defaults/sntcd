@@ -1,0 +1,15 @@
+#!/bin/sh
+uci batch <<-EOF
+del ucitrack.@sntcd[-1]
+del_list ucitrack.@network[0].affects=sntcd
+del_list ucitrack.@portal[0].affects=sntcd
+del_list ucitrack.@qos[0].affects=sntcd
+add ucitrack sntcd
+set ucitrack.@sntcd[0].init=sntcd
+add_list ucitrack.@network[0].affects=sntcd
+add_list ucitrack.@portal[0].affects=sntcd
+add_list ucitrack.@qos[0].affects=sntcd
+commit ucitrack
+EOF
+
+exit 0

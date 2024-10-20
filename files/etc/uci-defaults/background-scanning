@@ -1,0 +1,39 @@
+#!/bin/sh
+
+echo "========== set background scanning configuration. =========="
+
+wifs=$(/usr/sbin/foreach wireless wifi-device)
+
+commit=0
+for wif in $wifs; do
+	mode=$(uci get wireless.$wif.opmode)
+	backgroundscanEnable=$(uci get wireless.$wif.backgroundscanEnable)
+	[ -n "$backgroundscanEnable" ] || {
+		[ "$mode" == "ap" ] && {
+			uci set wireless.$wif.backgroundscanEnable=0
+			uci set wireless.$wif.switchChanInterval=20
+			uci set wireless.$wif.mindwell=51
+			uci set wireless.$wif.maxdwell=100
+			uci set wireless.$wif.resttime=1
+			uci set wireless.$wif.maxscantime=200
+			uci set wireless.$wif.idletime=51
+		}
+		cfgid=$(uci add wireless wifi-iface)
+		vif=${wif}"_scan"
+		uci rename wireless.$cfgid=$vif
+		uci set wireless.$vif.device=$wif
+		uci set wireless.$vif.mode=monitor
+		sif="scan_"$(echo ${wif:4})
+		uci set wireless.$vif.ifname=$sif
+		uci set wireless.$vif.ssid=$sif
+		[ "$mode" == "ap" ] && {
+			uci set wireless.$vif.network=lan
+			uci set wireless.$vif.mode_display=ap
+			uci set wireless.$vif.disabled=1
+		}
+		commit=1
+	}
+done
+[ "$commit" == "1" ] && uci commit wireless
+
+exit 0

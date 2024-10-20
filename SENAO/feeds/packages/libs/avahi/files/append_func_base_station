@@ -1,0 +1,97 @@
+genconfig() {
+	modelname=$(uci get sysProductInfo.model.modelName)
+
+	if [ "${modelname}" == "SP938BS" ]; then
+		allow_interface=eth0
+	elif [ "${modelname}" == "EnBSC" ] || [ "${modelname}" == "SP938BSC" ]; then
+		allow_interface=br-lan
+	fi
+
+	cat << EOF > /etc/avahi/avahi-daemon.conf
+[server]
+host-name=$modelname
+#domain-name=local
+use-ipv4=yes
+use-ipv6=no
+check-response-ttl=no
+use-iff-running=no
+allow-interfaces=$allow_interface
+
+[publish]
+publish-addresses=yes
+publish-hinfo=yes
+publish-workstation=no
+publish-domain=yes
+publish-aaaa-on-ipv4=no
+#publish-dns-servers=192.168.1.1
+#publish-resolv-conf-dns-servers=yes
+
+[reflector]
+enable-reflector=no
+reflect-ipv=no
+
+[rlimits]
+#rlimit-as=
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=30
+rlimit-stack=4194304
+rlimit-nproc=3
+EOF
+}
+
+genBonjourService() {
+	systemname=$(uci get system.@system[0].SystemName)
+	systemname=${systemname//</&lt;}
+	modelname=$(uci get sysProductInfo.model.modelName)
+	fw_ver=$(cat /etc/version | grep Firmware | awk 'BEGIN{FS= " "} {print $4}')
+	
+	if [ "${modelname}" == "SP938BS" ]; then
+#		interface=eth0
+#		mac_addr=$(setconfig -g 7 | awk '{$1=$1;print}' | tr -d "\n")
+		mac_addr=$(ip -o link | awk '$2 == "eth0:" {print $(NF-2)}' | tr -d "\n")
+#		device_id=$(setconfig -g 7 | awk '{$1=$1;print}' | awk -F":" '{print $1$2$3$4$5$6}' | tr -d "\n")
+		device_id=$(ip -o link | awk '$2 == "eth0:" {print $(NF-2)}' | awk -F":" '{print $1$2$3$4$5$6}' | tr -d "\n")
+		device_name=$(uci get system.@system[0].hostname)
+		bsc_id=$(uci get base-station-controller.bsc_0.id)
+		bsc_name=$(uci get base-station-controller.bsc_0.name)
+		sync_status=$(cat /tmp/ptp_status)
+		serial_number=$(setconfig -g 0)
+		subnet_mask=$(uci get network.lan.netmask)
+		gateway=$(uci get network.lan.gateway)
+	elif [ "${modelname}" == "EnBSC" ] || [ "${modelname}" == "SP938BSC" ]; then
+#		interface=br-lan
+		mac_addr=$(setconfig -g 6 | awk '{$1=$1;print}' | tr -d "\n")
+		device_id=$(setconfig -g 6 | awk '{$1=$1;print}' | awk -F":" '{print $1$2$3$4$5$6}' | tr -d "\n")
+		device_name=$(uci get system.@system[0].hostname)
+		bsc_id="-"
+		bsc_name="-"
+	fi
+
+	model_id=$(ip -o link | awk '$2 == "eth0:" {print $(NF-2)}' | tr -d "\n")
+
+	cat << EOF > /etc/avahi/services/bonjour.service
+<service-group>
+<name>$modelname</name>
+<service>
+<type>_http._tcp</type>
+<port>80</port>
+<txt-record>modelname=${modelname:-NULL}</txt-record>
+<txt-record>deviceName=${systemname:-NULL}</txt-record>
+<txt-record>mac=${mac_addr:-NULL}</txt-record>
+<txt-record>version=${fw_ver:-NULL}</txt-record>
+<txt-record>model_id=${model_id:-NULL}</txt-record>
+<txt-record>device_id=${device_id:-NULL}</txt-record>
+<txt-record>device_name=${device_name:-NULL}</txt-record>
+<txt-record>bsc_id=${bsc_id:-NULL}</txt-record>
+<txt-record>bsc_name=${bsc_name:-NULL}</txt-record>
+<txt-record>sync_status=${sync_status:-NULL}</txt-record>
+<txt-record>serial_number=${serial_number:-NULL}</txt-record>
+<txt-record>subnet_mask=${subnet_mask:-NULL}</txt-record>
+<txt-record>gateway=${gateway:-NULL}</txt-record>
+
+</service>
+</service-group>
+EOF
+}

@@ -1,0 +1,620 @@
+<%+header%>
+<%
+local uci = require "luci.model.uci".cursor()
+local MAX_WLAN_MAC_FILTER_NUMBER
+MAX_WLAN_MAC_FILTER_NUMBER = uci:get('functionlist','vendorlist','MAX_WLAN_MAC_FILTER_NUMBER') or 32
+%>
+<script src="/luci-static/web_ECB_FANCY/jquery-1.10.1.min.js"></script>
+<script>
+
+	var display={};
+
+	var meshdata, macdata, host_alfred;
+	var RefreshDelay = 30000;
+	function savechanges(value){
+
+		var f = document.mesh_connections;
+		var obj, jsonlist, k, match, mac, batctl_mac;
+		if(value==1)
+		{
+			var selectMesh =document.getElementsByName('selectMesh');
+
+
+			for (var i=0; i<selectMesh.length;i++)
+			{
+				if(selectMesh[i].checked==true)
+				{
+					f.deleteDevice.value = selectMesh[i].value;					
+				}
+			}
+
+			if(f.deleteDevice.value=="")
+			{
+				alert("<%:Please select delete mesh device%>");
+				return false;
+			}
+		}
+
+	    document.getElementsByName("mesh_action")[0].value = value;
+		ajax_setCsrf();
+
+		return true;
+	}
+
+	function refreshLog()
+	{
+	    var url , container ,data ;
+	    var meshlist, maclist = "";
+	    var mac, i, j,batctl_mac, strength;
+	    var match = 0;
+	    var obj, jsonlist;
+	    url = '<%=luci.dispatcher.build_url("admin/network/ajax_getMeshList")%>';
+
+	    $.ajax({
+			async: false,
+	        type : "GET",
+	        url:url,
+	        dataType:"json",
+	        error:function(){
+	        },
+	        success:function(result){
+	        	if(result[0].meshData!="")
+	        	{
+	        		result[0].meshData=result[0].meshData.replace(/\\/g, '');
+					result[0].meshData=result[0].meshData.replace(/u0022/g, '"');
+					result[0].meshData=result[0].meshData.replace(/},{/g, '},\n{');
+					meshlist = result[0].meshData ;
+					maclist = result[0].macData ;
+				}
+	        }
+	    });
+	    if(maclist != "")
+	    {
+			macdata = maclist.split("\n");
+			meshdata = meshlist.split("\n");
+			for(i=0;i<meshdata.length ;i++)
+			{
+				mac=meshdata[i].substring(3,20);
+
+				for(j=0;j<macdata.length ;j++)
+				{
+					batctl_mac = macdata[j].substring(0,17);
+
+					if(mac == batctl_mac)
+					{
+						strength = macdata[j].substring(31,34);
+						strength = Math.floor(((strength*100))/255)
+						match = 1;
+					}
+				}
+				if(match == 1)
+				{
+					document.getElementById('device_list').style.display = "";
+					document.getElementById('no_mesh_device').style.display = "none";
+					jsonlist=meshdata[i].substring(24,meshdata[i].length-4);
+					obj = JSON.parse(jsonlist);
+					dw('<tr class="title-option">')
+					dw('<td><input type="radio" name="selectMesh" id="selectMesh'+i+'" value="'+obj.IPAddress+'"></td>');
+					dw('<td>'+obj.DeviceType+'</td>');
+					dw('<td>'+obj.DeviceName+'</td>');
+					dw('<td><a href=http://'+obj.LANIPAddress+' target="_blank" title="device">'+obj.LANIPAddress+'</a></td>');
+					dw('<td>'+mac+'</td>');
+					dw('<td>'+strength+"%"+'</td>');
+					dw('</tr>')
+				}
+				else
+				{
+					host_alfred = i;
+				}
+				match = 0;
+			}
+		}
+		if(document.getElementById('device_list').style.display == "none")
+		{
+			document.getElementById('no_mesh_device').style.display = "";
+		}
+	}
+	function hide_delete_button()
+	{
+		if(document.getElementById('device_list').style.display == "none")
+		{
+			document.getElementById('del_mesh').style.display = "none";
+		}		
+	}
+	display.kickmacList=[];
+	display.transfer_byte = function(bytes)
+	{
+		var uby = '<%:KB%>';
+		var kby = bytes;
+		if (kby >= 1024)
+		{
+			uby = '<%:MB%>';
+			kby = kby / 1024;
+			if (kby >= 1024)
+			{
+				uby = '<%:GB%>';
+				kby = kby / 1024;
+			}
+			kby = kby.toFixed(1);
+		}
+		return String.format("%f %s", kby, uby);
+	};
+	display.wds_bridge = function(data, title)
+	{
+		var html="", t_idx;
+		html += "<table>";
+		html += '<tr><td class="title" colspan="4">'+title+'</tr>' +
+				'<tr style="background: #EEEEEE;" class="title-option">' +
+				'<td style="width:20%;"><%:WDS Link ID%>#</td>' +
+				'<td style="width:30%;"><%:MAC Address%></td>' +
+				'<td style="width:20%;"><%:Link Status%></td>' +
+				'<td style="width:20%;"><%:RSSI(dBm)%></td>' +
+				'</tr>';
+		for(var i =0;i<data.networks.length;i++)
+		{
+			if(data.networks[i].nmode == data.opmode)
+			{
+				//if(!data.networks[i].ssid)
+				//{
+					t_idx = i;
+					break;
+				//}
+			}
+		}
+		var k_idx=1, net = data.networks[t_idx],
+			assoclist = net.assoclist, obj;
+		for (var k in assoclist)
+		{
+			var isUP=0;
+
+			if(assoclist[k])
+			{
+				obj = assoclist[k];
+				// wds 2.4G connection status
+				//if (data.device == "wifi0"){
+					if(parseInt(obj.RXRATE)==0){
+						isUP = 0;
+					}
+					else{
+						if(obj.idle < 30){
+							isUP = 1;
+						}
+						else{
+							isUP = 0;
+						}
+					}					
+				//}
+				// wds 5G connection status
+				// if (data.device == "wifi1"){
+				// 	if(parseInt(obj.RXRATE)==0){
+				// 		isUP = 0;
+				// 	}
+				// 	else{
+				// 		// if(obj.idle < 30){
+				// 			isUP = 1;
+				// 		// }
+				// 		// else{
+				// 		// 	isUP = 0;
+				// 		// }
+				// 	}					
+				// }
+				html += "<tr class='title-option'>" +
+						"<td>#" + k_idx + "</td>" +
+						"<td>" + k + "</td>" +
+						// "<td>" + ((obj.idle < 120) ? "UP" : "DOWN") + "</td>" +
+						"<td>" + ((isUP == 1) ? "UP" : "DOWN") + "</td>" +
+						"<td>" + obj.rssi + "</td>" +
+						"</tr>";
+				k_idx += 1;
+			}
+		}
+		
+		html += "<tr>" +
+				"<td>&nbsp;</td>" +
+				"<td>&nbsp;</td>" +
+				"<td>&nbsp;</td>" +
+				"<td>&nbsp;</td>" +
+				"</tr>";
+		html += "</table><br/>";
+		return html;
+	};
+	display.wds_sta = function(data, title)
+	{
+
+		var html="",t_idx, is_assoc;
+		if(typeof(data) != "object")
+		{
+			return html;
+		}
+
+<% 
+local uci = require "luci.model.uci".cursor()
+local support_sta_ap=0
+if uci:get('functionlist','functionlist','SUPPORT_REPEATER_MODULE') == '1' then 
+	support_sta_ap=1 
+end 
+%>
+
+		for(var i =0;i<data.networks.length;i++)
+		{
+			if(data.networks[i].nmode == data.opmode)
+			{
+				<% if support_sta_ap==1 then %>
+				if ( data.opmode == "sta_ap" )
+				{
+					if ( data.networks[i].mode == "Client" )
+					{
+						t_idx = i;
+						break;
+					}
+				}
+				else
+				<% end %>
+				{
+					t_idx = i;
+					break;
+				}
+			}
+		}
+		var net = data.networks[t_idx];
+		var ssid = SpecHTML(net.ssid);
+		if ((net.bssid != "00:00:00:00:00:00") && (net.bitrate != 0))
+			is_assoc = true;
+		else
+			is_assoc = false;
+
+		html += "<table>";
+		html += "<tr>" +
+				"<td class='title' colspan='2'>" + title + "</td>" +
+				"</tr>" +
+				"<tr class='title-option'>" +
+				"<td style='width:40%;'>SSID</td>" + "<td style=\"word-break:break-all;\">" + ((net.ssid)?ssid:"N/A") + "</td>" +
+				"</tr>" +
+				"<tr class='title-option'>" +
+				"<td>BSSID</td>" + "<td>" + ((is_assoc)?net.bssid:"N/A") + "</td>" +
+				"</tr>" +
+				"<tr class='title-option'>" +
+				"<td><%:Connection Status%></td>" + "<td>" + ((is_assoc)?"<%:Associated%>":"<%:Not-Associated%>") + "</td>" +
+				"</tr>" +
+				"<tr class='title-option'>" +
+				"<td><%:Wireless Mode%></td>" + "<td>" + showStaHWMode(net.hwmode) + "</td>" +
+				"</tr>";
+		if(is_assoc)
+		{
+			html += "<tr class='title-option'>" +
+					"<td><%:Current Channel%></td>" + "<td>" + ((net.frequency) ? net.frequency : "-") + " GHz(<%:Channel %>" + ((net.channel) ? net.channel : "-") + ")</td>" +
+					"</tr>";
+		}
+		else
+		{
+			html += "<tr class='title-option'>" +
+					"<td><%:Current Channel%></td>" + "<td>N/A</td>" +
+					"</tr>";
+		}
+		html += "<tr class='title-option'>" +
+				"<td><%:Security%></td>" + "<td>" + showEncryption(net.encryption_option) + "</td>" +
+				"</tr>";
+		if(is_assoc)
+		{
+			html += "<tr class='title-option'>" +
+					"<td><%:Tx Data Rates%>(Mbps)</td>" + "<td>" + ((net.bitrate) ? (((net.bitrate_unit.match("Gb/s")) ? ( net.bitrate * 1000 ) : net.bitrate) + " Mb/s") : "N/A") + "</td>" +
+					"</tr>" +
+					"<tr class='title-option'>" +
+					"<td><%:Current noise level%></td>" + "<td>" + net.noise + "&nbsp;dBm</td>" +
+					"</tr>" +
+					"<tr class='title-option'>" +
+					"<td><%:Signal Strength%></td>" + "<td>" + net.signal + "&nbsp;dBm</td>" +
+					"</tr>";
+		}
+		else
+		{
+			html += "<tr class='title-option'>" +
+					"<td><%:Tx Data Rates%>(Mbps)</td>" + "<td>N/A</td>" +
+					"</tr>" +
+					"<tr class='title-option'>" +
+					"<td><%:Current noise level%></td>" + "<td>N/A</td>" +
+					"</tr>" +
+					"<tr class='title-option'>" +
+					"<td><%:Signal Strength%></td>" + "<td>N/A</td>" +
+					"</tr>";
+		}
+		html += "</table><br/>";
+		return html;
+	};
+	display.kickMe = function(mac, ifname, networkname)
+	{
+		 XHR.get("<%=luci.dispatcher.build_url('admin/status/wireless_conn_check_deny_list')%>", {networkname2kick:networkname},
+				 function(x, j)
+				 {
+					 if(x.responseText)
+					 {
+						 var denylistarray = j.denymaclist.split(" ");
+						 var max_size = <%=MAX_WLAN_MAC_FILTER_NUMBER%>
+						 if(parseInt(denylistarray.length) >= max_size)
+						 {
+							 alert("<%:The MAC filter deny table is full! Can't kick now.%>");
+						 }
+						 else
+						 {
+				 			var str;
+							if(j.filtermode == "allow")
+							{
+								str="This " + mac + " will be deleted from the allow list.";
+							}
+							else
+							{
+								str="MAC filter deny mode will be enabled. This " + mac + " will be added to the deny list.";
+							}
+							if(confirm(str))
+							{
+								getById('ap_'+mac).style.display="none";
+								display.kickmacList.push(mac);
+								XHR.get("<%=luci.dispatcher.build_url('admin/status/wireless_conn_macfilter')%>", {mac2kick:mac, ifname2kick:ifname}, function(x, j){
+									setTimeout(function()
+									{
+										XHR.get('<%=luci.dispatcher.build_url("admin", "uci", "changes_amount")%>', null,
+												function(x, j)
+												{
+													if(x.responseText)
+													{
+														var c = getById('changes_amount');
+														if(c)
+														{
+															c.innerHTML = x.responseText.trim();
+														}
+													}
+													if ( x.responseText.trim() > 0 )
+													{
+														$('#save_apply_float_window').show();
+														c = getById('save_apply_float_window_changes');
+														if(c)
+														{
+															c.innerHTML = "("+x.responseText.trim()+")";
+														}
+													}
+												}
+										);
+									}, 500);
+								});
+							}
+						 }
+					 }
+				 }
+		);
+	};
+	display.ap = function(data, title)
+	{
+		var net, is_assoc, html="", obj;
+		if(typeof(data) != "object")
+		{
+			return html;
+		}
+
+		html ="<table>" +
+				"<tr><td colspan='6' class='title'>"+title+"</td></tr>" +
+				"<tr style='background: #EEEEEE;' class='title-option'>" +
+				'<td style="width:20%;"><%:SSID%></td>' +
+				'<td style="width:20%;"><%:MAC Address%></td>' +
+				'<td style="width:15%;"><%:TX%> (KB)</td>' +
+				'<td style="width:15%;"><%:RX%> (KB)</td>' +
+				'<td style="width:15%;"><%:RSSI%> (dBm)</td>' +
+				'<td style="width:15%;"><%:Block%></td>' +
+				"</tr>";
+
+		for(var i=0;i<data.networks.length;i++)
+		{
+			net = data.networks[i];
+			var ssid = SpecHTML(net.ssid);
+			if(!net.ssid || net.nawds == "1") continue;  //is nawds
+			is_assoc = ((net.bssid != '00:00:00:00:00:00') && (net.up == true) && (net.networkname.indexOf("sta_ap_2") == -1)); //skip ath29
+			if(is_assoc)
+			{
+				for(key in net.assoclist)
+				{
+					obj = net.assoclist[key];
+					if(obj && ($.inArray(key, display.kickmacList) == -1))
+					{
+						
+						html+="<tr id='ap_"+ key +"' style=\"background: #FFFFFF; font-size: 16px;\" class='title-option'>";
+						html+="<td style=\"word-break:break-all;\">"+ssid+"</td>"; //<%#SSID%>
+						html+="<td>"+key+"</td>"; //<%#MAC addresss%>
+						html+="<td>"+this.transfer_byte(obj.tx_bytes.split('Kb')[0])+"</td>"; //<%#TX%>
+						html+="<td>"+this.transfer_byte(obj.rx_bytes.split('Kb')[0])+"</td>"; //<%#RX%>
+						html+="<td>"+obj.rssi+"dBm</td>"; //<%#RSSI%>
+<% if uci:get('functionlist','functionlist','SUPPORT_REMOVE_KICK_FUNCTION_FOR_REPEATER') == '1' then %>
+					if (data.opmode== "sta_ap")
+					{
+						html+="<td></td>";
+					}
+					else
+					{
+						html+="<td>" +
+							"<input class='cbi-button' type='submit' onclick='display.kickMe(\""+key+"\",\""+net.ifname+"\",\""+net.networkname+"\")' value='<%:Kick%>'/>" +
+							"</td>";
+					}
+<% else %>
+						html+="<td>" +
+								"<input class='cbi-button' type='submit' onclick='display.kickMe(\""+key+"\",\""+net.ifname+"\",\""+net.networkname+"\")' value='<%:Kick%>'/>" +
+								"</td>"; //<%#Block%>
+<% end %>
+						html+="</tr>";
+					}
+				}
+			}
+		}
+		html += "</table><br/>";
+		return html;
+	};
+<%
+local uci = require "luci.model.uci".cursor()
+if uci:get('functionlist','functionlist','SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON') == '1' then -----#### SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON START ###
+%>
+function renew_connection_func(){
+	XHR.get('<%=luci.dispatcher.build_url("admin", "status", "overview")%>', { status:1 },
+	function(x, info){
+		if(x.responseText)
+		{
+			var disp="";
+
+<% if WLAN5G_2 == '1' then --[[ #### WLAN5G_2 feature ### --]] %>
+		var wifiTable = {0:"2.4GHz",1:"5GHz - 1",2:"5GHz - 2"};
+<% else %>
+		var wifiTable = {0:"2.4GHz",1:"5GHz"};
+<% end --[[ #### WLAN5G_2 feature ### --]] %>
+			for (var didx = 0; didx < info.wifinets.length; didx++)
+			{
+				if (info.wifinets[didx] && info.wifinets[didx].device != "<%=filterRadio%>") {
+					if(info.wifinets[didx].opmode == "wds_sta" || info.wifinets[didx].opmode == "sta" <% if support_sta_ap==1 then %> || info.wifinets[didx].opmode == "sta_ap" <% end %>)
+					{
+						disp += display.wds_sta(info.wifinets[didx], "<%:Connection Status%> - "+wifiTable[didx]+"");
+<% if support_sta_ap==1 then %>
+						if(info.wifinets[didx].opmode == "sta_ap"){
+							disp += display.ap(info.wifinets[didx], "<%:Connection List%> - "+wifiTable[didx]+"");
+						}
+<% end %>
+					}
+					else if(info.wifinets[didx].opmode == "wds_ap" || info.wifinets[didx].opmode == "wds_bridge")
+					{
+						disp += display.wds_bridge(info.wifinets[didx], "<%:WDS Link List%> - "+wifiTable[didx]+"");
+						if(info.wifinets[didx].opmode == "wds_ap"){
+							disp += display.ap(info.wifinets[didx], "<%:Connection List%> - "+wifiTable[didx]+"");
+						}
+					}
+					else if(info.wifinets[didx].opmode == "ap" )
+					{
+						disp += display.ap(info.wifinets[didx], "<%:Connection List%> - "+wifiTable[didx]+"");
+					}
+				}
+			}
+	
+			$('#connection_display').html(disp);
+			if(getById('loading').style.display == "")
+			{
+				getById('loading').style.display = "none";
+				getById('connection_display').style.display = "";
+			}
+			setTimeout("renew_connection_func()", RefreshDelay);
+		}
+	});
+}
+$( document ).ready(function() {
+    $('#renew_connection').click(renew_connection_func).click(function (){getById('loading').style.display = "";}).triggerHandler('click');
+});
+<%
+else-----####  SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON ELSE #### 
+%>	
+	XHR.poll(3, '<%=luci.dispatcher.build_url("admin", "status", "overview")%>', { status:1 },
+	function(x, info){
+		if(x.responseText)
+		{
+			var disp="";
+
+<% if uci:get('functionlist','functionlist','SUPPORT_WLAN5G_2') == '1' then --[[ #### WLAN5G_2 feature ### --]] %>
+		var wifiTable = {0:"2.4GHz",1:"5GHz - 1",2:"5GHz - 2"};
+<% else %>
+		var wifiTable = {0:"2.4GHz",1:"5GHz"};
+<% end --[[ #### WLAN5G_2 feature ### --]] %>
+	
+			for (var didx = 0; didx < info.wifinets.length; didx++)
+			{
+				if (info.wifinets[didx]) {
+					if(info.wifinets[didx].opmode == "wds_sta" || info.wifinets[didx].opmode == "sta" <% if support_sta_ap==1 then %> || info.wifinets[didx].opmode == "sta_ap" <% end %>)
+					{
+						disp += display.wds_sta(info.wifinets[didx], "<%:Connection Status%> - "+wifiTable[didx]+"");
+<% if support_sta_ap==1 then %>
+						if(info.wifinets[didx].opmode == "sta_ap"){
+							disp += display.ap(info.wifinets[didx], "<%:Connection List%> - "+wifiTable[didx]+"");
+						}
+<% end %>
+					}
+					else if(info.wifinets[didx].opmode == "wds_ap" || info.wifinets[didx].opmode == "wds_bridge")
+					{
+						disp += display.wds_bridge(info.wifinets[didx], "<%:WDS Link List%> - "+wifiTable[didx]+"");
+						if(info.wifinets[didx].opmode == "wds_ap"){
+							disp += display.ap(info.wifinets[didx], "<%:Connection List%> - "+wifiTable[didx]+"");
+						}
+					}
+					else if(info.wifinets[didx].opmode == "ap")
+					{
+						disp += display.ap(info.wifinets[didx], "<%:Connection List%> - "+wifiTable[didx]+"");
+					}
+				}
+			}
+
+			$('#connection_display').html(disp);
+			if(getById('loading').style.display == "")
+			{
+				getById('loading').style.display = "none";
+				getById('connection_display').style.display = "";
+				if("<%=uci:get('functionlist','functionlist','SUPPORT_MESH_SETTING')%>" == "2")
+				{
+					if("<%=uci:get('wireless','wifi0_mesh','disabled')%>" == "0" || "<%=uci:get('wireless','wifi1_mesh','disabled')%>" == "0")
+					getById('mesh_table').style.display = "";
+				}
+			}
+		}
+	});
+<%
+end-----####  SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON END #### 
+%>
+</script>
+<fieldset id="loading" class="cbi-section" style="display: '';">
+	<legend><img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" /><%:Collecting data...%></legend>
+</fieldset>
+<fieldset id="connection_display" class="cbi-section" style="display: none;">
+</fieldset>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON') == '1' then -----#### SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON START ###
+%>
+<div class="cbi-page-actions left">
+		<input class="cbi-button cbi-button-save" id="renew_connection" type="button" value="<%:Refresh%>" />
+</div>
+<%
+end-----####  SUPPORT_RENEW_CONNECT_STATUS_BY_BUTTON END #### 
+%>
+<%
+if uci:get('functionlist','functionlist','SUPPORT_MESH_SETTING') == '2' then
+	if uci:get('wireless','wifi0_mesh','disabled') == '0' or uci:get('wireless','wifi1_mesh','disabled') == '0'  then
+%>
+<form name="mesh_connections" action="<%=REQUEST_URI%>" method="post">
+<input type="hidden" name="mesh_action" value="1">
+<input type="hidden" name="deleteDevice" value="">
+<input type="hidden" id="submitType" value="1" name="submitType"/>
+
+<fieldset id="mesh_table" class="cbi-section" style="display: none;">
+	<div id="no_mesh_device" class="cbi-page-actions" style="display:none">
+	<table >
+		<tr>
+			<td colspan="6" class="title"><%:NO Mesh Device connected....%></td>
+		</tr>
+	</table>
+	</div>
+	<div id="device_list" class="cbi-page-actions" style="display:none">
+	<table >
+		<tr>
+			<td colspan="6" class="title"><%:Mesh Device List%></td>
+		</tr>
+		<tr class="title-option"  >
+			<td ><%:Select%></td>
+			<td ><%:Device Type%></td>
+			<td ><%:Device Name%></td>
+			<td ><%:IP Address%></td>
+			<td ><%:MAC Address%></td>
+			<td ><%:Strength%></td>
+		</tr>
+		<tr style="display:none"><td></td></tr>
+		<script>refreshLog();</script>
+	</table>
+	</div>
+<div id = "save" class="cbi-page-actions" >
+	<input class="cbi-button cbi-button-save" onclick="return savechanges(2)" type="submit" value="<%:Refresh%>" class="cbi-button cbi-button-save">
+	<input id ="del_mesh" class="cbi-button cbi-button-save" onclick="return savechanges(1)" type="submit" value="<%:Delete Selected%>" class="cbi-button cbi-button-save">
+	<script>hide_delete_button();</script>	
+</div>
+</fieldset>
+</form>
+<%
+	end
+end
+%>
+<%+footer%>

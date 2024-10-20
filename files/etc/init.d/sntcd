@@ -1,0 +1,190 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+USE_PROCD=1
+TCPERUSERD_DAEMON=/usr/bin/sntcd
+TCPERUSERD_CONF=/tmp/etc/sntcd/sntcd.conf
+
+package_rate_unit=$(uci -q get /rom/etc/config/sntcd.sntcd.rate_unit || echo Mbps)
+
+wifi_count=0
+
+get_roundup()
+{
+    local input=$1
+    local unit=1000
+    local output
+    # if 0->0, 1~999Kbps->1Mbps, 998001~999999Kbps->999Mbps
+    if [ $input -eq 0 ]
+    then
+        output=0
+    else
+        output=$(((($input-1)/$unit)+1))
+        if [ $output -ge 1000 ]
+        then
+            output=999
+        fi
+    fi
+    echo ${output}
+}
+
+_generateTrafficControlConf() {
+    local cfg="$1"
+    local cfg_wireless="$(echo $cfg | sed s/ssid/wifi${wifi_count}_ssid/g)"
+
+    if [ "$(grep ssid /etc/config/sntcd | wc -l)" != "0" ];then
+        opmode=$(uci get wireless.wifi${wifi_count}.opmode)
+        if [ "$opmode" = "ap" ];then
+            opmode="ssid"
+        elif ["$opmode" = "wds_ap" ];then
+            opmode="wds"
+        else
+            opmode=$opmode
+        fi
+    else
+        opmode=$(uci get wireless.$(uci get wireless.${cfg}.device).opmode)
+        if [ "$opmode" = "ap" ];then
+            opmode="ssid"
+        elif [ "$opmode" = "wds_ap" ];then
+            opmode="wds"
+        else
+            opmode=$opmode
+        fi
+    fi
+
+    if [ "$(grep ssid /etc/config/sntcd | wc -l)" != "0" ];then
+    disabled=`uci -q get wireless.$cfg_wireless.disabled || echo 1`
+    else
+    config_get disabled "$cfg" disabled 1
+    fi
+
+    if [ "$disabled" = "1" ]
+    then
+        return
+    fi
+
+    config_get tc_enabled "$cfg" tc_enabled
+
+    if [ "$(grep ssid /etc/config/sntcd | wc -l)" != "0" ];then
+        ifname=`uci get wireless.$cfg_wireless.ifname`
+    else
+        config_get ifname "$cfg" ifname
+    fi
+    # Yolin: support peruser traffic control
+    if [ "$tc_enabled" = "1" -a "$(echo $cfg | grep -c $opmode)" != "0" ];then
+        if [ "$(grep ssid /etc/config/sntcd | wc -l)" != "0" ];then
+            echo "guestnetwork"
+            if [ $(uci get wireless.$cfg_wireless.guest_network) = "" ];then
+                guestmode="Disable"
+            else
+                guestmode=`uci get wireless.$cfg_wireless.guest_network`
+            fi
+        else
+            config_get guestmode "$cfg" guest_network "Disable"
+        fi
+        config_get downperuser "$cfg" tc_downperuser 0
+        config_get upperuser "$cfg" tc_upperuser 0
+        config_get downlimit "$cfg" tc_downlimit 0
+        config_get uplimit "$cfg" tc_uplimit 0
+        config_get downmaxlimit "$cfg" tc_downmaxlimit -1
+        config_get upmaxlimit "$cfg" tc_upmaxlimit -1
+        config_get downrateunit "$cfg" tc_downrateunit "Mbps"
+        config_get uprateunit "$cfg" tc_uprateunit "Mbps"
+
+        if [ $downmaxlimit -eq -1 ];then
+            if [ $downperuser -eq 1 ];then
+                downmaxlimit=0
+            else
+                downmaxlimit=$downlimit
+                downlimit=0
+            fi
+        fi
+
+        if [ $upmaxlimit -eq -1 ];then
+            if [ $upperuser -eq 1 ];then
+                upmaxlimit=0
+            else
+                upmaxlimit=$uplimit
+                uplimit=0
+            fi
+        fi
+
+        if [ "$downrateunit" = "Mbps" -a "$package_rate_unit" = "Kbps" ]
+        then
+            downlimit=$(($downlimit*1000))
+            downmaxlimit=$(($downmaxlimit*1000))
+        elif [ "$downrateunit" = "Kbps" -a "$package_rate_unit" = "Mbps" ]
+        then
+            downlimit=$(get_roundup $downlimit)
+            downmaxlimit=$(get_roundup $downmaxlimit)
+        fi
+
+        if [ "$uprateunit" = "Mbps" -a "$package_rate_unit" = "Kbps" ]
+        then
+            uplimit=$(($uplimit*1000))
+            upmaxlimit=$(($upmaxlimit*1000))
+        elif [ "$uprateunit" = "Kbps" -a "$package_rate_unit" = "Mbps" ]
+        then
+            uplimit=$(get_roundup $uplimit)
+            upmaxlimit=$(get_roundup $upmaxlimit)
+        fi
+        [ -f $TCPERUSERD_CONF ] || echo "# ifname downmaxlimit downlimit upmaxlimit uplimit [ w/l hookIF]" > $TCPERUSERD_CONF
+        # if [ "$guestmode" = "Disable" -a $ifname != "ath27" -a "$ifname" != "ath57" ];then
+        #     #### for legacy firmware use ethx for traffic controll ################
+        #     # Disable will bridge to br-lan
+        #     echo "$ifname $downmaxlimit $downlimit $upmaxlimit $uplimit w $(uci get /rom/etc/config/network.lan.ifname | awk '{print $1}')" >> $TCPERUSERD_CONF
+        #     lan2name=`uci get /rom/etc/config/network.lan.ifname | awk '{print $2}'`
+        #     if [ "$lan2name" != "" ];then
+        #         echo "$ifname $downmaxlimit $downlimit $upmaxlimit $uplimit w $lan2name" >> $TCPERUSERD_CONF
+        #     fi
+        # else
+            #### use athx for traffic controll  ##############################
+            ifconfig $ifname txqueuelen 1000 > /dev/null
+            echo "$ifname $downmaxlimit $downlimit $upmaxlimit $uplimit l $ifname" >> $TCPERUSERD_CONF
+        # fi
+        return
+    else
+        test -d /sys/class/net/$ifname && ifconfig $ifname txqueuelen 0
+    fi
+}
+
+generateTrafficControlConf() {
+    local i=0
+    if [ "$(grep ssid /etc/config/sntcd | wc -l)" != "0" ];then
+        config_load sntcd
+        for i in 0 1 2;
+        do
+            wifi_count=$i
+            config_foreach _generateTrafficControlConf wifi-iface
+        done
+    else
+        config_load wireless
+        config_foreach _generateTrafficControlConf wifi-iface
+    fi
+}
+
+start_service() {
+
+    mkdir -p /var/run/sntcd/stamp/
+    rm -rf /var/run/sntcd/stamp/*
+
+    mkdir -p $(dirname $TCPERUSERD_CONF)
+    [ -f $TCPERUSERD_CONF ] && rm -f $TCPERUSERD_CONF
+
+    generateTrafficControlConf
+
+    if [ -e $TCPERUSERD_DAEMON ]; then
+        if [ -f $TCPERUSERD_CONF ]; then
+            procd_open_instance
+            procd_set_param command $TCPERUSERD_DAEMON -c$TCPERUSERD_CONF
+            procd_set_param respawn
+            procd_close_instance
+        fi
+    fi
+}
+
+reload_service() {
+    stop
+    start
+}

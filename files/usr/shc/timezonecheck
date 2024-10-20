@@ -1,0 +1,66 @@
+#!/bin/sh
+
+. /usr/share/libubox/jshn.sh
+
+timezone="$(uci get system.@system[0].timezone)"
+zonename="$(uci get system.@system[0].zonename)"
+
+google_TIMEZONE()
+{
+	url="https://maps.googleapis.com/maps/api/timezone/json?"
+	key="key=AIzaSyDv2j1bB6IlLizwmd-3t-EtfZXQoUOPqoM"
+	latitude="25.017000"
+	[ -n "$1" ] && latitude=$1
+	longitude="121.449997"
+	[ -n "$2" ] && longitude=$2
+	location="&location=$latitude,$longitude"
+	timestamp="&timestamp="`date +%s`
+
+	timezone_MSG=$(curl -s -k $url$key$location$timestamp)
+#	echo $url$key$location$timestamp > /dev/console
+#	echo $timezone_MSG
+
+	[ "{" != "$(echo $timezone_MSG | cut -c 1)" ] && return #if site fail
+
+	json_load "$timezone_MSG"
+	json_get_var status status
+	[ "OK" == "$status" ] && {
+		json_get_var zonename timeZoneId
+		zonename=$zonename
+	}
+}
+
+if [ "Online" == "$(checkInternet.sh)" ]; then
+
+	ipaddr=$1
+
+	[ -n "$ipaddr" ] && ipaddr="?fqcn=$1"
+
+	MSG=$(curl -s http://getcitydetails.geobytes.com/GetCityDetails$ipaddr)
+
+	[ "{" != "$(echo $MSG | cut -c 1)" ] && return #if site fail
+
+	json_load "$MSG"
+	json_get_var var1 geobytestimezone
+	json_get_var city geobytescity
+	json_get_var var2 geobyteslatitude
+	json_get_var var3 geobyteslongitude
+
+	[ "auto" == "$(uci get system.@system[0].zonename)" ] && {
+		google_TIMEZONE $var2 $var3
+		uci set system.@system[0].zonename="$zonename"
+	}
+
+#	echo zonename $zonename
+#	echo city $city
+	uci set system.@system[0].city="$city"
+
+	[ -e "/usr/share/zoneinfo/timezone_list" -a -n "cat /usr/share/zoneinfo/timezone_list | grep $timezone | awk {'print $2'}" ] && {
+		timezone=$(cat /usr/share/zoneinfo/timezone_list | grep $zonename | awk {'print $2'})
+		uci set system.@system[0].timezone="$timezone"
+		echo "$timezone" > /etc/TZ
+	} || {
+		echo "not exist in zoneinfo database" > /dev/console
+	}
+	uci commit system
+fi

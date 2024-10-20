@@ -1,0 +1,72 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -562,17 +562,18 @@ print_scanning_token(struct stream_descr
+           printf("WPA/WPA2    \t");
+       }
+ #if SENAO_SUPPORT_BACKGROUND_FASTSCAN
+-      if(strlen(p_ifname) >= 5) //ath1x~ath9x
+-      {
+-          if(p_ifname[3] >= 53) //ath5x~ath9x
++      //if(strlen(p_ifname) >= 5) //ath1x~ath9x
++      //{
++          //if(p_ifname[3] >= 53) //ath5x~ath9x
++          if(p_ifname[3] != 48 && p_ifname[3] != 50 && strcmp(p_ifname, "ath32") != 0) //for 5g interfaces
+           {
+               if (state->type == GN)
+                   state->type = AN;
+               if (state->type == B || state->type == BG)
+                   state->type = A;
+           }
+-      }
+-#endif      
++      //}
++#endif     
+       if (state->type == B)
+         printf("11b\t");
+       else if (state->type == BG)
+@@ -1145,16 +1146,17 @@ print_scanning_info(int		skfd,
+           printf("WPA/WPA2    \t");
+       }
+ #if SENAO_SUPPORT_BACKGROUND_FASTSCAN
+-      if(strlen(p_ifname) >= 5) //ath1x~ath9x
+-      {
+-          if(p_ifname[3] >= 53) //ath5x~ath9x
++      //if(strlen(p_ifname) >= 5) //ath1x~ath9x
++      //{
++          //if(p_ifname[3] >= 53) //ath5x~ath9x
++          if(p_ifname[3] != 48 && p_ifname[3] != 50 && strcmp(p_ifname, "ath32") != 0) //for 5g interfaces
+           {
+               if (state.type == GN)
+                   state.type = AN;
+               if (state.type == B || state.type == BG)
+                   state.type = A;
+           }
+-      }
++      //}
+ #endif
+       if (state.type == B)
+           printf("11b\t");
+@@ -1503,16 +1505,17 @@ display_scanning_info(int     skfd,
+           printf("WPA/WPA2    \t");
+       }
+ #if SENAO_SUPPORT_BACKGROUND_FASTSCAN
+-      if(strlen(p_ifname) >= 5) //ath1x~ath9x
+-      {
+-          if(p_ifname[3] >= 53) //ath5x~ath9x
++      //if(strlen(p_ifname) >= 5) //ath1x~ath9x
++      //{
++          //if(p_ifname[3] >= 53) //ath5x~ath9x
++          if(p_ifname[3] != 48 && p_ifname[3] != 50 && strcmp(p_ifname, "ath32") != 0) //for 5g interfaces
+           {
+               if (state.type == GN)
+                   state.type = AN;
+               if (state.type == B || state.type == BG)
+                   state.type = A;
+           }
+-      }
++      //}
+ #endif
+       if (state.type == B)
+           printf("11b\t");

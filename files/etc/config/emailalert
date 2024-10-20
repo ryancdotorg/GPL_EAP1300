@@ -1,0 +1,14 @@
+config emailalert 'email'
+	option auth 
+	option alert_event_config 
+	option smtpaddr 
+	option smtpport 
+	option enable '0'
+	option from 
+	option alert_to 
+	option user 
+	option password 
+	option smtpaddr 
+	option smtpport '25'
+	option security '0'
+	option subject 

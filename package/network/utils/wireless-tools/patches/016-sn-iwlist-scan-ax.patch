@@ -1,0 +1,52 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -40,8 +40,10 @@ enum {
+ #if SENAO_SUPPORT_BACKGROUND_FASTSCAN
+ 	,
+   A = 5,
+-  AN = 6
++  AN = 6,
+ #endif
++  AX = 7,
++  MAX = 10
+ };
+ 
+ /*
+@@ -587,6 +589,8 @@ print_scanning_token(struct stream_descr *	stream,	/* Stream of events */
+ #endif
+       else if (state->type == AC)
+         printf("11ac\t");
++      else if (state->type == AX)
++        printf("11ax\t");
+ 
+ #if 0//SENAO_SUPPORT_BACKGROUND_FASTSCAN
+       if(event->u.data.flags & SCAN_ADV_HT_FLAG)
+@@ -763,6 +767,8 @@ print_scanning_token(struct stream_descr *	stream,	/* Stream of events */
+           state->type = GN;
+     if ((custom[0] == 'v') && (custom[1] == 'h') || strstr(custom, "IEEE80211_MODE_11AC"))
+           state->type = AC;
++    if ((custom[0] == 'h') && (custom[1] == 'e') || strstr(custom, "IEEE80211_MODE_11AX"))
++          state->type = AX;
+ 	//printf("                    Extra:%s\n", custom);
+ #if SENAO_SUPPORT_BACKGROUND_FASTSCAN
+           }
+@@ -1152,6 +1158,8 @@ print_scanning_info(int		skfd,
+ #endif
+         else if (state.type == AC)
+           printf("11ac\t");
++        else if (state.type == AX)
++          printf("11ax\t");
+       printf("\n");
+     }
+   else
+@@ -1509,6 +1517,8 @@ display_scanning_info(int     skfd,
+ #endif
+         else if (state.type == AC)
+           printf("11ac\t");
++        else if (state.type == AX)
++          printf("11ax\t");
+       printf("\n");
+     }
+   else

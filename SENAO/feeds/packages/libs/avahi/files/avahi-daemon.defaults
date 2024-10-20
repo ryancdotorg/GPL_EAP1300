@@ -1,0 +1,19 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+    del ucitrack.@avahi-daemon[-1]
+    del_list ucitrack.@system[-1].affects=avahi-daemon
+    del_list ucitrack.@network[-1].affects=avahi-daemon
+    del_list ucitrack.@apcontroller[-1].affects=avahi-daemon
+    del_list ucitrack.@lan-ip-obtain[-1].affects=avahi-daemon
+    add ucitrack avahi-daemon
+    set ucitrack.@avahi-daemon[0].init=avahi-daemon
+    add_list ucitrack.@system[0].affects=avahi-daemon
+    add_list ucitrack.@network[0].affects=avahi-daemon
+    add_list ucitrack.@apcontroller[0].affects=avahi-daemon
+    add_list ucitrack.@lan-ip-obtain[0].affects=avahi-daemon
+    commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

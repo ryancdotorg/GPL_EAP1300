@@ -1,0 +1,8 @@
+{
+	"EZMCloud": {
+		"wireless": {
+			"ssid_map": []
+		}
+	}
+}
+

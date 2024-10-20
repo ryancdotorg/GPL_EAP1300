@@ -1,0 +1,25 @@
+--- a/libblkid-tiny/mkdev.c
++++ b/libblkid-tiny/mkdev.c
+@@ -16,6 +16,9 @@
+ 
+ #include <sys/stat.h>
+ #include <sys/types.h>
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
+ 
+ #include <stdio.h>
+ #include <string.h>
+--- a/libubi/libubi.h
++++ b/libubi/libubi.h
+@@ -30,6 +30,10 @@
+ #include "ubi-user.h"
+ #include "ubi-media.h"
+ 
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif

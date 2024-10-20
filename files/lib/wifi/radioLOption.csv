@@ -1,0 +1,12 @@
+opmode
+hwmode
+htmode
+backgroundscanEnable
+apsteer
+fastroamingEnable
+min_rate
+clientlimits_enable
+clientlimits_number
+channel_config_enable
+channel_config_list
+nochannel

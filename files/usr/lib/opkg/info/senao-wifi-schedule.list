@@ -1,0 +1,10 @@
+/etc/config/wifi_schedule
+/usr/sbin/wifi_sch_cfg80211.sh
+/usr/sbin/wifi_schedule
+/etc/init.d/set_manual_time_before_reboot.sh
+/usr/shc/wifi_schedule
+/etc/init.d/wifi_schedule
+/usr/sbin/reboot_action
+/usr/sbin/wifi_action
+/etc/uci-defaults/z99wifi_schedule
+/usr/sbin/db_option

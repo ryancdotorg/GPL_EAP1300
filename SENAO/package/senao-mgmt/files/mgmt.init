@@ -1,0 +1,88 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions.sh
+
+. /etc/mgmt.d/mgmt_path.sh
+
+. /lib/senao-shell-libs/network.sh
+
+EXTRA_COMMANDS='lan_ip_obtain_reload'
+
+START=30
+
+MGMT_IFACE_EXIST=$(ifconfig | grep $MGMT_IFACE)
+TEMP_PRE_IP_FILE="/tmp/pre_ip"
+
+mgmt_ind_iface=$(/usr/sbin/foreach wireless wifi-iface network mgmt)
+
+check_mgmt_ip() {
+    ip_test_list="58 108 158"
+    mgmt_ip=$(uci get network.mgmt.ipaddr)
+    ip_conflict=$(skip_dev=br-mgmt is_ip_conflict $mgmt_ip/24)
+
+    echo ip:$mgmt_ip ip_conflict:$ip_conflict > /dev/console
+
+    if [ "$ip_conflict" = "1" ]
+    then
+        for test_ip in $ip_test_list
+        do
+            ip_conflict=$(skip_dev=br-mgmt is_ip_conflict 192.168.$test_ip.1/24)
+            echo ip:192.168.$test_ip.1 ip_conflict:$ip_conflict > /dev/console
+
+            if [ "$ip_conflict" = "0" ]
+            then
+                uci set network.mgmt.ipaddr=192.168.$test_ip.1
+                uci set dhcp.mgmt.start=192.168.$test_ip.100
+
+                uci commit network
+                uci commit dhcp
+                luci-reload auto network
+                break
+            fi
+        done
+    fi
+}
+
+boot() {
+    stop
+    # create vap by qcawifi.sh itself.
+    # [ $MGMT_DISABLED = 0 ] && [ ! -f $MGMT_HOSTAPD_CONF -o -z "$MGMT_IFACE_EXIST" ] && $MGMT_VAP_SCRIPT create_vap
+    $MGMT_TIMER_SCRIPT set_timer 
+    [ "$mgmt_ind_iface" != "" ] && {
+        # set max 5 clients for netgear in management SSID
+        model_name="`uci get sysProductInfo.model.modelName`"
+        echo $model_name | grep "WAX" && iwpriv $MGMT_IFACE maxsta 5
+    }
+}
+
+start() {
+    echo "start"
+    # create vap by qcawifi.sh itself.
+    # [ $MGMT_DISABLED = 0 ] && [ ! -f $MGMT_HOSTAPD_CONF -o -z "$MGMT_IFACE_EXIST" ] && $MGMT_VAP_SCRIPT create_vap
+    $MGMT_NOTIFY_SCRIPT check
+    [ "$mgmt_ind_iface" != "" ] && {
+        check_mgmt_ip
+        # set max 5 clients for netgear in management SSID
+        model_name="`uci get sysProductInfo.model.modelName`"
+        echo $model_name | grep "WAX" && iwpriv $MGMT_IFACE maxsta 5
+    }
+}
+
+stop() {
+    echo "stop"
+    [ -f $DHCPD_CONF ] && rm -f $DHCPD_CONF
+}
+
+lan_ip_obtain_reload() {
+    [ -f $DHCPD_CONF ] && rm -f $DHCPD_CONF
+
+    old_ip=$(cat $TEMP_PRE_IP_FILE)
+    now_ip=$(ifconfig br-lan |grep "inet addr" |cut -d':' -f2 |cut -d ' ' -f1)
+
+    [ "$old_ip" != "$now_ip" ] && {
+        [ "$mgmt_ind_iface" != "" ] && check_mgmt_ip
+        echo "$now_ip" > $TEMP_PRE_IP_FILE
+        $MGMT_NOTIFY_SCRIPT check
+    }
+
+}

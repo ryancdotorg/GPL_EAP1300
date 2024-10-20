@@ -1,0 +1,12 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	add ucitrack wifi_schedule
+	set ucitrack.@wifi_schedule[0].init=wifi_schedule
+	add_list ucitrack.@network[0].affects=wifi_schedule
+	add_list ucitrack.@system[0].affects=wifi_schedule
+	commit ucitrack
+EOF
+
+rm -f /tmp/luci-indexcache
+exit 0

@@ -1,0 +1,601 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -14,6 +14,11 @@
+ #include "iwlib.h"		/* Header */
+ #include <sys/time.h>
+ 
++#define SENAO_SUPPORT_BACKGROUND_FASTSCAN 1
++
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++char p_ifname[6]; //Edward: For print_scanning_token function can know which is 2G or 5G.
++#endif
+ /****************************** TYPES ******************************/
+ enum {
+   OPEN = 0,
+@@ -32,6 +37,11 @@ enum {
+   BG = 2,
+   GN = 3,
+   AC = 4
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++	,
++  A = 5,
++  AN = 6
++#endif
+ };
+ 
+ /*
+@@ -70,6 +80,13 @@ typedef struct iw_auth_descr
+ 
+ #define IW_SCAN_HACK		0x8000
+ 
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN 
++#define IW_SCAN_ONE_CHAN   0x0100   /* Scan only one channel */
++#define IW_SCAN_ONE_CHAN_ACTIVE   0x0800   /* Scan only one channel */
++#define IW_SCAN_FAST_DISPLAY   0x0200   /* Display fast scan result */
++#define IW_SCAN_FAST_DISPLAY_ADV   0x0400   /* Display fast scan advance result */
++#endif
++
+ #define IW_EXTKEY_SIZE	(sizeof(struct iw_encode_ext) + IW_ENCODING_TOKEN_MAX)
+ 
+ /* ------------------------ WPA CAPA NAMES ------------------------ */
+@@ -495,6 +512,16 @@ iw_print_gen_ie(unsigned char *	buffer,
+  * do the complete job...
+  */
+ 
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++#define SCAN_ADV_HT_FLAG 0x1
++#define SCAN_ADV_HT20 0x1
++#define SCAN_ADV_HT40_PLUS 0x2
++#define SCAN_ADV_HT40_MINUS 0x3
++#define SCAN_ADV_HT80 0x4
++
++#define SCAN_ADV_VHT_FLAG 0x2
++#endif
++
+ /*------------------------------------------------------------------*/
+ /*
+  * Print one element from the scanning results
+@@ -530,13 +557,32 @@ print_scanning_token(struct stream_descr
+         else
+           printf("WPA/WPA2    \t");
+       }
+-
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++      if(strlen(p_ifname) >= 5) //ath1x~ath9x
++      {
++          if(p_ifname[3] >= 53) //ath5x~ath9x
++          {
++              if (state->type == GN)
++                  state->type = AN;
++              if (state->type == B || state->type == BG)
++                  state->type = A;
++          }
++      }
++#endif      
+       if (state->type == B)
+         printf("11b\t");
+       else if (state->type == BG)
+         printf("11b/g\t");
+       else if (state->type == GN)
+         printf("11g/n\t");
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++      else if (state->type == AC)
++        printf("11ac\t");
++      else if (state->type == A)
++        printf("11a\t");
++      else if (state->type == AN)
++        printf("11a/n\t");
++#endif
+       else if (state->type == AC)
+         printf("11ac\t");
+       printf("\n%s\t", iw_saether_ntop(&event->u.ap_addr, buffer));
+@@ -672,6 +718,24 @@ print_scanning_token(struct stream_descr
+       break;
+     case IWEVCUSTOM:
+       {
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++          if(event->u.data.flags & SCAN_ADV_HT_FLAG)
++          {
++              char ht_option;
++              memcpy(&ht_option, event->u.data.pointer, event->u.data.length);
++
++              if(ht_option == SCAN_ADV_HT40_PLUS)
++                  printf("HT40PLUS");
++              else if(ht_option == SCAN_ADV_HT40_MINUS)
++                  printf("HT40MINUS");
++              else if(ht_option == SCAN_ADV_HT80)
++                  printf("VHT80");
++              else
++                  printf("HT20");
++          }
++          else
++          {
++#endif
+ 	char custom[IW_CUSTOM_MAX+1];
+ 	if((event->u.data.pointer) && (event->u.data.length))
+ 	  memcpy(custom, event->u.data.pointer, event->u.data.length);
+@@ -681,6 +745,9 @@ print_scanning_token(struct stream_descr
+     if ((custom[0] == 'v') && (custom[1] == 'h') || strstr(custom, "IEEE80211_MODE_11AC"))
+           state->type = AC;
+ 	//printf("                    Extra:%s\n", custom);
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++          }
++#endif
+       }
+       break;
+     default:
+@@ -706,9 +773,22 @@ print_scanning_info(int		skfd,
+   int			buflen = IW_SCAN_MAX_DATA; /* Min for compat WE<17 */
+   struct iw_range	range;
+   int			has_range;
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++  int quiet_option = 0, fast_scan_get=0; /* SENAO fast scan quiet mode */
++#endif
+   struct timeval	tv;				/* Select timeout */
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++#if ATH_SUPPORT_WRAP
++  int           timeout = 60000000;     /* 60s */
++#else
+   int			timeout = 15000000;		/* 15s */
+-
++#endif
++#else
++  int			timeout = 15000000;		/* 15s */
++#endif
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++  strcpy(p_ifname, ifname);
++#endif
+   /* Avoid "Unused parameter" warning */
+   args = args; count = count;
+ 
+@@ -781,7 +861,34 @@ print_scanning_info(int		skfd,
+ 	    /* Hack */
+ 	    scanflags |= IW_SCAN_HACK;
+ 	  }
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++    else
++  /* Check for fast scanning feature */
++  if(!strncmp(args[0], "fast", 4))
++    {
++      fast_scan_get = 1;
++      tv.tv_usec = tv.tv_usec / 12;
++      scanflags |= IW_SCAN_ONE_CHAN;
++    }
++    else
++  /* Check for fast scanning quiet feature */
++  if(!strncmp(args[0], "quiet", 5))
++    {
++      quiet_option = 1;
++      tv.tv_usec = tv.tv_usec / 12;
++      scanflags |= IW_SCAN_ONE_CHAN;
++    }
+ 	else
++  /* Check for fast scanning active-quiet feature */
++  if(!strncmp(args[0], "active_quiet", 12))
++    {
++      quiet_option = 1;
++      tv.tv_usec = tv.tv_usec / 12;
++      scanflags |= IW_SCAN_ONE_CHAN;
++      scanflags |= IW_SCAN_ONE_CHAN_ACTIVE;
++    }
++#endif
++    else
+ 	  {
+ 	    fprintf(stderr, "Invalid scanning option [%s]\n", args[0]);
+ 	    return(-1);
+@@ -833,7 +940,13 @@ print_scanning_info(int		skfd,
+ 	}
+     }
+   timeout -= tv.tv_usec;
+-
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++  if(quiet_option)
++  {
++      usleep(500 * 1000); //Just a lock to avoid user use fast scanning too soon.
++      goto fast_scan_quiet_point;
++  }
++#endif
+   /* Forever */
+   while(1)
+     {
+@@ -879,6 +992,11 @@ print_scanning_info(int		skfd,
+ 	  /* Try to read the results */
+ 	  wrq.u.data.pointer = buffer;
+ 	  wrq.u.data.flags = 0;
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++      /* SENAO fast scan display */
++	  if(fast_scan_get)
++	      wrq.u.data.flags |= IW_SCAN_FAST_DISPLAY;
++#endif
+ 	  wrq.u.data.length = buflen;
+ 	  if(iw_get_ext(skfd, ifname, SIOCGIWSCAN, &wrq) < 0)
+ 	    {
+@@ -988,13 +1106,362 @@ print_scanning_info(int		skfd,
+         else
+           printf("WPA/WPA2    \t");
+       }
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++      if(strlen(p_ifname) >= 5) //ath1x~ath9x
++      {
++          if(p_ifname[3] >= 53) //ath5x~ath9x
++          {
++              if (state.type == GN)
++                  state.type = AN;
++              if (state.type == B || state.type == BG)
++                  state.type = A;
++          }
++      }
++#endif
++      if (state.type == B)
++          printf("11b\t");
++        else if (state.type == BG)
++          printf("11b/g\t");
++        else if (state.type == GN)
++          printf("11g/n\t");
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++        else if (state.type == AN)
++          printf("11a/n\t");
++        else if (state.type == A)
++          printf("11a\t");
++#endif
++        else if (state.type == AC)
++          printf("11ac\t");
++      printf("\n");
++    }
++  else
++    printf("%-8.16s  No scan results\n\n", ifname);
++
++  free(buffer);
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++
++fast_scan_quiet_point:
++#endif
++  return(0);
++}
++
++/*------------------------------------------------------------------*/
++/*
++ * Display a scanning result on one device
++ */
++static int
++display_scanning_info(int     skfd,
++            char *  ifname,
++            char *  args[],     /* Command line args */
++            int     count)      /* Args count */
++{
++  struct iwreq      wrq;
++  struct iw_scan_req    scanopt;        /* Options for 'set' */
++  int           scanflags = 0;      /* Flags for scan */
++  unsigned char *   buffer = NULL;      /* Results */
++  int           buflen = IW_SCAN_MAX_DATA; /* Min for compat WE<17 */
++  struct iw_range   range;
++  int           has_range;
++  struct timeval    tv;             /* Select timeout */
++  int advance_display = 0; /* SENAO advance display mode */
++#if ATH_SUPPORT_WRAP
++  int           timeout = 60000000;     /* 60s */
++#else
++  int           timeout = 15000000;     /* 15s */
++#endif
++
++  strcpy(p_ifname, ifname);
++
++  /* Avoid "Unused parameter" warning */
++  args = args; count = count;
++
++  /* Debugging stuff */
++  if((IW_EV_LCP_PK2_LEN != IW_EV_LCP_PK_LEN) || (IW_EV_POINT_PK2_LEN != IW_EV_POINT_PK_LEN))
++    {
++      fprintf(stderr, "*** Please report to jt@hpl.hp.com your platform details\n");
++      fprintf(stderr, "*** and the following line :\n");
++      fprintf(stderr, "*** IW_EV_LCP_PK2_LEN = %zu ; IW_EV_POINT_PK2_LEN = %zu\n\n",
++          IW_EV_LCP_PK2_LEN, IW_EV_POINT_PK2_LEN);
++    }
++
++  /* Get range stuff */
++  has_range = (iw_get_range_info(skfd, ifname, &range) >= 0);
++
++  /* Check if the interface could support scanning. */
++  if((!has_range) || (range.we_version_compiled < 14))
++    {
++      fprintf(stderr, "%-8.16s  Interface doesn't support scanning.\n\n",
++          ifname);
++      return(-1);
++    }
++
++  /* Init timeout value -> 250ms between set and first get */
++  tv.tv_sec = 0;
++  //tv.tv_usec = 250000;
++  tv.tv_usec = 5000000;
++
++  /* Clean up set args */
++  memset(&scanopt, 0, sizeof(scanopt));
++
++  /* Parse command line arguments and extract options.
++   * Note : when we have enough options, we should use the parser
++   * from iwconfig... */
++  while(count > 0)
++    {
++      /* One arg is consumed (the option name) */
++      count--;
++
++    /* Display normal scanning result */
++    if(!strncmp(args[0], "normal", 4))
++      {
++        advance_display = 0;
++      }
++    else
++    /* Display advance scanning result */
++  if(!strncmp(args[0], "advance", 4))
++    {
++      advance_display = 1;
++    }
++    else
++      {
++        fprintf(stderr, "Invalid scanning option [%s]\n", args[0]);
++        return(-1);
++      }
+ 
++      /* Next arg */
++      args++;
++    }
++
++  /* Check if we have scan options */
++  if(scanflags)
++    {
++      wrq.u.data.pointer = (caddr_t) &scanopt;
++      wrq.u.data.length = sizeof(scanopt);
++      wrq.u.data.flags = scanflags;
++    }
++  else
++    {
++      wrq.u.data.pointer = NULL;
++      wrq.u.data.flags = 0;
++      wrq.u.data.length = 0;
++    }
++
++#if 0 //Only display
++      /* Initiate Scanning */
++      if(iw_set_ext(skfd, ifname, SIOCSIWSCAN, &wrq) < 0)
++    {
++      if((errno != EPERM) || (scanflags != 0))
++        {
++          fprintf(stderr, "%-8.16s  Interface doesn't support scanning : %s\n\n",
++              ifname, strerror(errno));
++          return(-1);
++        }
++      /* If we don't have the permission to initiate the scan, we may
++       * still have permission to read left-over results.
++       * But, don't wait !!! */
++#if 0
++      /* Not cool, it display for non wireless interfaces... */
++      fprintf(stderr, "%-8.16s  (Could not trigger scanning, just reading left-over results)\n", ifname);
++#endif
++#endif //Only display
++  tv.tv_usec = 0;
++
++  timeout -= tv.tv_usec;
++
++  /* Forever */
++  while(1)
++    {
++      fd_set        rfds;       /* File descriptors for select */
++      int       last_fd;    /* Last fd */
++      int       ret;
++
++      /* Guess what ? We must re-generate rfds each time */
++      FD_ZERO(&rfds);
++      last_fd = -1;
++
++      /* In here, add the rtnetlink fd in the list */
++
++      /* Wait until something happens */
++      ret = select(last_fd + 1, &rfds, NULL, NULL, &tv);
++
++      /* Check if there was an error */
++      if(ret < 0)
++    {
++      if(errno == EAGAIN || errno == EINTR)
++        continue;
++      fprintf(stderr, "Unhandled signal - exiting...\n");
++      return(-1);
++    }
++
++      /* Check if there was a timeout */
++      if(ret == 0)
++    {
++      unsigned char *   newbuf;
++
++    realloc:
++      /* (Re)allocate the buffer - realloc(NULL, len) == malloc(len) */
++      newbuf = realloc(buffer, buflen);
++      if(newbuf == NULL)
++        {
++          if(buffer)
++        free(buffer);
++          fprintf(stderr, "%s: Allocation failed\n", __FUNCTION__);
++          return(-1);
++        }
++      buffer = newbuf;
++
++      /* Try to read the results */
++      wrq.u.data.pointer = buffer;
++      wrq.u.data.flags = 0;
++
++      /* SENAO fast scan display */
++      wrq.u.data.flags |= IW_SCAN_FAST_DISPLAY;
++      if(advance_display)
++          wrq.u.data.flags |= IW_SCAN_FAST_DISPLAY_ADV;
++
++      wrq.u.data.length = buflen;
++      if(iw_get_ext(skfd, ifname, SIOCGIWSCAN, &wrq) < 0)
++        {
++          /* Check if buffer was too small (WE-17 only) */
++          if((errno == E2BIG) && (range.we_version_compiled > 16) && (buflen < 0xFFFF))
++        {
++          /* Some driver may return very large scan results, either
++           * because there are many cells, or because they have many
++           * large elements in cells (like IWEVCUSTOM). Most will
++           * only need the regular sized buffer. We now use a dynamic
++           * allocation of the buffer to satisfy everybody. Of course,
++           * as we don't know in advance the size of the array, we try
++           * various increasing sizes. Jean II */
++
++          /* Check if the driver gave us any hints. */
++          if(wrq.u.data.length > buflen)
++            buflen = wrq.u.data.length;
++          else
++            buflen *= 2;
++
++                  if(buflen > 0xFFFF)
++                    buflen = 0xFFFF;
++
++          /* Try again */
++          goto realloc;
++        }
++
++          /* Check if results not available yet */
++          if(errno == EAGAIN)
++        {
++          /* Restart timer for only 100ms*/
++          tv.tv_sec = 0;
++          tv.tv_usec = 100000;
++          timeout -= tv.tv_usec;
++          if(timeout > 0)
++            continue;   /* Try again later */
++        }
++
++          /* Bad error */
++          free(buffer);
++          fprintf(stderr, "%-8.16s  Failed to read scan data : %s\n\n",
++              ifname, strerror(errno));
++          return(-2);
++        }
++      else
++        /* We have the results, go to process them */
++        break;
++    }
++
++      /* In here, check if event and event type
++       * if scan event, read results. All errors bad & no reset timeout */
++    }
++
++  if(wrq.u.data.length)
++    {
++      struct iw_event       iwe;
++      struct stream_descr   stream;
++      struct iwscan_state   state = { .ap_num = 1, .val_index = 0 };
++      int           ret;
++
++#ifdef DEBUG
++      /* Debugging code. In theory useless, because it's debugged ;-) */
++      int   i;
++      printf("Scan result %d [%02X", wrq.u.data.length, buffer[0]);
++      for(i = 1; i < wrq.u.data.length; i++)
++    printf(":%02X", buffer[i]);
++      printf("]\n");
++#endif
++
++      printf("%-8.16s  Scan completed :\n", ifname);
++      if(advance_display)
++      {
++      printf("%-17.17s\t%-6.6s\t"
++        , "BSSID"
++        , "HT"
++    );
++      }
++      else
++      {
++            printf("%-17.17s\t%-32.32s\t%-3.3s\t%-6.6s\t%-2.2s\t%-6.6s\t%-12.12s\t%-4.4s"
++              , "BSSID"
++              , "SSID"
++              , "LEN"
++              , "MODE"
++              , "CHAN"
++              , "SIGNAL"
++              , "ENC"
++              , "TYPE"
++          );
++      }
++      //printf("%-8.16s  Scan completed :\n", ifname);
++      iw_init_event_stream(&stream, (char *) buffer, wrq.u.data.length);
++      do
++    {
++      /* Extract an event and print it */
++      ret = iw_extract_event_stream(&stream, &iwe,
++                    range.we_version_compiled);
++      if(ret > 0)
++        print_scanning_token(&stream, &iwe, &state,
++                 &range, has_range);
++    }
++      while(ret > 0);
++       if (state.sec != 0)
++        {
++        if (state.sec == WEP)
++          printf("WEP         \t");
++        else if (state.sec == WPA_PSK)
++          printf("WPA-PSK     \t");
++        else if (state.sec == WPA2_PSK)
++          printf("WPA2-PSK    \t");
++        else if (state.sec == WPAWPA2_MIX_PSK)
++          printf("WPA/WPA2-PSK\t");
++        else if (state.sec == WPA)
++          printf("WPA         \t");
++        else if (state.sec == WPA2)
++          printf("WPA2        \t");
++        else
++          printf("WPA/WPA2    \t");
++      }
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++      if(strlen(p_ifname) >= 5) //ath1x~ath9x
++      {
++          if(p_ifname[3] >= 53) //ath5x~ath9x
++          {
++              if (state.type == GN)
++                  state.type = AN;
++              if (state.type == B || state.type == BG)
++                  state.type = A;
++          }
++      }
++#endif
+       if (state.type == B)
+           printf("11b\t");
+         else if (state.type == BG)
+           printf("11b/g\t");
+         else if (state.type == GN)
+           printf("11g/n\t");
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++        else if (state.type == AN)
++          printf("11a/n\t");
++        else if (state.type == A)
++          printf("11a\t");
++#endif
+         else if (state.type == AC)
+           printf("11ac\t");
+       printf("\n");
+@@ -1003,6 +1470,10 @@ print_scanning_info(int		skfd,
+     printf("%-8.16s  No scan results\n\n", ifname);
+ 
+   free(buffer);
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++
++fast_scan_quiet_point:
++#endif
+   return(0);
+ }
+ 
+@@ -2178,7 +2649,12 @@ typedef struct iwlist_entry {
+ } iwlist_cmd;
+ 
+ static const struct iwlist_entry iwlist_cmds[] = {
++#if SENAO_SUPPORT_BACKGROUND_FASTSCAN
++  { "scanning",		print_scanning_info,	-1, "[essid NNN] [last] [fast] [quiet] [active_quiet]" },
++  { "displayscan",  display_scanning_info,    -1, "[normal] [advance]" },
++#else
+   { "scanning",		print_scanning_info,	-1, "[essid NNN] [last]" },
++#endif
+   { "frequency",	print_freq_info,	0, NULL },
+   { "channel",		print_freq_info,	0, NULL },
+   { "bitrate",		print_bitrate_info,	0, NULL },

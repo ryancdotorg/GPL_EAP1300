@@ -1,0 +1,7 @@
+if [ "${INTERFACE#app}" != "${INTERFACE}" ]
+then
+	if [ "$ACTION" = "add" ]
+	then
+		/etc/init.d/avahi-daemon restart
+	fi
+fi

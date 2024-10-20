@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+START=99
+
+start() {
+	local enable=$(uci get app_agent.agent.enable)
+	local enable_aes=$(uci get app_agent.agent.enable_aes)
+
+	if [ $enable -eq 1 ]; then
+		/usr/sbin/app_agentsd -s &
+		/usr/sbin/ipcam_iputil &
+	fi
+	if [ $enable_aes -eq 1 ]; then
+		/usr/sbin/app_agentd -e &
+	fi
+}
+
+stop() {
+	local agentd_pid=$(ps | grep app_agentd | grep -v "grep" | awk '{print $1}')
+	local agentsd_pid=$(ps | grep app_agentsd | grep -v "grep" | awk '{print $1}')
+	local ipcam_pid=$(ps | grep ipcam_iputil | grep -v "grep" | awk '{print $1}')
+
+	[ -n "$agentd_pid" ] && kill -9 $agentd_pid
+	[ -n "$agentsd_pid" ] && kill -9 $agentsd_pid
+	[ -n "$ipcam_pid" ] && kill -9 $ipcam_pid
+}

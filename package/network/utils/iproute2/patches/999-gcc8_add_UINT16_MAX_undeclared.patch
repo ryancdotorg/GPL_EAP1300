@@ -1,0 +1,12 @@
+--- a/tc/tc_core.c
++++ b/tc/tc_core.c
+@@ -12,6 +12,9 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
++#if __GNUC__ >= 8
++#include <stdint.h>
++#endif
+ #include <unistd.h>
+ #include <syslog.h>
+ #include <fcntl.h>

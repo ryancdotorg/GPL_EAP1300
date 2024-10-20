@@ -1,0 +1,13 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -806,7 +806,7 @@ print_scanning_info(int		skfd,
+ #if ATH_SUPPORT_WRAP
+   int           timeout = 60000000;     /* 60s */
+ #else
+-  int			timeout = 15000000;		/* 15s */
++  int			timeout = 25000000;		/* 25s */
+ #endif
+ #else
+   int			timeout = 15000000;		/* 15s */

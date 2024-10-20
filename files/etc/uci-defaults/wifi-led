@@ -1,0 +1,14 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	set system.wifi0_led.trigger='netdev'
+	set system.wifi0_led.dev='wifi0'
+	set system.wifi0_led.mode='link tx'
+	set system.wifi1_led.trigger='netdev'
+	set system.wifi1_led.dev='wifi1'
+	set system.wifi1_led.mode='link tx'
+	commit system
+EOF
+
+exit 0
+

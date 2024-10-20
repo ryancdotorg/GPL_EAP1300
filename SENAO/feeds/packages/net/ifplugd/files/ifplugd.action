@@ -1,0 +1,6 @@
+#!/bin/sh
+
+env -i ACTION=$2 /etc/led/iface_plug > /dev/null 2>&1 &
+env -i ACTION=$2 /etc/autofw/iface_plug > /dev/null 2>&1 &
+env -i ACTION=$2 INTERFACE=wan  /etc/ipv4_redial > /dev/null 2>&1 &
+env -i ACTION=$2 INTERFACE=wan6 /etc/ipv6_redial > /dev/null 2>&1 &

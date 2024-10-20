@@ -1,0 +1,7189 @@
+openapi: 3.0.0
+info:
+  version: 1.0.20201125
+  title: SWOS AP API
+  description: The document declares APIs used in SWOS AP products.
+servers:
+  - url: 'https://192.168.1.1:4430/api'
+paths:
+  /version:
+    get:
+      tags:
+        - api
+      description: Return api version
+      operationId: get_version
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiVersion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'  
+  /sys/login:
+    post:
+      tags:
+        - sys
+      description: Login to API server
+      operationId: post_login
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login_Token'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /sys/change_account:
+    post:
+      tags:
+        - sys
+      description: Change account and password
+      operationId: post_change_account
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeAccount'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/system_config:
+    post:
+      tags:
+        - sys
+      description: Set system configuration
+      operationId: post_system_config
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_SystemCfg'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - sys
+      description: Patch system configuration
+      operationId: patch_system_config
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_SystemCfg'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/sys_info:
+    get:
+      tags:
+        - sys
+      description: Return device system information
+      operationId: get_sys_info
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/apply:
+    post:
+      tags:
+        - sys
+      description: Request reload configuration
+      operationId: post_apply
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/reload:
+    get:
+      tags:
+        - sys
+      description: Return device reload status
+      operationId: get_reload
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response_No_Data'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/revert:
+    post:
+      tags:
+        - sys
+      description: Request revert configuration
+      operationId: post_revert
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/ethernet:
+    post:
+      tags:
+        - net
+      description: Set configuration for Ethernet interface
+      operationId: post_ethernet
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Ethernet'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - net
+      description: Patch configuration for Ethernet interface
+      operationId: patch_ethernet
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Ethernet'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - net
+      description: Return Ethernet interface configuration
+      operationId: get_ethernet
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ethernet'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/dev_capability:
+    get:
+      tags:
+        - sys
+      description: Return device's supported capability
+      operationId: get_dev_capability
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceCapability'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /sys/syslog:
+    post:
+      tags:
+        - sys
+      description: Set configuration for system log
+      operationId: post_syslog
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_System_log'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - sys
+      description: Patch configuration for system log
+      operationId: patch_syslog
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_System_log'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - sys
+      description: Return system log configuration
+      operationId: get_syslog
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/System_log'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/ethernet/traffic_info:
+    get:
+      tags:
+        - net
+      description: Get ethernet traffic information result
+      operationId: get_ethernet_traffic_info
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ethernet_Traffic_Info'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/ethernet/client_info:
+    get:
+      tags:
+        - net
+      description: Get ethernet client information result
+      operationId: get_ethernet_client_info
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EthernetClientInfoResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/linktest:
+    post:
+      tags:
+        - net
+      description: Set Link test configuration
+      operationId: post_linktest
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - net
+      description: Return Link test configuration
+      operationId: get_linktest
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkTest'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/proxy/settings:
+    patch:
+      tags:
+        - net
+      description: Patch configuration for http & https proxy settings
+      operationId: Patch_proxy_settings
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Proxy_settings'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    post:
+      tags:
+        - net
+      description: Set configuration for http & https proxy settings
+      operationId: post_proxy_settings
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Proxy_settings'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - net
+      description: Return http & https proxy configuration
+      operationId: get_proxy_settings
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proxy_settings'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/proxy/http:
+    post:
+      tags:
+        - net
+      description: Set configuration for http proxy
+      operationId: post_proxy_http
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Proxy'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - net
+      description: Return http proxy configuration
+      operationId: get_proxy_http
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proxy'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/proxy/https:
+    post:
+      tags:
+        - net
+      description: Set configuration for https proxy
+      operationId: post_proxy_https
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Proxy'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - net
+      description: Return https proxy configuration
+      operationId: get_proxy_https
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proxy'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/iptable_rules:
+    post:
+      tags:
+        - net
+      description: Set configuration for iptable rules
+      operationId: post_iptable_rules
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Iptable_rules'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - net
+      description: Patch configuration for iptable rules
+      operationId: patch_iptable_rules
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Iptable_rules'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - net
+      description: Return iptable rules configuration
+      operationId: get_iptable_rules
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Iptable_rules'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/spanning_tree:
+    post:
+      tags:
+        - net
+      description: Set configuration for spanning tree
+      operationId: post_spanning_tree
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Spanning_tree'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - net
+      description: Patch configuration for spanning tree
+      operationId: patch_spanning_tree
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Spanning_tree'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - net
+      description: Return spanning tree configuration
+      operationId: get_spanning_tree
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spanning_tree'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /net/internet_speedtest:
+    post:
+      tags:
+        - net
+      description: Request specific device to run Internet speedtest
+      operationId: post_internet_speedtest
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - net
+      description: Get specified device's Internet speedtest result
+      operationId: get_internet_speedtest
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Internet_Speedtest_Result'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/radio/24g:
+    post:
+      tags:
+        - wifi
+      description: Set 2.4GHz wifi radio configuration
+      operationId: post_radio_24g
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Radio_24G'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch 2.4GHz wifi radio configuration
+      operationId: patch_radio_24g
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Radio_24G'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return 2.4GHz wifi radio configuration
+      operationId: get_radio_24g
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Radio_24G'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/radio/5g:
+    post:
+      tags:
+        - wifi
+      description: Set 5GHz or first 5GHz wifi radio configuration
+      operationId: post_radio_5g
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Radio_5G'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch 5GHz or first 5GHz wifi radio configuration
+      operationId: patch_radio_5g
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Radio_5G'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return 5GHz or first 5GHz wifi radio configuration
+      operationId: get_radio_5g
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Radio_5G'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/radio/5g_2:
+    post:
+      tags:
+        - wifi
+      description: Set second 5GHz wifi radio configuration
+      operationId: post_radio_5g_2
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Radio_5G'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch second 5GHz wifi radio configuration
+      operationId: patch_radio_5g_2
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Radio_5G'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return second 5GHz wifi radio configuration
+      operationId: get_radio_5g_2
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Radio_5G'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/channel_list:
+    post:
+      tags:
+        - wifi
+      description: Set country and green mode for channel
+      operationId: post_channel_list
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Channel_list'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'    
+    get:
+      tags:
+        - wifi
+      description: get wifi radio channel list
+      operationId: get_channel_list
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel_list'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+  /wifi/mesh:
+    post:
+      tags:
+        - wifi
+      description: Set configuration for Mesh interface
+      operationId: post_mesh
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Mesh'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - wifi
+      description: Return WiFi Mesh interface configuration
+      operationId: get_mesh
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mesh'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/mesh/mesh_group_info:
+    get:
+      tags:
+        - wifi
+      description: Return wireless mesh group information
+      operationId: get_mesh_group_info
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeshGroupInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/mesh/mesh_group_tree_topology:
+    get:
+      tags:
+        - wifi
+      description: Return wireless mesh group tree topology information
+      operationId: get_mesh_group_tree_topology
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeshGroupTreeTopology'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/mesh/mesh_group_node_info:
+    get:
+      tags:
+        - wifi
+      description: Return specified mesh node information in wireless mesh group
+      operationId: get_mesh_group_node_info
+      parameters:
+        - in: query
+          name: target_mac_addr
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeshGroupNodeInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/ssids:
+    get:
+      tags:
+        - wifi
+      description: Get all SSID configuration
+      operationId: get_ssids
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSIDs'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}':
+    post:
+      tags:
+        - wifi
+      description: Set SSID configuration according to specified ID
+      operationId: post_ssidconfig_id
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_SSID'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch SSID configuration according to specified ID
+      operationId: patch_ssidconfig_id
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_SSID'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return SSID configuration according to specified ID
+      operationId: get_ssidconfig_id
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSID'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/security':
+    post:
+      tags:
+        - wifi
+      description: Set security configuration according to specified SSID
+      operationId: post_ssid_security
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_WifiSecurity'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch security configuration according to specified SSID
+      operationId: patch_ssid_security
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_WifiSecurity'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return security configuration according to specified SSID
+      operationId: get_ssid_security
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WifiSecurity'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/guest_network':
+    post:
+      tags:
+        - wifi
+      description: Set guest network configuration according to specified SSID
+      operationId: post_ssid_guest_network
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_GuestNetwork'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch guest network configuration according to specified SSID
+      operationId: patch_ssid_guest_network
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_GuestNetwork'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return guest network configuration according to specified SSID
+      operationId: get_ssid_guest_network
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestNetwork'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/accounting_server':
+    post:
+      tags:
+        - wifi
+      description: Set accounting_server configuration according to specified SSID
+      operationId: post_ssid_accounting_server
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_AccountingServer'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch accounting_server configuration according to specified SSID
+      operationId: patch_ssid_accounting_server
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_AccountingServer'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return accounting_server configuration according to specified SSID
+      operationId: get_ssid_accounting_server
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountingServer'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/traffic_shaping':
+    post:
+      tags:
+        - wifi
+      description: Set traffic_shaping configuration according to specified SSID
+      operationId: post_ssid_traffic_shaping
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2                              
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_TrafficShaping'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch traffic_shaping configuration according to specified SSID
+      operationId: patch_ssid_traffic_shaping
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2                              
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_TrafficShaping'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return traffic_shaping configuration according to specified SSID
+      operationId: get_ssid_traffic_shaping
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2              
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrafficShaping'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/band_steering':
+    post:
+      tags:
+        - wifi
+      description: Set band_steering configuration according to specified SSID
+      operationId: post_ssid_band_steering
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap   
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_BandSteering'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch band_steering configuration according to specified SSID
+      operationId: patch_ssid_band_steering
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap   
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_BandSteering'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return band_steering configuration according to specified SSID
+      operationId: get_ssid_band_steering
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap       
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BandSteering'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/radius_server':
+    post:
+      tags:
+        - wifi
+      description: Set radius_server configuration according to specified SSID
+      operationId: post_ssid_radius_server
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_RadiusServer'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch radius_server configuration according to specified SSID
+      operationId: patch_ssid_radius_server
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_RadiusServer'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return radius_server configuration according to specified SSID
+      operationId: get_ssid_radius_server
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadiusServer'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/scheduling':
+    post:
+      tags:
+        - wifi
+      description: Set scheduling configuration according to specified SSID
+      operationId: post_ssid_scheduling
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Scheduling'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch scheduling configuration according to specified SSID
+      operationId: patch_ssid_scheduling
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Scheduling'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Return scheduling configuration according to specified SSID
+      operationId: get_ssid_scheduling
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scheduling'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/l2_acl':
+    post:
+      tags:
+        - wifi
+      description: Set L2 ACL rules according to specified SSID
+      operationId: post_ssid_l2_acl
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_L2Acl'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch L2 ACL rules according to specified SSID
+      operationId: patch_ssid_l2_acl
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_L2Acl'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+    get:
+      tags:
+        - wifi
+      description: Get L2 ACL rules according to specified SSID
+      operationId: get_ssid_l2_acl
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/L2Acl'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  '/wifi/{ssid_mode}/{id}/traffic_info':      
+    get:
+      tags:
+        - wifi
+      description: Return coneected wifi client information
+      operationId: get_ssid_traffic_info
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrafficInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError' 
+  '/wifi/{ssid_mode}/{id}/kick':
+    post:
+      tags:
+        - wifi
+      description: Kick connect mac to specified SSID
+      operationId: post_ssid_kick
+      parameters:
+        - name: ssid_mode
+          in: path
+          description: ap, wds_ap_24g, wds_ap_5g, wds_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - ap
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+        - name: id
+          in: path
+          description: ID of SSID to return
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_Kick'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'       
+  /wifi/wifi_client_info:
+    get:
+      tags:
+        - wifi
+      description: Return coneected wifi client information
+      operationId: get_wifi_client_info
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WiFiClientInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/mesh/throughput:
+    post:
+      tags:
+        - wifi
+      description: >-
+        Request target node to ask specified mesh node (destination) to run
+        throughput.
+      operationId: post_mesh_throughput
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_mac_addr:
+                  type: string
+                  format: mac
+                dst_mac_addr:
+                  type: string
+                  format: mac
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - wifi
+      description: Return mesh throughput result from given target mesh node
+      operationId: get_mesh_throughput
+      parameters:
+        - in: query
+          name: target_mac_addr
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mesh_Throughput_Result'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                   
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/site_survey:
+    post:
+      tags:
+        - wifi
+      description: Run wifi site-survey
+      operationId: post_site_survey
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - wifi
+      description: Get wifi site-survey result
+      operationId: get_site_survey
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WifiSiteSurveyResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/{wds_link}/wds_link:
+    post:
+      tags:
+        - wifi
+      description: Set wifi wds link settings
+      operationId: post_wds_link
+      parameters:
+        - name: wds_link
+          in: path
+          description: wds_ap_24g, wds_ap_5g, wds_ap_5g_2, wds_bridge_24g, wds_bridge_5g, wds_bridge_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+              - wds_bridge_24g
+              - wds_bridge_5g
+              - wds_bridge_5g_2
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_WifiWdsLink'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - wifi
+      description: Get wifi wds link settings
+      operationId: get_wds_link
+      parameters:
+        - name: wds_link
+          in: path
+          description: wds_ap_24g, wds_ap_5g, wds_ap_5g_2, wds_bridge_24g, wds_bridge_5g, wds_bridge_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - wds_ap_24g
+              - wds_ap_5g
+              - wds_ap_5g_2
+              - wds_bridge_24g
+              - wds_bridge_5g
+              - wds_bridge_5g_2
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WifiWdsLink'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /wifi/{sta_mode}:
+    post:
+      tags:
+        - wifi
+      description: Set wifi sta mode SSID
+      operationId: post_sta_mode
+      parameters:
+        - name: sta_mode
+          in: path
+          description: wds_sta_24g, wds_sta_5g, sta_24g, sta_5g, sta_ap_24g, sta_ap_5g, sta_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - wds_sta_24g
+              - wds_sta_5g
+              - sta_24g
+              - sta_5g
+              - sta_ap_24g
+              - sta_ap_5g
+              - sta_ap_5g_2
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_WifiSta'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    patch:
+      tags:
+        - wifi
+      description: Patch wifi sta mode SSID
+      operationId: patch_sta_mode
+      parameters:
+        - name: sta_mode
+          in: path
+          description: wds_sta_24g, wds_sta_5g, sta_24g, sta_5g, sta_ap_24g, sta_ap_5g, sta_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - wds_sta_24g
+              - wds_sta_5g
+              - sta_24g
+              - sta_5g
+              - sta_ap_24g
+              - sta_ap_5g
+              - sta_ap_5g_2
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_WifiSta'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+
+    get:
+      tags:
+        - wifi
+      description: Get wifi sta mode SSID
+      operationId: get_sta_mode
+      parameters:
+        - name: sta_mode
+          in: path
+          description: wds_sta_24g, wds_sta_5g, sta_24g, sta_5g, sta_ap_24g, sta_ap_5g, sta_ap_5g_2
+          required: true
+          schema:
+            type: string
+            enum:
+              - wds_sta_24g
+              - wds_sta_5g
+              - sta_24g
+              - sta_5g
+              - sta_ap_24g
+              - sta_ap_5g
+              - sta_ap_5g_2              
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WifiSta'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/fw_upgrade:
+    post:
+      tags:
+        - mgm
+      description: Run firmware upgrade
+      operationId: post_fw_upgrade
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FwUpgrade'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+        '520':
+          $ref: '#/components/responses/UnknownError'
+  /mgm/fw_upgrade_only:
+    post:
+      tags:
+        - mgm
+      description: Run firmware upgrade without reboot
+      operationId: cmdMgmFwUpgradeOnly
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+        '520':
+          $ref: '#/components/responses/UnknownError'
+  /mgm/tools/iperf:
+    post:
+      tags:
+        - mgm
+      description: Run iperf3 speedtest to specific destination
+      operationId: post_tools_iperf
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dst_ip_addr:
+                  type: string
+                time_period:
+                  type: integer
+                check_interval:
+                  type: integer
+                direction_reverse:
+                  type: boolean
+                bandwidth_limit:
+                  type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get device's iperf3 result
+      operationId: get_tools_iperf
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MgmToolsIperfResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/backup_config:
+    post:
+      tags:
+        - mgm
+      description: Backup device's config file
+      operationId: post_backup_config
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get backup file url
+      operationId: get_backup_config
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Backup_url'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/restore_config:
+    post:
+      tags:
+        - mgm
+      description: Restore device's configuration file
+      operationId: post_restore_config
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/local_upgrade_image:
+    get:
+      tags:
+        - mgm
+      description: Get information of buffered local upgrade image
+      operationId: get_local_upgrade_image
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalUpgradeImageInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/restore_image:
+    get:
+      tags:
+        - mgm
+      description: Get information of buffered restore image
+      operationId: get_restore_image
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalUpgradeImageInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'          
+  /mgm/reboot:
+    post:
+      tags:
+        - mgm
+      description: Reboot the device
+      operationId: post_reboot
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'      
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/auto_reboot_cfg:
+    post:
+      tags:
+        - mgm
+      description: Set auto_reboot configuration
+      operationId: post_auto_reboot_cfg
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_AutoRebootCfg'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get auto_reboot configuration
+      operationId: get_auto_reboot_cfg
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoRebootCfg'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/reset_to_default:
+    post:
+      tags:
+        - mgm
+      description: Reset the device to factory default
+      operationId: post_reset_to_default
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'      
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/led_status:
+    get:
+      tags:
+        - mgm
+      description: Show LED status
+      operationId: get_led_status
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MgmLEDstatus'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/led_cfg:
+    post:
+      tags:
+        - mgm
+      description: Set parameters for LED
+      operationId: post_led_cfg
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_MgmLEDcfg'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/ssh:
+    post:
+      tags:
+        - mgm
+      description: Set SSH setting
+      operationId: post_ssh_setting
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_SSH'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'        
+    get:
+      tags:
+        - mgm
+      description: Get SSH setting
+      operationId: get_ssh_setting
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSH'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/tools/ping:
+    post:
+      tags:
+        - mgm
+      description: Run PING to specific destination
+      operationId: post_tools_ping
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dst_ip_addr:
+                  type: string
+                  format: ipv4
+                packet_size:
+                  type: integer
+                  minimum: 64
+                  maximum: 20480
+                number_of_ping:
+                  type: integer
+                  minimum: 1
+                  maximum: 200                  
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get device's PING result
+      operationId: get_tools_ping
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MgmToolsPingResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/tools/traceroute:
+    post:
+      tags:
+        - mgm
+      description: Run traceroute to specific destination
+      operationId: post_tools_traceroute
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dst_ip_addr:
+                  type: string
+                  format: ipv4
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get device's traceroute result
+      operationId: get_tools_traceroute
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MgmToolsTracerouteResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/tools/nslookup:
+    post:
+      tags:
+        - mgm
+      description: Run Nslookup to specific destination
+      operationId: post_tools_nslookup
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dst_ip_addr:
+                  type: string
+                  format: ipv4                  
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get device's Nslookup result
+      operationId: get_tools_nslookup
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MgmToolsNslookupResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'                
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+  /mgm/tools/device_discovery:
+    post:
+      tags:
+        - mgm
+      description: >-
+        Run Device_Discovery to serach for En products in same subnet of the
+        device
+      operationId: post_tools_device_discovery
+      parameters: []
+      requestBody:
+        description: ''
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullData'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessCode'
+        '400':
+          $ref: '#/components/responses/SetValueFailError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+    get:
+      tags:
+        - mgm
+      description: Get Device Discovery result
+      operationId: get_tools_device_discovery
+      parameters: []
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MgmToolsDevDiscoveryResult'
+        '202':
+          $ref: '#/components/responses/AcceptedCode'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/UrlNotMatchError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    SuccessCode:
+      description: Success case without return value
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Response_No_Data'
+    AcceptedCode:
+      description: API is processing
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Response_No_Data'
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Response_No_Data'
+    UrlNotMatchError:
+      description: API URL not matched
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Response_No_Data'
+    SetValueFailError:
+      description: API set value error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Response_No_Data'
+    GatewayTimeOut:
+      description: Server no response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NoRespond'
+    UnknownError:
+      description: Unknown error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Unknown'            
+  schemas:
+    Response_No_Data:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+    NoRespond:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+          enum:
+            - 10
+            - 13
+        error_message:
+          type: string
+          enum:
+            - API_INTERNET_ERROR
+            - API_REMOTE_SERVER_ERROR
+        data:
+          type: object
+    Unknown:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+          enum:
+            - 100
+            - 101
+            - 104
+        error_message:
+          type: string
+          enum:
+            - API_FILE_MD5SUM_ERROR
+            - API_FILE_NOT_EXIST
+            - API_FILE_SIZE_NOT_EQUAL
+        data:
+          type: object          
+    Login:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 12
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        password:
+          type: string
+          minLength: 1
+          maxLength: 12
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+    Login_Token:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+    ChangeAccount:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 12
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        password:
+          type: string
+          minLength: 1
+          maxLength: 12
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+    Radio_24G:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Radio_24G_Stat'
+    _Radio_24G:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        country:
+          $ref: '#/components/schemas/CountryTable'
+        green_mode:
+          type: boolean
+        is_11ax_disable:
+          type: boolean
+        channel:
+          type: integer
+          minimum: 0
+          maximum: 14
+          description: >
+            Specific value:
+              * 0 - Auto
+        channel_config_enable:
+          type: boolean
+        channel_config_list:
+          type: string
+          minimum: 1
+          maximum: 14
+          description: >
+            Example value:
+              * 1,6,11
+        channel_config_dynamic:
+          type: boolean
+        channel_config_interval:
+          type: integer
+          minimum: 1
+          maximum: 48
+        ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT20_40
+            - HT40
+        tx_power:
+          type: integer
+          minimum: 8
+          maximum: 28
+          enum:
+            - 0
+          description: >
+            Specific value:
+              * 0 - Auto
+        client_limit:
+          type: integer
+          minimum: 0
+          maximum: 127
+          description: >
+            Specific value:
+              * 0 - Disable
+        min_bitrate:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 5
+            - 6
+            - 9
+            - 11
+            - 12
+            - 18
+            - 24
+        rssi_threshold:
+          type: integer
+          minimum: -100
+          maximum: -60
+          description: >
+            Specific value:
+              * 0 - Disable
+        opmode:
+          type: string
+          enum:
+            - ap
+            - wds_ap
+            - wds_bridge
+            - wds_sta
+            - sta_ap
+            - sta
+        distance:
+          type: integer
+          minimum: 0
+          maximum: 30
+        is_legacy_hwmode_deny:
+          type: boolean
+    _Radio_24G_Stat:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        country:
+          $ref: '#/components/schemas/CountryTable'
+        green_mode:
+          type: boolean
+        hw_mode:
+          type: string
+          enum:
+            - 11b
+            - 11g
+            - 11bg
+            - 11n
+            - 11ng
+            - 11axg
+        is_11ax_disable:
+          type: boolean
+        cur_channel:
+          type: integer
+          minimum: 0
+          maximum: 14
+          description: >
+            Specific value:
+              * 0 - Auto
+        cur_ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT20_40
+            - HT40
+            - N/A
+        channel:
+          type: integer
+          minimum: 0
+          maximum: 14
+          description: >
+            Specific value:
+              * 0 - Auto
+        channel_config_enable:
+          type: boolean
+        channel_config_list:
+          type: string
+          minimum: 1
+          maximum: 14
+          description: >
+            Example value:
+              * 1,6,11
+        channel_config_dynamic:
+          type: boolean
+        channel_config_interval:
+          type: integer
+          minimum: 1
+          maximum: 48
+        ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT20_40
+            - HT40
+        tx_power:
+          type: integer
+          minimum: 8
+          maximum: 28
+          enum:
+            - 0
+          description: >
+            Specific value:
+              * 0 - Auto
+        client_limit:
+          type: integer
+          minimum: 0
+          maximum: 127
+          description: >
+            Specific value:
+              * 0 - Disable
+        min_bitrate:
+          type: integer
+          enum:
+            - 1
+            - 2
+            - 5
+            - 6
+            - 9
+            - 11
+            - 12
+            - 18
+            - 24
+        rssi_threshold:
+          type: integer
+          minimum: -100
+          maximum: -60
+          description: >
+            Specific value:
+              * 0 - Disable
+        opmode:
+          type: string
+          enum:
+            - ap
+            - wds_ap
+            - wds_bridge
+            - wds_sta
+            - sta_ap
+            - sta
+        STA_mode_stat:
+          type: object
+          properties:
+            connect_to_ssid:
+              type: string
+        distance:
+          type: integer
+          minimum: 0
+          maximum: 30
+        is_legacy_hwmode_deny:
+          type: boolean
+    Radio_5G:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Radio_5G_Stat'
+    _Radio_5G:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        country:
+          $ref: '#/components/schemas/CountryTable'
+        green_mode:
+          type: boolean
+        is_11ax_disable:
+          type: boolean
+        channel:
+          type: integer
+          enum:
+            - 0
+            - 36
+            - 40
+            - 44
+            - 48
+            - 52
+            - 56
+            - 60
+            - 64
+            - 100
+            - 104
+            - 108
+            - 112
+            - 116
+            - 120
+            - 124
+            - 128
+            - 132
+            - 136
+            - 140
+            - 144
+            - 149
+            - 153
+            - 157
+            - 161
+            - 165
+          description: >
+            Specific value:
+             * 0 - Auto
+        channel_config_enable:
+          type: boolean
+        channel_config_list:
+          type: string
+          enum:
+            - 36
+            - 40
+            - 44
+            - 48
+            - 52
+            - 56
+            - 60
+            - 64
+            - 100
+            - 104
+            - 108
+            - 112
+            - 116
+            - 120
+            - 124
+            - 128
+            - 132
+            - 136
+            - 140
+            - 144
+            - 149
+            - 153
+            - 157
+            - 161
+            - 165
+          description: >
+            Example value:
+              * 36,40,44,48
+        channel_config_dynamic:
+          type: boolean
+        channel_config_interval:
+          type: integer
+          minimum: 1
+          maximum: 48
+        ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT40
+            - HT80
+        tx_power:
+          type: integer
+          minimum: 8
+          maximum: 28
+          enum:
+            - 0
+          description: >
+            Specific value:
+              * 0 - Auto
+        client_limit:
+          type: integer
+          minimum: 0
+          maximum: 127
+          description: >
+            Specific value:
+              * 0 - Disable
+        min_bitrate:
+          type: integer
+          enum:
+            - 6
+            - 9
+            - 12
+            - 18
+            - 24
+        rssi_threshold:
+          type: integer
+          minimum: -100
+          maximum: -60
+          description: >
+            Specific value:
+              * 0 - Disable
+        opmode:
+          type: string
+          enum:
+            - ap
+            - wds_ap
+            - wds_bridge
+            - wds_sta
+            - sta_ap
+            - sta
+        distance:
+          type: integer
+          minimum: 0
+          maximum: 30
+        is_legacy_hwmode_deny:
+          type: boolean
+    _Radio_5G_Stat:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        country:
+          $ref: '#/components/schemas/CountryTable'
+        green_mode:
+          type: boolean
+        hw_mode:
+          type: string
+          enum:
+            - 11a
+            - 11n
+            - 11na
+            - 11ac
+            - 11axa
+        is_11ax_disable:
+          type: boolean
+        cur_channel:
+          type: integer
+          enum:
+            - 0
+            - 36
+            - 40
+            - 44
+            - 48
+            - 52
+            - 56
+            - 60
+            - 64
+            - 100
+            - 104
+            - 108
+            - 112
+            - 116
+            - 120
+            - 124
+            - 128
+            - 132
+            - 136
+            - 140
+            - 144
+            - 149
+            - 153
+            - 157
+            - 161
+            - 165
+          description: >
+            Specific value:
+             * 0 - Auto
+        cur_ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT40
+            - HT80
+            - N/A
+        channel:
+          type: integer
+          enum:
+            - 0
+            - 36
+            - 40
+            - 44
+            - 48
+            - 52
+            - 56
+            - 60
+            - 64
+            - 100
+            - 104
+            - 108
+            - 112
+            - 116
+            - 120
+            - 124
+            - 128
+            - 132
+            - 136
+            - 140
+            - 144
+            - 149
+            - 153
+            - 157
+            - 161
+            - 165
+        channel_config_enable:
+          type: boolean
+        channel_config_list:
+          type: string
+          enum:
+            - 36
+            - 40
+            - 44
+            - 48
+            - 52
+            - 56
+            - 60
+            - 64
+            - 100
+            - 104
+            - 108
+            - 112
+            - 116
+            - 120
+            - 124
+            - 128
+            - 132
+            - 136
+            - 140
+            - 144
+            - 149
+            - 153
+            - 157
+            - 161
+            - 165
+          description: >
+            Example value:
+              * 36,40,44,48
+        channel_config_dynamic:
+          type: boolean
+        channel_config_interval:
+          type: integer
+          minimum: 1
+          maximum: 48
+        ht_mode:
+          type: string
+          enum:
+            - HT20
+            - HT40
+            - HT80
+        tx_power:
+          type: integer
+          minimum: 8
+          maximum: 28
+          enum:
+            - 0
+          description: >
+            Specific value:
+              * 0 - Auto
+        client_limit:
+          type: integer
+          minimum: 0
+          maximum: 127
+          description: >
+            Specific value:
+              * 0 - Disable
+        min_bitrate:
+          type: integer
+          enum:
+            - 6
+            - 9
+            - 12
+            - 18
+            - 24
+        rssi_threshold:
+          type: integer
+          minimum: -100
+          maximum: -60
+          description: >
+            Specific value:
+              * 0 - Disable
+        opmode:
+          type: string
+          enum:
+            - ap
+            - wds_ap
+            - wds_bridge
+            - wds_sta
+            - sta_ap
+            - sta
+        STA_mode_stat:
+          type: object
+          properties:
+            connect_to_ssid:
+              type: string
+        dfs_backup_channel:
+          type: string
+          enum:
+            - 36
+            - 40
+            - 44
+            - 48
+            - 52
+            - 56
+            - 60
+            - 64
+            - 100
+            - 104
+            - 108
+            - 112
+            - 116
+            - 120
+            - 124
+            - 128
+            - 132
+            - 136
+            - 140
+            - 144
+            - 149
+            - 153
+            - 157
+            - 161
+            - 165
+        distance:
+          type: integer
+          minimum: 0
+          maximum: 30
+        is_legacy_hwmode_deny:
+          type: boolean
+    Wep:
+      type: object
+      properties:
+        auth_type:
+          type: string
+          enum:
+            - open
+            - shared
+        input_type:
+          type: string
+          enum:
+            - hex
+            - ascii
+        key_length:
+          type: string
+          enum:
+            - 40/60-bit
+            - 104/128-bit
+            - 128/152-bit
+        default_key:
+          type: integer
+          minimum: 1
+          maximum: 4
+        key1:
+          type: string
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+        key2:
+          type: string
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+        key3:
+          type: string
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+        key4:
+          type: string
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+    WPA:
+      type: object
+      properties:
+        passphrase:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: >
+            Specific value:
+              * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+    Enterprise:
+      type: object
+      properties:
+        eap_method:
+          type: string
+          enum:
+            - ttls
+            - peap
+        eap_auth:
+          type: string
+          enum:
+            - MSCHAP
+            - MSCHAPV2
+        auth_identity:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+        auth_password:
+          type: string
+          minLength: 1
+          maxLength: 64          
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+    Ethernet:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            lacp_mode:
+              type: boolean
+            mgm_vlan_enable:
+              type: boolean
+            mgm_vlan_id:
+              type: integer
+              minimum: 1
+              maximum: 4094
+            mode:
+              type: string
+              enum:
+                - Static
+                - DHCP
+            ipv4:
+              $ref: '#/components/schemas/ipv4_info'
+            ipv6:
+              $ref: '#/components/schemas/ipv6_info'
+    _Ethernet:
+      type: object
+      properties:
+        lacp_mode:
+          type: boolean
+        mgm_vlan_enable:
+          type: boolean
+        mgm_vlan_id:
+          type: integer
+          minimum: 1
+          maximum: 4094
+        mode:
+          type: string
+          enum:
+            - Static
+            - DHCP
+        ipv4:
+          $ref: '#/components/schemas/_ipv4_info'
+        ipv6:
+          $ref: '#/components/schemas/_ipv6_info'
+    ipv4_info:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ipv4
+        mask:
+          type: string
+          format: ipv4
+        gateway:
+          type: string
+          format: ipv4
+        primary_dns:
+          type: string
+          format: ipv4
+        secondary_dns:
+          type: string
+          format: ipv4
+        cur_ipv4_ip:
+          type: string
+          format: ipv4
+        cur_ipv4_mask:
+          type: string
+          format: ipv4
+        cur_ipv4_gateway:
+          type: string
+          format: ipv4
+        cur_ipv4_dns1:
+          type: string
+          format: ipv4
+        cur_ipv4_dns2:
+          type: string
+          format: ipv4
+    ipv6_info:
+      type: object
+      properties:
+        linklocal:
+          type: boolean
+        ip:
+          type: string
+          format: ipv6
+        prefix:
+          type: integer
+          minimum: 2
+          maximum: 128          
+        gateway:
+          type: string
+          format: ipv6          
+        primary_dns:
+          type: string
+          format: ipv6          
+        secondary_dns:
+          type: string
+          format: ipv6
+        cur_ipv6_addr:
+          type: string
+          format: ipv6          
+        cur_ipv6_link:
+          type: string
+          format: ipv6          
+        cur_ipv6_gwaddr:
+          type: string
+          format: ipv6
+        cur_ipv6_dns1:
+          type: string
+          format: ipv6          
+        cur_ipv6_dns2:
+          type: string
+          format: ipv6
+    _ipv4_info:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ipv4
+        mask:
+          type: string
+          format: ipv4
+        gateway:
+          type: string
+          format: ipv4
+        primary_dns:
+          type: string
+          format: ipv4
+        secondary_dns:
+          type: string
+          format: ipv4
+    _ipv6_info:
+      type: object
+      properties:
+        linklocal:
+          type: boolean
+        ip:
+          type: string
+          format: ipv6
+        prefix:
+          type: integer
+          minimum: 2
+          maximum: 128          
+        gateway:
+          type: string
+          format: ipv6          
+        primary_dns:
+          type: string
+          format: ipv6          
+        secondary_dns:
+          type: string
+          format: ipv6
+    LinkTest:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_LinkTest'
+    _LinkTest:
+      type: object
+      properties:
+        DeviceStatus:
+          $ref: '#/components/schemas/Device_status'
+    Device_status:
+      type: object
+      properties:
+        Connectivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device_connectivity'
+        LocalInfo:
+          $ref: '#/components/schemas/Local_Info'
+        InternetInfo:
+          $ref: '#/components/schemas/Internet_Info'
+    Device_connectivity:
+      properties:
+        protocol:
+          type: string
+          enum:
+            - phylink
+            - arpdup
+            - icmp
+            - http
+            - https
+            - dns
+        status:
+          type: integer
+          enum:
+            - 0
+            - 1
+            - 100
+            - 101
+            - 102
+            - 103
+            - 104
+            - 200
+            - 201
+            - 202
+            - 203
+            - 204
+            - 300
+            - 301
+            - 302
+            - 303
+            - 304
+            - 400
+            - 401
+            - 402
+            - 403
+            - 404
+            - 405
+            - 406
+            - 407
+            - 500
+            - 501
+            - 502
+            - 503
+            - 504
+            - 505
+            - 506
+            - 507
+            - 508
+            - 600
+            - 601
+            - 602
+            - 603
+          description: >
+            Specific value:
+              * 0 - LINK_INIT
+              * 1 - STATUS_OK
+              * 100 - ICMP_CREATE_ERR
+              * 101 - ICMP_SEND_ERR
+              * 102 - ICMP_RCV_ERR
+              * 103 - ICMP_DATA_ERR
+              * 104 - ICMP_NO_RESPONSE
+              * 200 - ARP_CREATE_ERR
+              * 201 - ARP_SEND_ERR
+              * 202 - ARP_DATA_ERR
+              * 203 - ARP_RCV_ERR
+              * 204 - ARP_DUPLICATE
+              * 300 - DNS_CREATE_ERR
+              * 301 - DNS_SEND_ERR
+              * 302 - DNS_RCV_ERR
+              * 303 - DNS_DATA_ERR
+              * 304 - DNS_NO_RESPONSE
+              * 400 - HTTP_DATA_ERR
+              * 401 - HTTP_DNS_ERR
+              * 402 - HTTP_CREATE_ERR
+              * 403 - HTTP_SEND_ERR
+              * 404 - HTTP_RCV_ERR
+              * 405 - HTTP_CONN_ERR
+              * 406 - HTTP_PAGE_ERR
+              * 407 - HTTP_NO_RESPONSE
+              * 500 - HTTPS_DATA_ERR
+              * 501 - HTTPS_DNS_ERR
+              * 502 - HTTPS_CREATE_ERR
+              * 503 - HTTPS_SEND_ERR
+              * 504 - HTTPS_HANDSHAKE_ERR
+              * 505 - HTTPS_RCV_ERR
+              * 506 - HTTPS_CONN_ERR
+              * 507 - HTTPS_PAGE_ERR
+              * 508 - HTTPS_NO_RESPONSE
+              * 600 - PHYLINK_DATA_ERR
+              * 601 - PHYLINK_CREATE_ERR
+              * 602 - PHYLINK_DOWN
+              * 603 - PHYLINK_UNKNOWN
+        msg:
+          type: string
+    Local_Info:
+      properties:
+        status:
+          type: integer
+          enum:
+            - -1
+            - 1
+          description: >
+            Specific value:          
+              * -1 - INIT
+              * 1 - OK
+        address:
+          type: string
+          format: ipv4
+        mask:
+          type: string
+          format: ipv4
+        gateway:
+          type: string
+          format: ipv4
+        proto:
+          type: string
+          enum:
+            - phylink
+            - arpdup
+            - icmp
+            - http
+            - https
+            - dns          
+        dhcp_addr_status:
+          type: string
+    Internet_Info:
+      properties:
+        status:
+          type: integer
+          enum:
+            - -1
+            - 1
+          description: >
+            Specific value:
+              * -1 - INIT
+              * 1 - OK
+        http_proxy:
+          type: integer
+    Proxy_settings:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Proxy_settings'
+    _Proxy_settings:
+      type: object
+      properties:
+        http:
+          $ref: '#/components/schemas/_Proxy_set'
+        https:
+          $ref: '#/components/schemas/_Proxy_set'
+        exclude_subnet:
+          type: string
+    _Proxy_set:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        ip:
+          type: string
+          format: ipv4
+        port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        is_auth_en:
+          type: boolean
+        username:
+          type: string
+        password:
+          type: string
+    Proxy:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Proxy'
+    _Proxy:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ipv4
+        port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        is_auth_en:
+          type: boolean
+        username:
+          type: string
+        password:
+          type: string
+    Iptable_rules:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Iptable_rules'
+    _Iptable_rules:
+      type: object
+      properties:
+        use_profile:
+          type: string
+          enum:
+            - none
+            - proxy1
+            - proxy2
+        exclude_subnet:
+          type: string
+    System_log:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_System_log'
+    _System_log:
+      type: object
+      properties:
+        syslog_enable:
+          type: boolean
+        remotelog_enable:
+          type: boolean
+        trafficlog_enable:
+          type: boolean
+        log_ip:
+          type: string
+          format: ipv4
+        log_port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+    Spanning_tree:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Spanning_tree'
+    _Spanning_tree:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        hello_time:
+          type: integer
+          minimum: 1
+          maximum: 10
+        max_age:
+          type: integer
+          minimum: 6
+          maximum: 40
+        forward_delay:
+          type: integer
+          minimum: 4
+          maximum: 30
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 65535
+    Mesh:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Mesh'
+    _Mesh:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        wifi_radio:
+          type: string
+          enum:
+            - 2_4G
+            - 5G
+            - 5G-2
+        mesh_id:
+          type: string
+          minLength: 8
+          maxLength: 8
+          pattern: '^[0-9]$'
+        mesh_pw:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: >
+            Specific value:
+              * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+        mesh_rssi:
+          type: integer
+          minimum: -95
+          maximum: -75
+    BandSteering:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_BandSteering'
+    _BandSteering:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        steering_type:
+          type: string
+          enum:
+            - band_balance
+            - force_5g
+            - prefer_5g
+        5g_rssi_threshold:
+          type: integer
+          minimum: -80
+          maximum: -60
+        5g_client_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+    TrafficShaping:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_TrafficShaping'
+    _TrafficShaping:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        download_limit:
+          type: integer
+          minimum: 1
+          maximum: 999
+        upload_limit:
+          type: integer
+          minimum: 1
+          maximum: 999
+        perclient_download_limit:
+          type: boolean
+        perclient_upload_limit:
+          type: boolean
+    WifiSecurity_noTitle:
+      type: object
+      properties:
+        encryption:
+          type: string
+          enum:
+            - Disabled
+            - WPA-PSK
+            - WPA2-PSK
+            - WPA-PSK-Mixed
+            - WPA-Enterprise
+            - WPA2-Enterprise
+            - WPA-Mixed-Enterprise
+            - OWE
+            - WPA3-SAE
+            - WPA3-SAE-Mixed
+            - WPA3-Enterprise
+            - WPA3-Mixed-Enterprise
+        auth_type:
+          type: string
+          enum:
+            - TKIP
+            - AES
+            - BOTH
+        suiteb_192bits:
+          type: boolean
+          description: >-
+            only support WPA3 Enterprise
+        key_interval:
+          type: integer
+          minimum: 30
+          maximum: 3600
+          enum:
+            - 0
+          description: >
+            Specific value:
+              * 0 - Disable
+        nasId_enable:
+          type: boolean
+        nasId:
+          type: string
+          minLength: 3
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        nasIp_enable:
+          type: boolean
+        nasIp:
+          type: string
+          format: ipv4
+        nasPort_enable:
+          type: boolean
+        nasPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        wpa:
+          $ref: '#/components/schemas/WPA'
+        radius_server:
+          $ref: '#/components/schemas/_RadiusServer'
+        fast_roaming:
+          type: boolean
+          description: >-
+            fast_roaming
+        accounting_server:
+          $ref: '#/components/schemas/_AccountingServer'
+    WifiSecurity:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            encryption:
+              type: string
+              enum:
+                - Disabled
+                - WEP
+                - WPA-PSK
+                - WPA2-PSK
+                - WPA-PSK-Mixed
+                - WPA-Enterprise
+                - WPA2-Enterprise
+                - WPA-Mixed-Enterprise
+                - OWE
+                - WPA3-SAE
+                - WPA3-SAE-Mixed
+                - WPA3-Enterprise
+                - WPA3-Mixed-Enterprise
+            auth_type:
+              type: string
+              enum:
+                - TKIP
+                - AES
+                - BOTH
+                - OPEN
+                - SHARED
+            suiteb_192bits:
+              type: boolean
+              description: >-
+                only support WPA3 Enterprise
+            ieee80211w:
+              type: integer
+              minimum: 0
+              maximum: 2
+              description: >
+                Specific value:
+                  * 0 - Disable
+                  * 1 - all_clients
+                  * 2 - 11w_client_only
+                  * Disabled - 0
+                  * WPA2-PSK - 0 or 1 or 2
+                  * WPA2-Enterprise - 0 or 1 or 2
+                  * OWE - 2
+                  * WPA3-SAE - 2
+                  * WPA3-SAE-Mixed - 1
+                  * WPA3-Enterprise - 2
+                  * WPA3-Mixed-Enterprise - 1
+            key_interval:
+              type: integer
+              minimum: 30
+              maximum: 3600
+              enum:
+                - 0
+              description: >
+                Specific value:
+                  * 0 - Disable
+            nasId_enable:
+              type: boolean
+            nasId:
+              type: string
+              minLength: 3
+              maxLength: 32
+              pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+            nasIp_enable:
+              type: boolean
+            nasIp:
+              type: string
+              format: ipv4
+            nasPort_enable:
+              type: boolean
+            nasPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            wpa:
+              $ref: '#/components/schemas/WPA'
+            radius_server:
+              $ref: '#/components/schemas/_RadiusServer'
+            fast_roaming:
+              type: boolean
+              description: >-
+                fast_roaming
+            accounting_server:
+              $ref: '#/components/schemas/_AccountingServer'
+    _WifiSecurity:
+      type: object
+      properties:
+        encryption:
+          type: string
+          enum:
+            - Disabled
+            - WPA2-PSK
+            - WPA2-Enterprise
+            - OWE
+            - WPA3-SAE
+            - WPA3-SAE-Mixed
+            - WPA3-Enterprise
+            - WPA3-Mixed-Enterprise
+        auth_type:
+          type: string
+          enum:
+            - AES
+        suiteb_192bits:
+          type: boolean
+          description: >-
+            only support WPA3 Enterprise
+        ieee80211w:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: >
+            Specific value:
+              * 0 - Disable
+              * 1 - all_clients
+              * 2 - 11w_client_only
+              * Disabled - 0
+              * WPA2-PSK - 0 or 1 or 2
+              * WPA2-Enterprise - 0 or 1 or 2
+              * OWE - 2
+              * WPA3-SAE - 2
+              * WPA3-SAE-Mixed - 1
+              * WPA3-Enterprise - 2
+              * WPA3-Mixed-Enterprise - 1
+        key_interval:
+          type: integer
+          minimum: 30
+          maximum: 3600
+          enum:
+            - 0
+          description: >
+            Specific value:
+              * 0 - Disable
+        nasId_enable:
+          type: boolean
+        nasId:
+          type: string
+          minLength: 3
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        nasIp_enable:
+          type: boolean
+        nasIp:
+          type: string
+          format: ipv4
+        nasPort_enable:
+          type: boolean
+        nasPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        wpa:
+          $ref: '#/components/schemas/WPA'
+        radius_server:
+          $ref: '#/components/schemas/_RadiusServer'
+        fast_roaming:
+          type: boolean
+          description: >-
+            fast_roaming
+        accounting_server:
+          $ref: '#/components/schemas/_AccountingServer'
+      required:
+        - encryption
+    RadiusServer:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_RadiusServer'
+    _RadiusServer:
+      type: object
+      properties:
+        server1Ip:
+          type: string
+          format: ipv4
+        server1Port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        server1Secret:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+    AccountingServer:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_AccountingServer'
+    _AccountingServer:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        interval:
+          type: integer
+          minimum: 60
+          maximum: 600
+        server1Ip:
+          type: string
+          format: ipv4
+        server1Port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        server1Secret:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9''"_!*@$%^()+= |<>,.?\[\]{}~`#&\\/-]$'
+      required:
+        - enable
+    GuestNetwork:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_GuestNetwork'
+    _GuestNetwork:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        manual_nat:
+          $ref: '#/components/schemas/ManualNat'
+    ManualNat:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ipv4
+        subnet_mask:
+          type: string
+          format: ipv4
+        start_ip:
+          type: string
+          format: ipv4
+        end_ip:
+          type: string
+          format: ipv4
+        client_lease_time:
+          type: string
+          pattern: '^(([1-9])|([1][0-9])|([2][0-4]))h'
+          description: >-
+                1h-24h
+        client_dns_server:
+              $ref: '#/components/schemas/_ClientDnsServer'
+    _ClientDnsServer:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        primary_dns:
+          type: string
+          format: ipv4
+        secondary_dns:
+          type: string
+          format: ipv4
+    Captive_Portal:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Captive_Portal'
+    _Captive_Portal:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        auth_type:
+          type: string
+          enum:
+            - splash
+            - cloud-radius
+            - custom-radius
+        external_splash_url:
+          type: string
+          format: url
+        session_timeout:
+          type: integer
+          minimum: 10
+          maximum: 30
+        idle_timeout:
+          type: integer
+          minimum: 10
+          maximum: 30
+        walled_garden:
+          type: string
+          format: url
+    DaySch:
+      type: object
+      properties:
+        available:
+          type: boolean
+        start:
+          type: string
+          format: time
+        end:
+          type: string
+          format: time
+    WeekSch:
+      type: object
+      properties:
+        su:
+          $ref: '#/components/schemas/DaySch'
+        mo:
+          $ref: '#/components/schemas/DaySch'
+        tu:
+          $ref: '#/components/schemas/DaySch'
+        we:
+          $ref: '#/components/schemas/DaySch'
+        th:
+          $ref: '#/components/schemas/DaySch'
+        fr:
+          $ref: '#/components/schemas/DaySch'
+        sa:
+          $ref: '#/components/schemas/DaySch'
+    Scheduling:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_Scheduling'
+    _Scheduling:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        days:
+          $ref: '#/components/schemas/WeekSch'
+    SSID:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            enable:
+              type: boolean
+            enable_bands:
+              type: string
+              enum:
+                - 2_4G
+                - 5G
+                - 2_4G|5G
+                - 5G|5G-2
+                - 2_4G|5G|5G-2
+              description: >-
+                wds_ap mode not support enable_bands
+            ssid_name:
+              type: string
+              minLength: 1
+              maxLength: 32
+            hidden_ssid:
+              type: boolean
+            l2_isolation:
+              type: boolean
+            vlan_isolation:
+              type: boolean
+            vlan_id:
+              type: integer
+              minimum: 1
+              maximum: 4094
+            max_rx_data_rate:
+              type: string
+            rx_bytes:
+              type: string
+            rx_packets:
+              type: string
+            max_tx_data_rate:
+              type: string
+            tx_bytes:
+              type: string
+            tx_packets:
+              type: string
+            cur_tx_power:
+              type: string
+            band_steering:
+              $ref: '#/components/schemas/_BandSteering'
+            traffic_shaping:
+              $ref: '#/components/schemas/_TrafficShaping'
+            wireless_security:
+              $ref: '#/components/schemas/WifiSecurity_noTitle'
+            guest_network:
+              $ref: '#/components/schemas/_GuestNetwork'
+            scheduling:
+              $ref: '#/components/schemas/_Scheduling'
+            l2_acl:
+              $ref: '#/components/schemas/_L2Acl'
+    _SSID:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        enable_bands:
+          type: string
+          enum:
+            - 2_4G
+            - 5G
+            - 2_4G|5G
+            - 5G|5G-2
+            - 2_4G|5G|5G-2
+          description: >-
+            wds_ap mode not support enable_bands            
+        ssid_name:
+          type: string
+          minLength: 1
+          maxLength: 32
+        hidden_ssid:
+          type: boolean
+        l2_isolation:
+          type: boolean
+        vlan_isolation:
+          type: boolean
+        vlan_id:
+          type: integer
+          minimum: 1
+          maximum: 4094
+        band_steering:
+          $ref: '#/components/schemas/_BandSteering'
+        traffic_shaping:
+          $ref: '#/components/schemas/_TrafficShaping'
+        wireless_security:
+          $ref: '#/components/schemas/_WifiSecurity'
+        guest_network:
+          $ref: '#/components/schemas/_GuestNetwork'
+        scheduling:
+          $ref: '#/components/schemas/_Scheduling'
+        l2_acl:
+          $ref: '#/components/schemas/_L2Acl'
+    SSIDs:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            '1':
+              $ref: '#/components/schemas/_SSID'
+            '2':
+              $ref: '#/components/schemas/_SSID'
+            '3':
+              $ref: '#/components/schemas/_SSID'
+            '4':
+              $ref: '#/components/schemas/_SSID'
+            '5':
+              $ref: '#/components/schemas/_SSID'
+            '6':
+              $ref: '#/components/schemas/_SSID'
+            '7':
+              $ref: '#/components/schemas/_SSID'
+            '8':
+              $ref: '#/components/schemas/_SSID'
+    SystemInfo:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            gateway_ip:
+              type: string
+            firmware_version:
+              type: string
+            device_version:
+              type: string
+            serial_number:
+              type: string
+            cpu_loading:
+              type: string
+            mem_capacity:
+              type: integer
+            mem_usage:
+              type: string
+            mem_usage_size:
+              type: integer
+            mem_total_available:
+              type: string
+            mem_total_available_size:
+              type: integer
+            mem_buffers:
+              type: string
+            mem_buffers_size:
+              type: integer
+            mem_free:
+              type: string
+            mem_free_size:
+              type: integer
+            mem_cached:
+              type: string
+            mem_cached_size:
+              type: integer
+            uptime:
+              type: string
+            raw_proc_uptime:
+              type: string
+            raw_proc_loadavg:
+              type: string
+            date:
+              type: string
+            ethr_link_status:
+              type: string
+            lan_speed:
+              type: integer
+            ip_address:
+              type: string
+            mac_address:
+              type: string
+            mac_5g_address:
+              type: string
+            sys_cfg:
+              $ref: '#/components/schemas/SystemCfg'
+            product_name:
+              type: string
+            internet_available:
+              type: boolean
+            station_counts:
+              type: object
+              properties:
+                2_4G:
+                  type: object
+                  properties:
+                    counts:
+                      type: integer
+                5G:
+                  type: object
+                  properties:
+                    counts:
+                      type: integer
+                5G-2:
+                  type: object
+                  properties:
+                    counts:
+                      type: integer
+            power_source:
+              type: integer
+    DaylightSaving:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        start_month:
+          type: string
+          enum:
+            - JAN
+            - FEB
+            - MAR
+            - APR
+            - MAY
+            - JUN
+            - JUL
+            - AUG
+            - SEP
+            - OCT
+            - NOV
+            - DEC
+        start_week:
+          type: integer
+          minimum: 1
+          maximum: 6
+        start_day:
+          type: string
+          enum:
+            - SUN
+            - MON
+            - TUE
+            - WED
+            - THU
+            - FRI
+            - SAT
+        start_time:
+          type: string
+          format: time
+        end_month:
+          type: string
+          enum:
+            - JAN
+            - FEB
+            - MAR
+            - APR
+            - MAY
+            - JUN
+            - JUL
+            - AUG
+            - SEP
+            - OCT
+            - NOV
+            - DEC
+        end_week:
+          type: integer
+          minimum: 1
+          maximum: 6
+        end_day:
+          type: string
+          enum:
+            - SUN
+            - MON
+            - TUE
+            - WED
+            - THU
+            - FRI
+            - SAT
+        end_time:
+          type: string
+          format: time
+    _TimeCfg:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - Manual
+            - Auto
+        Manual_set:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+            time:
+              type: string
+              format: time
+        Auto_set:
+          type: object
+          properties:
+            ntp_server:
+              type: string
+              format: ipv4
+        auto_daylight_saving:
+          type: boolean
+        time_zone:
+          $ref: '#/components/schemas/TimezoneTable2'
+        time_zone_auto_detect:
+          type: boolean
+        daylight_saving:
+          $ref: '#/components/schemas/DaylightSaving'
+    TimeCfg:
+      type: object
+      properties:
+        current_time:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+            time:
+              type: string
+              format: time
+        mode:
+          type: string
+          enum:
+            - Manual
+            - Auto
+        Manual_set:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+            time:
+              type: string
+              format: time
+        Auto_set:
+          type: object
+          properties:
+            ntp_server:
+              type: string
+              format: ipv4
+        auto_daylight_saving:
+          type: boolean
+        time_zone:
+          $ref: '#/components/schemas/TimezoneTable2'
+        cur_time_zone:
+          $ref: '#/components/schemas/TimezoneTable2'
+        time_zone_auto_detect:
+          type: boolean
+        daylight_saving:
+          $ref: '#/components/schemas/DaylightSaving'
+    _SystemCfg:
+      type: object
+      properties:
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        model:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        time:
+          $ref: '#/components/schemas/_TimeCfg'
+        led_enable:
+          type: boolean
+    SystemCfg:
+      type: object
+      properties:
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        model:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_!*@$%^()+=|<>,.?{}~-]$'
+        time:
+          $ref: '#/components/schemas/TimeCfg'
+        led_enable:
+          type: boolean
+    WiFiClientInfo:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            2_4G:
+              type: array
+              items:
+                $ref: '#/components/schemas/_WiFiClientInfo'
+            5G:
+              type: array
+              items:
+                $ref: '#/components/schemas/_WiFiClientInfo'
+            5G-2:
+              type: array
+              items:
+                $ref: '#/components/schemas/_WiFiClientInfo'
+    _WiFiClientInfo:
+      type: object
+      properties:
+        device_name:
+          type: string
+        mac_addr:
+          type: string
+        ip_addr:
+          type: string
+        os_info:
+          type: string
+        channel:
+          type: integer
+        ssid_id:
+          type: integer
+        ssid_name:
+          type: string
+        bssid:
+          type: string
+        rssi:
+          type: integer
+        tx_rate:
+          type: integer
+        rx_rate:
+          type: integer
+        tx_byte:
+          type: integer
+        rx_byte:
+          type: integer
+        capability:
+          type: string
+          enum:
+          - 802.11a
+          - 802.11b
+          - 802.11g
+          - 802.11n
+          - 802.11na
+          - 802.11ng
+          - 802.11ac
+          - 802.11ax
+        connection_time:
+          type: string
+        is_en_product:
+          type: boolean
+        en_product:
+          type: object
+          properties:
+            product_name:
+              type: string
+            fw_version:
+              type: string
+    WifiWdsLink:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_WifiWdsLink'
+    _WifiWdsLink:
+      type: object
+      properties:
+        security:
+          type: string
+          enum:
+            - none
+            - ccmp
+        passphrase:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: >
+            Specific value:
+              * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+        nawds:
+          type: array
+          items:
+            type: object
+            properties:
+              enable:
+                type: boolean
+              dev_mac_addr:
+                type: string
+                format: mac
+    WifiSta:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            ssid_name:
+              type: string
+              minLength: 1
+              maxLength: 32
+            prebssid_enable:
+              type: boolean
+            bssid:
+              type: string
+              format: mac
+            tx_rate:
+              type: string
+            rx_rate:
+              type: string
+            signal_strength:
+              type: string
+            tx_bytes:
+              type: string
+            rx_bytes:
+              type: string
+            cur_tx_power:
+              type: string
+            encryption:
+              type: string
+              enum:
+                - Disabled
+                - WEP
+                - WPA-PSK
+                - WPA2-PSK
+                - WPA-Enterprise
+                - WPA2-Enterprise
+              description: >-
+                Repeater mode not support WPA2-Enterprise
+            wep:
+              $ref: '#/components/schemas/Wep'
+            wpa:
+              type: object
+              properties:
+                auth_type:
+                  type: string
+                  enum:
+                    - AES
+                    - TKIP
+                passphrase:
+                  type: string
+                  minLength: 8
+                  maxLength: 64
+                  description: >
+                    Specific value:
+                      * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+            enterprise:
+              $ref: '#/components/schemas/Enterprise'
+            change_erp_ssid:
+              type: object
+              properties:
+                enable:
+                  type: boolean
+                rp_ssid_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+                encryption:
+                  type: string
+                  enum:
+                    - Disabled
+                    - WEP
+                    - WPA2-PSK
+                  description: >
+                    Specific value:
+                      * WEP - only support get {sta_mode} api
+                auth_type:
+                  type: string
+                  enum:
+                    - AES
+                    - OPEN
+                    - SHARED
+                  description: >
+                    Specific value:
+                      * OPEN - only support get {sta_mode} api
+                      * SHARED - only support get {sta_mode} api
+                passphrase:
+                  type: string
+                  minLength: 8
+                  maxLength: 64
+                  description: >
+                    Specific value:
+                      * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+    _WifiSta:
+      type: object
+      properties:
+        ssid_name:
+          type: string
+          minLength: 1
+          maxLength: 32
+        prebssid_enable:
+          type: boolean
+        bssid:
+          type: string
+          format: mac
+        encryption:
+          type: string
+          enum:
+            - Disabled
+            - WEP
+            - WPA-PSK
+            - WPA2-PSK
+            - WPA-Enterprise
+            - WPA2-Enterprise
+          description: >-
+            Repeater mode not support WPA2-Enterprise
+        wep:
+          $ref: '#/components/schemas/Wep'
+        wpa:
+          type: object
+          properties:
+            auth_type:
+              type: string
+              enum:
+                - AES
+                - TKIP
+            passphrase:
+              type: string
+              minLength: 8
+              maxLength: 64
+              description: >
+                Specific value:
+                  * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+        enterprise:
+          $ref: '#/components/schemas/Enterprise'
+        change_erp_ssid:
+          type: object
+          properties:
+            enable:
+              type: boolean
+            rp_ssid_name:
+              type: string
+              minLength: 1
+              maxLength: 32
+            encryption:
+              type: string
+              enum:
+                - Disabled
+                - WEP
+                - WPA2-PSK
+              description: >
+                Specific value:
+                  * WEP - only support get {sta_mode} api
+            auth_type:
+              type: string
+              enum:
+                - AES
+                - OPEN
+                - SHARED
+              description: >
+                Specific value:
+                  * OPEN - only support get {sta_mode} api
+                  * SHARED - only support get {sta_mode} api
+            passphrase:
+              type: string
+              minLength: 8
+              maxLength: 64
+              description: >
+                Specific value:
+                  * 64 - only hex 64 digits allowed [0-9, a-f, A-F] or 8-63 ASCII characters
+    MeshLearnTable:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+        learn_rssi:
+          type: integer
+        link_flags:
+          enum:
+            - ..
+            - B.
+            - .R
+            - BR
+          type: string
+    MeshRobust:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        threshold:
+          type: integer
+    MeshLink:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+        rssi:
+          type: integer
+        tq_val:
+          type: integer
+        tx_datarate:
+          type: integer
+        rx_datarate:
+          type: integer
+    MeshOutgoingGw:
+      type: object
+      properties:
+        gw_mac_addr:
+          type: string
+        next_hop_mac_addr:
+          type: string
+    MeshGroupInfo:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/_MeshInfo'
+    _MeshInfo:
+      type: object
+      properties:
+        dev_mac_addr:
+          type: string
+        mesh_role:
+          type: string
+          enum:
+            - Gateway
+            - AP
+        mesh_channel:
+          type: integer
+        mesh_learn_table:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeshLearnTable'
+        mesh_robust:
+          $ref: '#/components/schemas/MeshRobust'
+        mesh_link:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeshLink'
+        mesh_outgoing_gw:
+          $ref: '#/components/schemas/MeshOutgoingGw'
+    L2Acl:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_L2Acl'          
+    _L2Acl:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        client_mac_list:
+          type: string
+          format: mac
+        policy:
+          type: string
+          enum:
+            - DENY
+            - ALLOW
+    _Kick:
+      type: object
+      properties:
+        kick_mac:
+          type: string
+          format: mac
+    TrafficInfo:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            connection_list:
+              type: array
+              items:
+                type: object
+                properties:
+                  mac_addr:
+                    type: string
+                  tx_rate:
+                    type: string
+                  rx_rate:
+                    type: string
+                  signal_strength:
+                    type: string
+                  tx_bytes:
+                    type: string
+                  rx_bytes:
+                    type: string
+    FwUpgrade:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - Upgrade_from_server
+            - Upgrade_locally
+        upgrade_from_server:
+          type: object
+          properties:
+            upgrade_url:
+              type: string
+              format: url
+    FwUrl:
+      type: object
+      properties:
+        fw_url:
+          type: string
+          format: url
+    Internet_Speedtest_Result:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            upload:
+              type: string
+            download:
+              type: string
+            timestamp:
+              type: string
+    Ethernet_Traffic_Info:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            tx_bytes:
+              type: string
+            rx_bytes:
+              type: string
+    EthernetClientInfoResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+            $ref: '#/components/schemas/_Ethernet_Client_Info'
+    _Ethernet_Client_Info:
+      type: object
+      properties:
+        client:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ethernet_Client_Info' 
+    Ethernet_Client_Info:
+      type: object
+      properties:
+        mac_addr:
+          type: string
+    MgmToolsIperfResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            upload_rate:
+              type: integer
+            upload_bytes:
+              type: integer
+            download_rate:
+              type: integer
+            download_bytes:
+              type: integer
+    Mesh_Throughput_Result:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            upload:
+              type: string
+            download:
+              type: string
+    LocalUpgradeImageInfo:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            image_size:
+              type: integer
+            image_checksum:
+              type: string
+    AutoRebootCfg:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_AutoRebootCfg'
+    _AutoRebootCfg:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        trigger_day:
+          type: array
+          items:
+            type: string
+            enum:
+              - SUN
+              - MON
+              - TUE
+              - WED
+              - THU
+              - FRI
+              - SAT
+        trigger_time:
+          type: string
+    DhcpServer:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          $ref: '#/components/schemas/_DhcpServer'
+    _DhcpServer:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ipv4
+        mask:
+          type: string
+          format: ipv4
+        start:
+          type: string
+          format: ipv4
+        end:
+          type: string
+          format: ipv4
+        wins_server:
+          type: string
+          format: ipv4
+    MgmToolsPingResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            result:
+              type: string
+    MgmToolsTracerouteResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            result:
+              type: string
+    MgmToolsNslookupResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            result:
+              type: string
+    WifiSiteSurveyResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+            $ref: '#/components/schemas/_SiteSurveyItem'
+    _SiteSurveyItem:
+      type: object
+      properties:
+        2_4G:
+            type: array
+            items:
+              $ref: '#/components/schemas/SiteSurveyItem'
+        5G:
+            type: array
+            items:
+              $ref: '#/components/schemas/SiteSurveyItem'
+        5G-2:
+            type: array
+            items:
+              $ref: '#/components/schemas/SiteSurveyItem'
+    SiteSurveyItem:
+      type: object
+      properties:
+        dev_mac_addr:
+          type: string
+        ssid_name:
+          type: string
+        rssi:
+          type: integer
+        encryption:
+          type: string
+    MgmToolsDevDiscoveryResult:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DevDiscoveryItem'
+    DevDiscoveryItem:
+      type: object
+      properties:
+        device_name:
+          type: string
+        opmode:
+          type: string
+        ip_addr:
+          type: string
+        mac_addr:
+          type: string
+        fw_version:
+          type: string
+    DeviceCapability:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:            
+          type: object
+          properties:
+            support_opmode:
+              type: array
+              items:
+                type: string
+                enum:
+                  - ap
+                  - wds_ap
+                  - wds_bridge
+                  - wds_sta
+                  - sta_ap
+                  - sta
+            support_radio:
+              type: array
+              items:
+                type: string
+                enum:
+                  - 2_4G
+                  - 5G
+                  - 5G-2
+            support_mesh:
+              type: boolean
+            support_wpa3:
+              type: boolean
+            support_hwmode_ax:
+              type: boolean
+            support_band_steering:
+              type: boolean
+            support_captive_portal:
+              type: boolean
+            outdoor:
+              type: boolean
+            reg_domain:
+              type: string
+              enum:
+                - FCC
+                - ETSI
+                - INT
+            dfs_certified:
+              type: object
+              properties:
+                fcc:
+                  type: integer
+                etsi:
+                  type: integer
+                int:
+                  type: integer
+            ssid_num:
+              type: object
+              properties:
+                ap:
+                  type: integer
+                wds_ap:
+                  type: integer
+            nawds_num:
+              type: object
+              properties:
+                wds_ap:
+                  type: integer
+                wds_bridge:
+                  type: integer
+            mac_filter_num:
+              type: integer
+            tx_power_min:
+              type: integer
+            tx_power_max:
+              type: integer
+    MeshGroupTreeTopology:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeshTopologyNodeItem'
+    MeshTopologyNodeItem:
+      type: object
+      properties:
+        dev_mac_addr:
+          type: string
+        mesh_role:
+          type: string
+          enum:
+            - Gateway
+            - AP
+        gw_mac_addr:
+          type: string
+        next_hop_mac_addr:
+          type: string
+        next_hop_rssi:
+          type: integer
+        next_hop_tq_val:
+          type: integer
+        next_hop_tq:
+          type: integer
+    MeshGroupNodeInfo:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            mesh_role:
+              type: string
+              enum:
+                - Gateway
+                - AP
+            mesh_learn_table:
+              type: array
+              items:
+                $ref: '#/components/schemas/MeshLearnTable'
+            mesh_robust:
+              $ref: '#/components/schemas/MeshRobust'
+            mesh_link:
+              type: array
+              items:
+                $ref: '#/components/schemas/MeshLink'
+            mesh_outgoing_gw:
+              $ref: '#/components/schemas/MeshOutgoingGw'
+    ApiVersion:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:      
+          type: object
+          properties:
+            server:
+              $ref: '#/components/schemas/Version'
+            module:
+              $ref: '#/components/schemas/Version'
+            library:
+              type: object
+              properties:
+                libapi:
+                  $ref: '#/components/schemas/Version'
+                libsnjson:
+                  $ref: '#/components/schemas/Version'
+    Version:
+      type: object
+      properties:
+        major:
+          type: integer
+        minor:
+          type: integer
+        release:
+          type: integer
+        patch:
+          type: string
+    _Channel_list:
+      type: object
+      properties:
+        country:
+          $ref: '#/components/schemas/CountryTable'
+        green_mode:
+          type: boolean
+    Channel_list:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            2_4G:
+              type: array
+              items:
+                $ref: '#/components/schemas/_Channelinfo_24g'
+            5G:
+              type: array
+              items:
+                $ref: '#/components/schemas/_Channelinfo_5g'
+            5G-2:
+              type: array
+              items:
+                $ref: '#/components/schemas/_Channelinfo_5g'
+    _Channelinfo_24g:
+      type: object
+      properties:
+        ht_20:
+          type: array
+          items:
+            type: integer
+        ht_20_40:
+          type: array
+          items:
+            type: integer
+        ht_40:
+          type: array
+          items:
+            type: integer
+    _Channelinfo_5g:
+      type: object
+      properties:
+        ht_20:
+          type: array
+          items:
+            type: integer
+        ht_40:
+          type: array
+          items:
+            type: integer
+        ht_80:
+          type: array
+          items:
+            type: integer
+    Backup_url:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            backup_file_path:
+              type: string
+            backup_file:
+              type: string
+    MgmLEDstatus:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              led:
+                type: string
+              action:
+                type: string
+                enum:
+                    - on
+                    - off
+                    - blinking
+              blinking_on:
+                type: integer
+                description: >
+                  The unit is milliseconds
+                minimum: 0
+                maximum: 1000000
+              blinking_off:
+                type: integer
+                description: >
+                  The unit is milliseconds
+                minimum: 0
+                maximum: 1000000
+    MgmLEDList:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: array
+          items:
+            type: string
+    _MgmLEDcfg:
+      type: object
+      properties:
+        led:
+          type: string
+        action:
+          type: string
+          enum:
+            - on
+            - off
+            - blinking
+        blinking_on:
+          type: integer
+          description: >
+            The unit is milliseconds
+          minimum: 0
+          maximum: 1000000
+        blinking_off:
+          type: integer
+          description: >
+            The unit is milliseconds
+          minimum: 0
+          maximum: 1000000
+    NullData:
+      example: {}
+    CountryTable:
+      type: string
+      enum:
+        - Albania
+        - "8"
+        - Algeria
+        - "12"
+        - Argentina
+        - "32"
+        - Australia
+        - "36"
+        - Austria
+        - "40"
+        - Bahrain
+        - "48"
+        - Belgium
+        - "56"
+        - Brazil
+        - "76"
+        - Brunei
+        - "96"
+        - Bulgaria
+        - "100"
+        - Canada
+        - "124"
+        - Chile
+        - "152"
+        - China
+        - "156"
+        - Colombia
+        - "170"
+        - Costa Rica
+        - "188"
+        - Croatia
+        - "191"
+        - Czech Republic
+        - "203"
+        - Denmark
+        - "208"
+        - Dominican Republic
+        - "214"
+        - Ecuador
+        - "218"
+        - Egypt
+        - "818"
+        - Estonia
+        - "233"
+        - Finland
+        - "246"
+        - France
+        - "250"
+        - Germany
+        - "276"
+        - Greece
+        - "300"
+        - Guatemala
+        - "320"
+        - Honduras
+        - "340"
+        - Hong Kong
+        - "344"
+        - Hungary
+        - "348"
+        - Iceland
+        - "352"
+        - India
+        - "356"
+        - Indonesia
+        - "360"
+        - Iran
+        - "364"
+        - Ireland
+        - "372"
+        - Israel
+        - "376"
+        - Italy
+        - "380"
+        - Japan
+        - "392"
+        - Jordan
+        - "400"
+        - Kazakhstan
+        - "398"
+        - Kenya
+        - "404"
+        - Kuwait
+        - "414"
+        - Latvia
+        - "428"
+        - Lebanon
+        - "422"
+        - Lithuania
+        - "440"
+        - Luxembourg
+        - "442"
+        - Macau
+        - "446"
+        - Malaysia
+        - "458"
+        - Mexico
+        - "484"
+        - Monaco
+        - "492"
+        - Morocco
+        - "504"
+        - Myanmar
+        - "104"
+        - Nepal
+        - "524"
+        - Netherlands
+        - "528"
+        - New Zealand
+        - "554"
+        - North Macedonia
+        - "807"
+        - Norway
+        - "578"
+        - Oman
+        - "512"
+        - Pakistan
+        - "586"
+        - Panama
+        - "591"
+        - Peru
+        - "604"
+        - Philippines
+        - "608"
+        - Poland
+        - "616"
+        - Portugal
+        - "620"
+        - Puerto Rico
+        - "630"
+        - Qatar
+        - "634"
+        - Romania
+        - "642"
+        - Russia
+        - "643"
+        - Saudi Arabia
+        - "682"
+        - Singapore
+        - "702"
+        - Slovakia
+        - "703"
+        - Slovenia
+        - "705"
+        - South Africa
+        - "710"
+        - South Korea
+        - "410"
+        - Spain
+        - "724"
+        - Sri Lanka
+        - "144"
+        - Sweden
+        - "752"
+        - Switzerland
+        - "756"
+        - Taiwan
+        - "158"
+        - Thailand
+        - "764"
+        - Tunisia
+        - "788"
+        - Turkey
+        - "792"
+        - United Arab Emirates
+        - "784"
+        - Ukraine
+        - "804"
+        - United Kingdom
+        - "826"
+        - USA
+        - "840"
+        - Uruguay
+        - "858"
+        - Uzbekistan
+        - "860"
+        - Venezuela
+        - "862"
+        - Vietnam
+        - "704"
+    TimezoneTable:
+      type: string
+      enum:
+        - 'UTC-12:00 Kwajalein'
+        - 'UTC-11:00 Midway Island, Samoa'
+        - 'UTC-10:00 Hawaii'
+        - 'UTC-09:00 Alaska'
+        - 'UTC-08:00 Pacific Time'
+        - 'UTC-07:00 Arizona'
+        - 'UTC-07:00 Mountain Time'
+        - 'UTC-06:00 Mexico'
+        - 'UTC-06:00 Central Time'
+        - 'UTC-05:00 Colombia, Panama'
+        - 'UTC-05:00 Eastern Time'
+        - 'UTC-04:00 Bolivia, Venezuela'
+        - 'UTC-04:00 Atlantic Time'
+        - 'UTC-04:00 Brazil West'
+        - 'UTC-03:30 Newfoundland'
+        - 'UTC-03:00 Greenland'
+        - 'UTC-03:00 Brazil East'
+        - 'UTC-03:00 Guyana'
+        - 'UTC-02:00 Mid-Atlantic'
+        - 'UTC-01:00 Azores'
+        - 'UTC+00:00 Gambia, Liberia, Morocco'
+        - 'UTC+00:00 England'
+        - 'UTC+01:00 Tunisia'
+        - 'UTC+01:00 France, Germany, Italy'
+        - 'UTC+02:00 South Africa'
+        - 'UTC+02:00 Greece, Ukraine, Romania, Turkey'
+        - 'UTC+03:00 Iraq, Jordan, Kuwait'
+        - 'UTC+03:00 Finland'
+        - 'UTC+04:00 Armenia'
+        - 'UTC+05:00 Pakistan, Russia'
+        - 'UTC+05:30 Bombay, Calcutta, Madras, New Delhi'
+        - 'UTC+06:00 Bangladesh, Russia'
+        - 'UTC+07:00 Thailand, Russia'
+        - 'UTC+08:00 China, Hong Kong, Western Australia, Singapore, Taiwan, Russia'
+        - 'UTC+09:00 Japan, Korea'
+        - 'UTC+09:30 South Australia'
+        - 'UTC+10:00 Guam, Russia'
+        - 'UTC+10:00 Australia'
+        - 'UTC+11:00 Solomon Islands'
+        - 'UTC+12:00 Fiji'
+        - 'UTC+12:00 New Zealand'
+    SSH:
+      type: object
+      properties:
+        status_code:
+          type: integer
+        reason_phrase:
+          type: string
+        error_code:
+          type: integer
+        error_message:
+          type: string
+        data:
+          type: object
+          properties:
+            ssh_enable:
+              type: boolean
+    _SSH:
+      type: object
+      properties:
+        ssh_enable:
+          type: boolean
+    TimezoneTable2:
+      type: string
+      enum:
+        - 'Africa/Abidjan'
+        - 'Africa/Accra'
+        - 'Africa/Addis_Ababa'
+        - 'Africa/Algiers'
+        - 'Africa/Asmara'
+        - 'Africa/Bamako'
+        - 'Africa/Bangui'
+        - 'Africa/Banjul'
+        - 'Africa/Bissau'
+        - 'Africa/Blantyre'
+        - 'Africa/Brazzaville'
+        - 'Africa/Bujumbura'
+        - 'Africa/Casablanca'
+        - 'Africa/Ceuta'
+        - 'Africa/Conakry'
+        - 'Africa/Dakar'
+        - 'Africa/Dar_es_Salaam'
+        - 'Africa/Djibouti'
+        - 'Africa/Douala'
+        - 'Africa/El_Aaiun'
+        - 'Africa/Freetown'
+        - 'Africa/Gaborone'
+        - 'Africa/Harare'
+        - 'Africa/Johannesburg'
+        - 'Africa/Kampala'
+        - 'Africa/Khartoum'
+        - 'Africa/Kigali'
+        - 'Africa/Kinshasa'
+        - 'Africa/Lagos'
+        - 'Africa/Libreville'
+        - 'Africa/Lome'
+        - 'Africa/Luanda'
+        - 'Africa/Lubumbashi'
+        - 'Africa/Lusaka'
+        - 'Africa/Malabo'
+        - 'Africa/Maputo'
+        - 'Africa/Maseru'
+        - 'Africa/Mbabane'
+        - 'Africa/Mogadishu'
+        - 'Africa/Monrovia'
+        - 'Africa/Nairobi'
+        - 'Africa/Ndjamena'
+        - 'Africa/Niamey'
+        - 'Africa/Nouakchott'
+        - 'Africa/Ouagadougou'
+        - 'Africa/Porto-Novo'
+        - 'Africa/Sao_Tome'
+        - 'Africa/Tripoli'
+        - 'Africa/Tunis'
+        - 'Africa/Windhoek'
+        - 'America/Adak'
+        - 'America/Anchorage'
+        - 'America/Anguilla'
+        - 'America/Antigua'
+        - 'America/Araguaina'
+        - 'America/Argentina/Buenos_Aires'
+        - 'America/Argentina/Catamarca'
+        - 'America/Argentina/Cordoba'
+        - 'America/Argentina/Jujuy'
+        - 'America/Argentina/La_Rioja'
+        - 'America/Argentina/Mendoza'
+        - 'America/Argentina/Rio_Gallegos'
+        - 'America/Argentina/Salta'
+        - 'America/Argentina/San_Juan'
+        - 'America/Argentina/Tucuman'
+        - 'America/Argentina/Ushuaia'
+        - 'America/Aruba'
+        - 'America/Asuncion'
+        - 'America/Atikokan'
+        - 'America/Bahia'
+        - 'America/Barbados'
+        - 'America/Belem'
+        - 'America/Belize'
+        - 'America/Blanc-Sablon'
+        - 'America/Boa_Vista'
+        - 'America/Bogota'
+        - 'America/Boise'
+        - 'America/Cambridge_Bay'
+        - 'America/Campo_Grande'
+        - 'America/Cancun'
+        - 'America/Caracas'
+        - 'America/Cayenne'
+        - 'America/Cayman'
+        - 'America/Chicago'
+        - 'America/Chihuahua'
+        - 'America/Costa_Rica'
+        - 'America/Cuiaba'
+        - 'America/Curacao'
+        - 'America/Danmarkshavn'
+        - 'America/Dawson'
+        - 'America/Dawson_Creek'
+        - 'America/Denver'
+        - 'America/Detroit'
+        - 'America/Dominica'
+        - 'America/Edmonton'
+        - 'America/Eirunepe'
+        - 'America/El_Salvador'
+        - 'America/Fortaleza'
+        - 'America/Glace_Bay'
+        - 'America/Goose_Bay'
+        - 'America/Grand_Turk'
+        - 'America/Grenada'
+        - 'America/Guadeloupe'
+        - 'America/Guatemala'
+        - 'America/Guayaquil'
+        - 'America/Guyana'
+        - 'America/Halifax'
+        - 'America/Havana'
+        - 'America/Hermosillo'
+        - 'America/Indiana/Indianapolis'
+        - 'America/Indiana/Knox'
+        - 'America/Indiana/Marengo'
+        - 'America/Indiana/Petersburg'
+        - 'America/Indiana/Tell_City'
+        - 'America/Indiana/Vevay'
+        - 'America/Indiana/Vincennes'
+        - 'America/Indiana/Winamac'
+        - 'America/Inuvik'
+        - 'America/Iqaluit'
+        - 'America/Jamaica'
+        - 'America/Juneau'
+        - 'America/Kentucky/Louisville'
+        - 'America/Kentucky/Monticello'
+        - 'America/La_Paz'
+        - 'America/Lima'
+        - 'America/Los_Angeles'
+        - 'America/Maceio'
+        - 'America/Managua'
+        - 'America/Manaus'
+        - 'America/Marigot'
+        - 'America/Martinique'
+        - 'America/Matamoros'
+        - 'America/Mazatlan'
+        - 'America/Menominee'
+        - 'America/Merida'
+        - 'America/Mexico_City'
+        - 'America/Miquelon'
+        - 'America/Moncton'
+        - 'America/Monterrey'
+        - 'America/Montevideo'
+        - 'America/Montreal'
+        - 'America/Montserrat'
+        - 'America/Nassau'
+        - 'America/New_York'
+        - 'America/Nipigon'
+        - 'America/Nome'
+        - 'America/Noronha'
+        - 'America/North_Dakota/Center'
+        - 'America/North_Dakota/New_Salem'
+        - 'America/Ojinaga'
+        - 'America/Panama'
+        - 'America/Pangnirtung'
+        - 'America/Paramaribo'
+        - 'America/Phoenix'
+        - 'America/Port_of_Spain'
+        - 'America/Port-au-Prince'
+        - 'America/Porto_Velho'
+        - 'America/Puerto_Rico'
+        - 'America/Rainy_River'
+        - 'America/Rankin_Inlet'
+        - 'America/Recife'
+        - 'America/Regina'
+        - 'America/Rio_Branco'
+        - 'America/Santa_Isabel'
+        - 'America/Santarem'
+        - 'America/Santo_Domingo'
+        - 'America/Sao_Paulo'
+        - 'America/Noronha'
+        - 'America/Shiprock'
+        - 'America/St_Barthelemy'
+        - 'America/St_Johns'
+        - 'America/St_Kitts'
+        - 'America/St_Lucia'
+        - 'America/St_Thomas'
+        - 'America/St_Vincent'
+        - 'America/Swift_Current'
+        - 'America/Tegucigalpa'
+        - 'America/Thule'
+        - 'America/Thunder_Bay'
+        - 'America/Tijuana'
+        - 'America/Toronto'
+        - 'America/Tortola'
+        - 'America/Vancouver'
+        - 'America/Whitehorse'
+        - 'America/Winnipeg'
+        - 'America/Yakutat'
+        - 'America/Yellowknife'
+        - 'Antarctica/Casey'
+        - 'Antarctica/Davis'
+        - 'Antarctica/DumontDUrville'
+        - 'Antarctica/Macquarie'
+        - 'Antarctica/Mawson'
+        - 'Antarctica/McMurdo'
+        - 'Antarctica/Rothera'
+        - 'Antarctica/South_Pole'
+        - 'Antarctica/Syowa'
+        - 'Antarctica/Vostok'
+        - 'Arctic/Longyearbyen'
+        - 'Asia/Aden'
+        - 'Asia/Almaty'
+        - 'Asia/Anadyr'
+        - 'Asia/Aqtau'
+        - 'Asia/Aqtobe'
+        - 'Asia/Ashgabat'
+        - 'Asia/Baghdad'
+        - 'Asia/Bahrain'
+        - 'Asia/Baku'
+        - 'Asia/Bangkok'
+        - 'Asia/Beirut'
+        - 'Asia/Bishkek'
+        - 'Asia/Brunei'
+        - 'Asia/Choibalsan'
+        - 'Asia/Chongqing'
+        - 'Asia/Colombo'
+        - 'Asia/Damascus'
+        - 'Asia/Dhaka'
+        - 'Asia/Dili'
+        - 'Asia/Dubai'
+        - 'Asia/Dushanbe'
+        - 'Asia/Gaza'
+        - 'Asia/Harbin'
+        - 'Asia/Ho_Chi_Minh'
+        - 'Asia/Hong_Kong'
+        - 'Asia/Hovd'
+        - 'Asia/Irkutsk'
+        - 'Asia/Jakarta'
+        - 'Asia/Jayapura'
+        - 'Asia/Kabul'
+        - 'Asia/Kamchatka'
+        - 'Asia/Karachi'
+        - 'Asia/Kashgar'
+        - 'Asia/Kathmandu'
+        - 'Asia/Kolkata'
+        - 'Asia/Krasnoyarsk'
+        - 'Asia/Kuala_Lumpur'
+        - 'Asia/Kuching'
+        - 'Asia/Kuwait'
+        - 'Asia/Macau'
+        - 'Asia/Magadan'
+        - 'Asia/Makassar'
+        - 'Asia/Manila'
+        - 'Asia/Muscat'
+        - 'Asia/Nicosia'
+        - 'Asia/Novokuznetsk'
+        - 'Asia/Novosibirsk'
+        - 'Asia/Omsk'
+        - 'Asia/Oral'
+        - 'Asia/Phnom_Penh'
+        - 'Asia/Pontianak'
+        - 'Asia/Pyongyang'
+        - 'Asia/Qatar'
+        - 'Asia/Qyzylorda'
+        - 'Asia/Rangoon'
+        - 'Asia/Riyadh'
+        - 'Asia/Sakhalin'
+        - 'Asia/Samarkand'
+        - 'Asia/Seoul'
+        - 'Asia/Shanghai'
+        - 'Asia/Singapore'
+        - 'Asia/Taipei'
+        - 'Asia/Tashkent'
+        - 'Asia/Tbilisi'
+        - 'Asia/Tehran'
+        - 'Asia/Thimphu'
+        - 'Asia/Tokyo'
+        - 'Asia/Ulaanbaatar'
+        - 'Asia/Urumqi'
+        - 'Asia/Vientiane'
+        - 'Asia/Vladivostok'
+        - 'Asia/Yakutsk'
+        - 'Asia/Yekaterinburg'
+        - 'Asia/Yerevan'
+        - 'Atlantic/Azores'
+        - 'Atlantic/Bermuda'
+        - 'Atlantic/Canary'
+        - 'Atlantic/Cape_Verde'
+        - 'Atlantic/Faroe'
+        - 'Atlantic/Madeira'
+        - 'Atlantic/Reykjavik'
+        - 'Atlantic/South_Georgia'
+        - 'Atlantic/St_Helena'
+        - 'Atlantic/Stanley'
+        - 'Australia/Adelaide'
+        - 'Australia/Brisbane'
+        - 'Australia/Broken_Hill'
+        - 'Australia/Currie'
+        - 'Australia/Darwin'
+        - 'Australia/Eucla'
+        - 'Australia/Hobart'
+        - 'Australia/Lindeman'
+        - 'Australia/Lord_Howe'
+        - 'Australia/Melbourne'
+        - 'Australia/Perth'
+        - 'Australia/Sydney'
+        - 'Europe/Amsterdam'
+        - 'Europe/Andorra'
+        - 'Europe/Athens'
+        - 'Europe/Belgrade'
+        - 'Europe/Berlin'
+        - 'Europe/Bratislava'
+        - 'Europe/Brussels'
+        - 'Europe/Bucharest'
+        - 'Europe/Budapest'
+        - 'Europe/Chisinau'
+        - 'Europe/Copenhagen'
+        - 'Europe/Dublin'
+        - 'Europe/Gibraltar'
+        - 'Europe/Guernsey'
+        - 'Europe/Helsinki'
+        - 'Europe/Isle_of_Man'
+        - 'Europe/Istanbul'
+        - 'Europe/Jersey'
+        - 'Europe/Kaliningrad'
+        - 'Europe/Kiev'
+        - 'Europe/Lisbon'
+        - 'Europe/Ljubljana'
+        - 'Europe/London'
+        - 'Europe/Luxembourg'
+        - 'Europe/Madrid'
+        - 'Europe/Malta'
+        - 'Europe/Mariehamn'
+        - 'Europe/Minsk'
+        - 'Europe/Monaco'
+        - 'Europe/Moscow'
+        - 'Europe/Oslo'
+        - 'Europe/Paris'
+        - 'Europe/Podgorica'
+        - 'Europe/Prague'
+        - 'Europe/Riga'
+        - 'Europe/Rome'
+        - 'Europe/Samara'
+        - 'Europe/San_Marino'
+        - 'Europe/Sarajevo'
+        - 'Europe/Simferopol'
+        - 'Europe/Skopje'
+        - 'Europe/Sofia'
+        - 'Europe/Stockholm'
+        - 'Europe/Tallinn'
+        - 'Europe/Tirane'
+        - 'Europe/Uzhgorod'
+        - 'Europe/Vaduz'
+        - 'Europe/Vatican'
+        - 'Europe/Vienna'
+        - 'Europe/Vilnius'
+        - 'Europe/Volgograd'
+        - 'Europe/Warsaw'
+        - 'Europe/Zagreb'
+        - 'Europe/Zaporozhye'
+        - 'Europe/Zurich'
+        - 'Indian/Antananarivo'
+        - 'Indian/Chagos'
+        - 'Indian/Christmas'
+        - 'Indian/Cocos'
+        - 'Indian/Comoro'
+        - 'Indian/Kerguelen'
+        - 'Indian/Mahe'
+        - 'Indian/Maldives'
+        - 'Indian/Mauritius'
+        - 'Indian/Mayotte'
+        - 'Indian/Reunion'
+        - 'Pacific/Apia'
+        - 'Pacific/Auckland'
+        - 'Pacific/Chatham'
+        - 'Pacific/Efate'
+        - 'Pacific/Enderbury'
+        - 'Pacific/Fakaofo'
+        - 'Pacific/Fiji'
+        - 'Pacific/Funafuti'
+        - 'Pacific/Galapagos'
+        - 'Pacific/Gambier'
+        - 'Pacific/Guadalcanal'
+        - 'Pacific/Guam'
+        - 'Pacific/Honolulu'
+        - 'Pacific/Johnston'
+        - 'Pacific/Kiritimati'
+        - 'Pacific/Kosrae'
+        - 'Pacific/Kwajalein'
+        - 'Pacific/Majuro'
+        - 'Pacific/Marquesas'
+        - 'Pacific/Midway'
+        - 'Pacific/Nauru'
+        - 'Pacific/Niue'
+        - 'Pacific/Norfolk'
+        - 'Pacific/Noumea'
+        - 'Pacific/Pago_Pago'
+        - 'Pacific/Palau'
+        - 'Pacific/Pitcairn'
+        - 'Pacific/Ponape'
+        - 'Pacific/Port_Moresby'
+        - 'Pacific/Rarotonga'
+        - 'Pacific/Saipan'
+        - 'Pacific/Tahiti'
+        - 'Pacific/Tarawa'
+        - 'Pacific/Tongatapu'
+        - 'Pacific/Truk'
+        - 'Pacific/Wake'
+        - 'Pacific/Wallis'

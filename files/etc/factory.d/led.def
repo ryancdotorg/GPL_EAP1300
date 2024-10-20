@@ -1,0 +1,10 @@
+########################################################
+# sourced by F96led/led.sh
+# used by all vendor
+########################################################
+
+LED_SYSTEM_PATH="/sys/class/leds/"
+BRIGHTNESS=brightness
+TRIGGER=trigger
+NOT_LED_LIST="bt_en gps_pwr_en gps_rst mmc0::"
+

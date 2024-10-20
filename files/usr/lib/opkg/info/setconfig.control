@@ -1,0 +1,10 @@
+Package: setconfig
+Version: 1.0
+Depends: libc, mtd
+Source: SENAO/package/setconfig
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 7682
+Description:  This package can set/get u-boot config.
+ This package use mtd to write flash.

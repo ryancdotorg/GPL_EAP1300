@@ -1,0 +1,19 @@
+--- a/Makefile	2016-05-24 15:23:21.279896675 +0800
++++ b/Makefile	2016-05-24 15:24:42.481433801 +0800
+@@ -15,6 +15,7 @@
+ CXX=$(TARGET_CXX) $(CFLAGS)
+ LINK=$(TARGET_LINK)
+ THREAD_LFLAGS=-lpthread
++MATH_LFLAGS=-lm
+ 
+ INSTALL=/usr/bin/install -c
+ INSTALL_PROGRAM=${INSTALL}
+@@ -48,7 +49,7 @@
+ 	$(CXX) -o getc_putc_helper $(GETCHOBJS)
+ 
+ bon_csv2html: bon_csv2html.o
+-	$(LINK) bon_csv2html.o -o bon_csv2html
++	$(LINK) bon_csv2html.o -o bon_csv2html $(MATH_LFLAGS)
+ 
+ generate_randfile: generate_randfile.o
+ 	$(LINK) generate_randfile.o -o generate_randfile

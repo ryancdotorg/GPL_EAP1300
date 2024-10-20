@@ -1,0 +1,22 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org 
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+stop() {
+    local i=0
+	if [ $(ls dev/ | grep ubi0_) ];then
+	for vol in UBI_VOLUMES
+		do
+			ls /tmp | grep ${vol} && fsync -d /dev/ubi0_${i} && umount /tmp/${vol}
+			let i=${i}+1
+		done
+	fi
+	sync
+	umount -a -d -r
+}
+
+case "$1" in
+	stop) stop;;
+esac

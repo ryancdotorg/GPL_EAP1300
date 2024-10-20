@@ -1,0 +1,37 @@
+#!/bin/sh
+. /lib/functions.sh
+do_button () {
+	local button
+	local action
+	local handler
+	local min
+	local max
+	
+	config_get button $1 button
+	config_get action $1 action
+	config_get handler $1 handler
+	config_get time $1 time
+	config_get least $1 least
+	config_get min $1 min
+	config_get max $1 max
+
+	if [ "$ACTION" = "$action" -a "$BUTTON" = "$button" -a -n "$handler" ]; then
+		case "$ACTION" in
+		"pressed")
+			echo pressed > /tmp/button_log
+			eval $handler
+			;;
+		"released")
+			echo released > /tmp/button_log
+			if [ -n "$least" ] && [ $SEEN -gt $least ]; then
+				eval $handler
+			elif [ -n "$min" -a -n "$max" ] && [ $min -le $SEEN -a $max -ge $SEEN ]; then
+				eval $handler
+			fi
+			;;
+		esac
+	fi
+}
+ 
+config_load system
+config_foreach do_button button

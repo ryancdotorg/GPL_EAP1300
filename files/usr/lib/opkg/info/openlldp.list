@@ -1,0 +1,3 @@
+/etc/uci-defaults/openlldpd
+/etc/init.d/openlldpd
+/usr/bin/lldpd

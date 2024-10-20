@@ -1,0 +1,16 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -676,9 +676,9 @@ print_scanning_token(struct stream_descr
+ 	if((event->u.data.pointer) && (event->u.data.length))
+ 	  memcpy(custom, event->u.data.pointer, event->u.data.length);
+ 	custom[event->u.data.length] = '\0';
+-	if ((custom[0] == 'h') && (custom[1] == 't'))
++	if ((custom[0] == 'h') && (custom[1] == 't') || strstr(custom, "IEEE80211_MODE_11NG"))
+           state->type = GN;
+-    if ((custom[0] == 'v') && (custom[1] == 'h'))
++    if ((custom[0] == 'v') && (custom[1] == 'h') || strstr(custom, "IEEE80211_MODE_11AC"))
+           state->type = AC;
+ 	//printf("                    Extra:%s\n", custom);
+       }

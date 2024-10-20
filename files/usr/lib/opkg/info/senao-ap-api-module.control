@@ -1,0 +1,9 @@
+Package: senao-ap-api-module
+Version: 1.2-12-g1713731
+Depends: libc, libapi, fcgi, libjson-c, libopenssl, libsnjson
+Source: SENAO/package/senao-ap-api-module
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 23725
+Description:  senao-ap-api-module

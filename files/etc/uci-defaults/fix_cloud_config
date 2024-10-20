@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Copyright (C) 2010 OpenWrt.org
+#
+
+clear_config_version()
+{
+	uci delete ezmcloud.ezmcloud.config_version
+	uci commit ezmcloud
+}
+
+if [ -x /usr/bin/ezmcloud ]; then
+	# if is_ezm_radius config doesn't exist, should clear config_version.
+	if [ -z "$(uci show wireless | grep is_ezm_radius)" ]; then
+		clear_config_version
+	fi
+fi
+
+exit 0

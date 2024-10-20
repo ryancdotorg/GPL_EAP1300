@@ -1,0 +1,145 @@
+#!/bin/sh
+
+ERROR_MSG_101="101:Md5 check failed."
+ERROR_MSG_102="102:MAC check failed."
+ERROR_MSG_103="103:Other failed."
+
+CLIENT_KEY=/tmp/client.key
+CLIENT_KEY_CHK=/tmp/client.key.chk
+CLIENT_KEY_MD5=/tmp/client.key.md5
+CLIENT_KEY_MD5_CHK=/tmp/client.key.md5.chk
+CLIENT_CRT=/tmp/client.crt
+CLIENT_CRT_CHK=/tmp/client.crt.chk
+CLIENT_CRT_MD5=/tmp/client.crt.md5
+CLIENT_CRT_MD5_CHK=/tmp/client.crt.md5.chk
+
+CERT_FILE=/tmp/cert_file
+PART_FILE=/tmp/part_file
+
+[ -z $1 ] && {
+	echo "command incorrect!!"
+	echo "Example: mphiddencrt 192.168.1.111/00-11-33-44-22-ab"
+	return
+}
+
+DEVICE_IP="$(echo $1 | cut -d '/' -f 1)"
+MAC_PATH="$(echo $1 | cut -d '/' -f 2)"
+
+cd /tmp
+tftp -gr ./$MAC_PATH/${CLIENT_KEY#/tmp/} $DEVICE_IP > /dev/null 2>&1
+tftp -gr ./$MAC_PATH/${CLIENT_CRT#/tmp/} $DEVICE_IP > /dev/null 2>&1
+tftp -gr ./$MAC_PATH/${CLIENT_KEY_MD5#/tmp/} $DEVICE_IP > /dev/null 2>&1
+tftp -gr ./$MAC_PATH/${CLIENT_CRT_MD5#/tmp/} $DEVICE_IP > /dev/null 2>&1
+
+[ ! -f "$CLIENT_KEY" ] && {
+	echo "$ERROR_MSG_103 Missing the file ${CLIENT_KEY#/tmp/}"
+	return
+}
+[ ! -f "$CLIENT_KEY_MD5" ] && {
+	echo "$ERROR_MSG_103 Missing the file ${CLIENT_KEY_MD5#/tmp/}"
+	return
+}
+[ ! -f "$CLIENT_CRT" ] && {
+	echo "$ERROR_MSG_103 Missing the file ${CLIENT_CRT#/tmp/}"
+	return
+}
+[ ! -f "$CLIENT_CRT_MD5" ] && {
+	echo "$ERROR_MSG_103 Missing the file ${CLIENT_CRT_MD5#/tmp/}"
+	return
+}
+
+# ====== cert file format =====
+# length of client.key
+# xxxxxxxxx
+# xxxxxxxxx
+# length of client.crt
+# xxxxxxxxx
+# xxxxxxxxx
+# MD5
+# length of MD5 with client.key
+# MD5 with client.key
+# length of MD5 with client.crt
+# MD5 with client.crt
+echo $(stat -c%s "$CLIENT_KEY") > $CERT_FILE
+cat $CLIENT_KEY >> $CERT_FILE
+echo $(stat -c%s "$CLIENT_CRT") >> $CERT_FILE
+cat $CLIENT_CRT >> $CERT_FILE
+echo "MD5" >> $CERT_FILE
+echo $(stat -c%s "$CLIENT_KEY_MD5") >> $CERT_FILE
+cat $CLIENT_KEY_MD5 | xargs >> $CERT_FILE
+echo $(stat -c%s "$CLIENT_CRT_MD5") >> $CERT_FILE
+cat $CLIENT_CRT_MD5 | xargs >> $CERT_FILE
+
+CERT_MTD=$(cat /proc/mtd | grep cert | awk -F: '{print $1}')
+CERT_MTD_SIZE=$(cat /sys/class/mtd/${CERT_MTD}/size)
+
+# mtd write to cert partition
+dd if=$CERT_FILE bs=$CERT_MTD_SIZE conv=sync 2>/dev/null | mtd -qq -e cert write - cert
+
+# cat cert partition to file.
+cat /dev/$CERT_MTD > $PART_FILE
+
+# get client.key size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get client.key
+dd if=$PART_FILE of=$CLIENT_KEY_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# remove client.key from PART_FILE
+lines=$(wc -l ${CLIENT_KEY_CHK}|cut -d ' ' -f 1)
+sed -i 1,"$lines"d $PART_FILE
+
+# get client.crt size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get client.crt
+dd if=$PART_FILE of=$CLIENT_CRT_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# remove client.crt from PART_FILE
+lines=$(wc -l ${CLIENT_CRT_CHK}|cut -d ' ' -f 1)
+sed -i 1,"$lines"d $PART_FILE
+
+# remove MD5 string
+sed -i '1d' $PART_FILE
+# get MD5 with client.key size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get MD5 with client.key
+dd if=$PART_FILE of=$CLIENT_KEY_MD5_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# remove MD5 with client.key from PART_FILE
+lines=$(wc -l ${CLIENT_KEY_MD5_CHK}|cut -d ' ' -f 1)
+sed -i 1,"$lines"d $PART_FILE
+
+# get MD5 with client.crt size
+size=$(sed -n '1p' $PART_FILE)
+sed -i '1d' $PART_FILE
+# get MD5 with client.key
+dd if=$PART_FILE of=$CLIENT_CRT_MD5_CHK bs=$size count=1 conv=sync 2>/dev/null
+
+# check client.key
+if [ "$(cat "$CLIENT_KEY_MD5_CHK")" != "$(cat "$CLIENT_KEY_MD5")" ]; then
+	echo "$ERROR_MSG_101"
+	return
+fi
+
+# check client.crt
+if [ "$(cat "$CLIENT_CRT_MD5_CHK")" != "$(cat "$CLIENT_CRT_MD5")" ]; then
+	echo "$ERROR_MSG_101"
+	return
+fi
+
+# check the mac of key same with DUT's MAC.
+CRT_MAC=$(openssl x509 -in $CLIENT_CRT_CHK -text -noout | grep UID)
+# Subject: O = "EnGenius Technologies, Inc.", CN = *.engeniuscloud.com, serialNumber = 34:76:c5:02:20:85, UID = 88:dc:96:ee:ee:34
+CRT_MAC=${CRT_MAC##*UID = }
+CRT_MAC=$(echo $CRT_MAC | tr 'A-F' 'a-f')
+
+DUT_MAC=$(setconfig -g 6 | tr 'A-F' 'a-f' | tr -d " ")
+
+if [ "$CRT_MAC" != "$DUT_MAC" ];then
+	echo "$ERROR_MSG_102"
+	return
+fi
+
+echo "Success !!!"

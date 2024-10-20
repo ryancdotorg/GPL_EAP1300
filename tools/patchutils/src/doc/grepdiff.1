@@ -1,0 +1,259 @@
+'\" t
+.\"     Title: grepdiff
+.\"    Author: 
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 10 Feb 2011
+.\"    Manual: Man pages
+.\"    Source: patchutils
+.\"  Language: English
+.\"
+.TH "GREPDIFF" "1" "10 Feb 2011" "patchutils" "Man pages"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+grepdiff \- show files modified by a diff containing a regex
+.SH "SYNOPSIS"
+.HP \w'\fBgrepdiff\fR\ 'u
+\fBgrepdiff\fR [[\-n] | [\-\-line\-number]] [[\-N] | [\-\-number\-files]] [[\-p\ \fIn\fR] | [\-\-strip\-match=\fIn\fR]] [\-\-strip=\fIn\fR] [\-\-addprefix=\fIPREFIX\fR] [\-\-addoldprefix=\fIPREFIX\fR] [\-\-addnewprefix=\fIPREFIX\fR] [[\-s] | [\-\-status]] [[\-i\ \fIPATTERN\fR] | [\-\-include=\fIPATTERN\fR]] [[\-I\ \fIFILE\fR] | [\-\-include\-from\-file=\fIFILE\fR]] [[\-x\ \fIPATTERN\fR] | [\-\-exclude=\fIPATTERN\fR]] [[\-X\ \fIFILE\fR] | [\-\-exclude\-from\-file=\fIFILE\fR]] [[\-#\ \fIRANGE\fR] | [\-\-hunks=\fIRANGE\fR]] [\-\-lines=\fIRANGE\fR] [[\-F\fIRANGE\fR] | [\-\-files=\fIRANGE\fR]] [\-\-annotate] [\-\-as\-numbered\-lines=\fIWHEN\fR] [\-\-format=\fIFORMAT\fR] [\-\-remove\-timestamps] [[\-v] | [\-\-verbose]] [[\-z] | [\-\-decompress]] [[\-E] | [\-\-extended\-regexp]] [[\-H] | [\-\-with\-filename]] [[\-h] | [\-\-no\-filename]] [\-\-output\-matching=\fIWHAT\fR] {[\fIREGEX\fR] | [\-f\ \fIFILE\fR]} [\fIfile\fR...]
+.HP \w'\fBgrepdiff\fR\ 'u
+\fBgrepdiff\fR {[\-\-help] | [\-\-version] | [\-\-list] | [\-\-filter\ \&.\&.\&.]}
+.SH "DESCRIPTION"
+.PP
+For each file modified by a patch, if the patch hunk contains the
+\fIREGEX\fR
+then the file\*(Aqs name is printed\&.
+.PP
+The regular expression is treated as POSIX Basic Regular Expression syntax, unless the
+\fB\-E\fR
+option is given in which case POSIX Extended Regular Expression syntax is used\&.
+.PP
+For example, to see the patches in
+my\&.patch
+which contain the regular expression
+\(lqpf_gfp_mask\(rq, use:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+grepdiff pf_gfp_mask my\&.patch | \e
+  xargs \-rn1 filterdiff my\&.patch \-i
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+You can use both unified and context format diffs with this program\&.
+.SH "OPTIONS"
+.PP
+\fB\-n\fR, \fB\-\-line\-number\fR
+.RS 4
+Display the line number that each patch begins at\&. If verbose output is requested, each matching hunk is listed as well\&.
+.sp
+For a description of the output format see
+\fBlsdiff\fR(1)\&.
+.RE
+.PP
+\fB\-N\fR, \fB\-\-number\-files\fR
+.RS 4
+File numbers are listed, beginning at 1, before each filename\&.
+.RE
+.PP
+\fB\-p\fR \fIn\fR, \fB\-\-strip\-match=\fR\fB\fIn\fR\fR
+.RS 4
+When matching, ignore the first
+\fIn\fR
+components of the pathname\&.
+.RE
+.PP
+\fB\-\-strip\fR=\fIn\fR
+.RS 4
+Remove the first
+\fIn\fR
+components of the pathname before displaying it\&.
+.RE
+.PP
+\fB\-\-addprefix\fR=\fIPREFIX\fR
+.RS 4
+Prefix the pathname with
+\fIPREFIX\fR
+before displaying it\&. This will override any individual settings specified with the
+\fB\-\-addoldprefix\fR
+or
+\fB\-\-addnewprefix\fR
+options\&.
+.RE
+.PP
+\fB\-\-addoldprefix\fR=\fIPREFIX\fR
+.RS 4
+Prefix pathnames for old or original files in the output by
+\fIPREFIX\fR\&.
+.RE
+.PP
+\fB\-\-addnewprefix\fR=\fIPREFIX\fR
+.RS 4
+Prefix pathnames for updated or new files in the output by
+\fIPREFIX\fR\&.
+.RE
+.PP
+\fB\-s\fR
+.RS 4
+Show file additions, modifications and removals\&. A file addition is indicated by a
+\(lq+\(rq, a removal by a
+\(lq\-\(rq, and a modification by a
+\(lq!\(rq\&.
+.RE
+.PP
+\fB\-i\fR \fIPATTERN\fR, \fB\-\-include=\fR\fB\fIPATTERN\fR\fR
+.RS 4
+Include only files matching
+\fIPATTERN\fR\&.
+.RE
+.PP
+\fB\-I\fR \fIFILE\fR, \fB\-\-include\-from\-file=\fR\fB\fIFILE\fR\fR
+.RS 4
+Include only files matching any pattern listed in
+\fIFILE\fR, one pattern per line\&. All other lines in the input are suppressed\&.
+.RE
+.PP
+\fB\-x\fR \fIPATTERN\fR \fB\-\-exclude=\fR\fB\fIPATTERN\fR\fR
+.RS 4
+Exclude files matching
+\fIPATTERN\fR\&.
+.RE
+.PP
+\fB\-X\fR \fIFILE\fR, \fB\-\-exclude\-from\-file=\fR\fB\fIFILE\fR\fR
+.RS 4
+Exclude files matching any pattern listed in
+\fIFILE\fR, one pattern per line\&. All other lines in the input are displayed\&.
+.RE
+.PP
+\fB\-#\fR \fIRANGE\fR, \fB\-\-hunks\fR=\fIRANGE\fR
+.RS 4
+Only include hunks within the specified
+\fIRANGE\fR\&. Hunks are numbered from 1, and the range is a comma\-separated list of numbers or
+\(lqfirst\-last\(rq
+spans, optionially preceeded by a modifier \*(Aqx\*(Aq which inverts the entire range; either the first or the last in the span may be omitted to indicate no limit in that direction\&.
+.RE
+.PP
+\fB\-\-lines\fR=\fIRANGE\fR
+.RS 4
+Only list hunks that contain lines from the original file that lie within the specified
+\fIRANGE\fR\&. Lines are numbered from 1, and the range is a comma\-separated list of numbers or
+\(lqfirst\-last\(rq
+spans, optionially preceeded by a modifier \*(Aqx\*(Aq which inverts the entire range; either the first or the last in the span may be omitted to indicate no limit in that direction\&.
+.RE
+.PP
+\fB\-F\fR=\fIRANGE\fR, \fB\-\-files\fR=\fIRANGE\fR
+.RS 4
+Only list files indicated by the specified
+\fIRANGE\fR\&. Files are numbered from 1 in the order they appear in the patch input, and the range is a comma\-separated list of numbers or
+\(lqfirst\-last\(rq
+spans, optionially preceeded by a modifier \*(Aqx\*(Aq which inverts the entire range; either the first or the last in the span may be omitted to indicate no limit in that direction\&.
+.RE
+.PP
+\fB\-\-annotate\fR
+.RS 4
+Annotate each hunk with the filename and hunk number\&.
+.RE
+.PP
+\fB\-\-as\-numbered\-lines\fR=before|after
+.RS 4
+Instead of a patch fragment, display the lines of the selected hunks with the line number of the file before (or after) the patch is applied, followed by a
+TAB
+character and a colon, at the beginning of each line\&. Each hunk except the first will have a line consisting of
+\(lq\&.\&.\&.\(rq
+before it\&.
+.RE
+.PP
+\fB\-\-format\fR=unified|context
+.RS 4
+Use specified output format\&.
+.RE
+.PP
+\fB\-\-remove\-timestamps\fR
+.RS 4
+Do not include file timestamps in the output\&.
+.RE
+.PP
+\fB\-z\fR, \fB\-\-decompress\fR
+.RS 4
+Decompress files with extensions \&.gz and \&.bz2\&.
+.RE
+.PP
+\fB\-E\fR, \fB\-\-extended\-regexp\fR
+.RS 4
+Use POSIX Extended Regular Expression syntax\&.
+.RE
+.PP
+\fB\-H\fR, \fB\-\-with\-filename\fR
+.RS 4
+Print the name of the patch file containing each match\&.
+.RE
+.PP
+\fB\-h\fR, \fB\-\-no\-filename\fR
+.RS 4
+Suppress the name of the patch file containing each match\&.
+.RE
+.PP
+\fB\-f\fR \fIFILE\fR, \fB\-\-file=\fR\fB\fIFILE\fR\fR
+.RS 4
+Read regular expressions from
+\fIFILE\fR, one per line\&.
+.RE
+.PP
+\fB\-\-output\-matching\fR=hunk|file
+.RS 4
+Display the matching hunk\-level or file\-level diffs\&.
+.RE
+.PP
+\fB\-\-help\fR
+.RS 4
+Display a short usage message\&.
+.RE
+.PP
+\fB\-\-version\fR
+.RS 4
+Display the version number of grepdiff\&.
+.RE
+.PP
+\fB\-\-filter\fR
+.RS 4
+Behave like
+\fBfilterdiff\fR(1)
+instead\&.
+.RE
+.PP
+\fB\-\-list\fR
+.RS 4
+Behave like
+\fBlsdiff\fR(1)
+instead\&.
+.RE
+.SH "SEE ALSO"
+.PP
+\fBfilterdiff\fR(1),
+\fBlsdiff\fR(1)
+.SH "AUTHOR"
+.PP
+\fBTim Waugh\fR <\&twaugh@redhat.com\&>
+.RS 4
+Package maintainer
+.RE

@@ -1,0 +1,11 @@
+/etc/init.d/senao-mgmt
+/etc/hotplug.d/ifplugd/20-mgmt-release
+/etc/init.d/senao-mgmt-preinit
+/etc/mgmt.d/mgmt_path.sh
+/etc/uci-defaults/z99senao-mgmt
+/etc/mgmt.d/mgmt_dhcpd.sh
+/etc/mgmt.d/mgmt_rule.sh
+/etc/init.d/senao-mgmt-postinit
+/etc/mgmt.d/mgmt_vap.sh
+/etc/assoc_notify.d/mgmt_notify.sh
+/etc/mgmt.d/mgmt_timer.sh

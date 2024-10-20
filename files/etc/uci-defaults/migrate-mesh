@@ -1,0 +1,29 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+
+# Fix senaowrt to smartopenwrt 
+
+# Check 
+if [ "$(uci get network.sys.meshband)" != "1" ]; then
+	# 1
+	nw_m=$(eval "uci show /rom/etc/config/network.sys | grep mesh")
+	for i in $nw_m; do
+		eval uci set ${i}
+	done
+	# 2
+	w_0m=$(eval "uci show /rom/etc/config/wireless.wifi0_mesh | grep -v ' '")
+	for i in $w_0m; do
+		eval uci set ${i}
+	done
+	uci set wireless.wifi0_mesh.MeshDeviceLocation="Living Room"
+	# 3
+	w_1m=$(eval "uci show /rom/etc/config/wireless.wifi1_mesh | grep -v ' '")
+	for i in $w_1m; do
+		eval uci set ${i}
+	done
+	uci set wireless.wifi1_mesh.MeshDeviceLocation="Living Room"
+
+	uci commit
+fi
+
+exit 0

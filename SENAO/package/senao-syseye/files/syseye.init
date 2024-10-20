@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions.sh
+
+START=13  ## after snlogd
+STOP=97  ## before syslogd
+
+boot() {
+    start
+}
+
+start() {
+    /usr/sbin/syseye -d
+}
+
+stop() {
+    killall -15 syseye
+}
+
+reload() {
+    stop
+    start
+}

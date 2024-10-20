@@ -1,0 +1,123 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+boot() {
+    local wifi_configs=$(uci show | grep @wifi-iface\\[0]=wifi-iface)
+    echo "check wifi section name." > /dev/console
+
+    [ -n "$wifi_configs" ] && {
+        echo "start rename wifi section name." > /dev/console
+
+        uci reorder wireless.@wifi-device[0]=1
+
+        uci rename wireless.@wifi-iface[0]=wifi0_ssid_1
+        uci rename wireless.@wifi-iface[1]=wifi0_ssid_2
+        uci rename wireless.@wifi-iface[2]=wifi0_ssid_3
+        uci rename wireless.@wifi-iface[3]=wifi0_ssid_4
+        uci rename wireless.@wifi-iface[4]=wifi0_ssid_5
+        uci rename wireless.@wifi-iface[5]=wifi0_ssid_6
+        uci rename wireless.@wifi-iface[6]=wifi0_ssid_7
+        uci rename wireless.@wifi-iface[7]=wifi0_ssid_8
+        uci rename wireless.@wifi-iface[8]=wifi1_ssid_1
+        uci rename wireless.@wifi-iface[9]=wifi1_ssid_2
+        uci rename wireless.@wifi-iface[10]=wifi1_ssid_3
+        uci rename wireless.@wifi-iface[11]=wifi1_ssid_4
+        uci rename wireless.@wifi-iface[12]=wifi1_ssid_5
+        uci rename wireless.@wifi-iface[13]=wifi1_ssid_6
+        uci rename wireless.@wifi-iface[14]=wifi1_ssid_7
+        uci rename wireless.@wifi-iface[15]=wifi1_ssid_8
+        uci rename wireless.@wifi-iface[16]=wifi0_wds
+        uci rename wireless.@wifi-iface[17]=wifi1_wds
+        uci rename wireless.@wifi-iface[18]=wifi0_wds_0
+        uci rename wireless.@wifi-iface[19]=wifi0_wds_1
+        uci rename wireless.@wifi-iface[20]=wifi0_wds_2
+        uci rename wireless.@wifi-iface[21]=wifi0_wds_3
+        uci rename wireless.@wifi-iface[22]=wifi0_wds_4
+        uci rename wireless.@wifi-iface[23]=wifi1_wds_0
+        uci rename wireless.@wifi-iface[24]=wifi1_wds_1
+        uci rename wireless.@wifi-iface[25]=wifi1_wds_2
+        uci rename wireless.@wifi-iface[26]=wifi1_wds_3
+        uci rename wireless.@wifi-iface[27]=wifi1_wds_4
+        uci rename wireless.@wifi-iface[28]=wifi0_wds_sta
+        uci rename wireless.@wifi-iface[29]=wifi1_wds_sta
+        uci rename wireless.@wifi-iface[30]=wifi0_sta
+        uci rename wireless.@wifi-iface[31]=wifi1_sta
+
+        uci set wireless.wifi1.hwmode=11ac
+        uci set wireless.wifi0.hwmode=11ng
+
+        uci set wireless.wifi1.rts=2346
+        uci set wireless.wifi0.rts=2346
+
+        [ "$(uci get wireless.wifi0.aggregation_frame)" -gt 32 ] && uci set wireless.wifi0.aggregation_frame=32
+        [ "$(uci get wireless.wifi1.aggregation_frame)" -gt 32 ] && uci set wireless.wifi1.aggregation_frame=32
+
+        [ "$(uci get wireless.wifi0.opmode)" == "wds_sta" ] && uci set wireless.wifi0.opmode=ap
+        [ "$(uci get wireless.wifi1.opmode)" == "wds_sta" ] && uci set wireless.wifi1.opmode=ap
+
+        [ "$(uci get wireless.wifi0.fastroamingEnable)" == "1" ] && {
+            uci set wireless.wifi0_ssid_1.fastroamingEnable=1
+            uci set wireless.wifi0_wds_1.fastroamingEnable=1
+        }
+        uci delete wireless.wifi0.fastroamingEnable
+        [ "$(uci get wireless.wifi1.fastroamingEnable)" == "1" ] && {
+            uci set wireless.wifi1_ssid_1.fastroamingEnable=1
+            uci set wireless.wifi1_wds_1.fastroamingEnable=1
+        }
+        uci delete wireless.wifi1.fastroamingEnable
+
+        uci rename system.@led1[0]=lan1_led
+        uci set system.lan1_led=led
+        uci set system.lan1_led.name=LAN1
+        uci set system.lan1_led.sysfs=lan_led1
+        uci set system.lan1_led.trigger=netdev
+        uci set system.lan1_led.dev=eth1
+        uci set system.lan1_led.mode="link tx rx"
+        #uci set system.lan1_led.default=0
+
+        uci rename system.@led2[0]=power_led
+        uci set system.power_led=led
+        uci set system.power_led.name=Power
+        uci set system.power_led.sysfs=power_led1
+        uci set system.power_led.trigger=none
+        uci set system.power_led.brightness=1
+        #uci set system.power_led.default=0
+
+        uci rename system.@led3[0]=wifi0_led
+        uci set system.wifi0_led=led
+        uci set system.wifi0_led.name=WIFI0
+        uci set system.wifi0_led.sysfs=wlan_2g_led
+        uci set system.wifi0_led.trigger=none
+        uci set system.wifi0_led.brightness=1
+        #uci set system.wifi0_led.default=0
+
+        uci rename system.@led4[0]=wifi1_led
+        uci set system.wifi1_led=led
+        uci set system.wifi1_led.name=WIFI1
+        uci set system.wifi1_led.sysfs=wlan_5g_led
+        uci set system.wifi1_led.trigger=none
+        uci set system.wifi1_led.brightness=1
+        #uci set system.wifi1_led.default=0
+
+        uci del network.@switch[0]
+        uci del network.@switch_vlan[1]
+        uci del network.@switch_vlan[0]
+        uci del network.@switch_ext[5]
+        uci del network.@switch_ext[4]
+        uci del network.@switch_ext[3]
+        uci del network.@switch_ext[2]
+        uci del network.@switch_ext[1]
+        uci del network.@switch_ext[0]
+
+        uci commit
+
+    } || {
+        echo "do nothing" > /dev/console
+    }
+}
+
+case "$1" in
+	boot) boot;;
+esac

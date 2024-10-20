@@ -1,0 +1,37 @@
+#!/bin/sh
+
+#echo "[ IPv4 Redial ] $ACTION " >> /dev/console
+
+config_load 'network'
+proto=$(uci get network.wan.proto_display)
+local PID
+
+[ down = "$ACTION" ] && {
+	case $proto in
+		static|pppoe)
+			ifdown wan
+		;;
+		pptp|l2tp)
+			ifdown $proto
+		;;
+		*)
+		;;
+	esac
+}
+
+[ up = "$ACTION" ] && {
+	case $proto in
+		dhcp)
+			PID=`pidof udhcpc`
+			/bin/kill -SIGUSR1 $PID
+		;;
+		static|pppoe)
+			ifup wan
+		;;
+		pptp|l2tp)
+			ifup $proto
+		;;
+		*)
+		;;
+	esac
+}

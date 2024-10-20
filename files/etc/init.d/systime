@@ -1,0 +1,311 @@
+#!/bin/sh /etc/rc.common
+
+# run before cron
+START=38
+SERVICE_DAEMONIZE=1
+
+HWCLOCK=/usr/sbin/hwclock
+
+# NTP
+# ====================================
+# 1)Success
+#       sync time with IPcam.
+#       Add crontab rule, call ntpd after 24 hrs.
+#
+# 2)Failure
+#       Add crontab rule, call ntpd after 2 mins
+#
+# 3)Replug
+#       Ignore, do nothing
+#
+# 4)Reboot
+#       Get time from IPcam
+#       Call ntpd
+#
+# Manual
+# ====================================
+# 1)Start
+#       Command: date “options(tokens)"
+#       sync time with IPcam.
+#
+# 2)Replug
+#       Ignore, do nothing 
+#
+# 3)Reboot
+#       Get time from IPcam
+#
+
+ipcam_timezone="x 0 1 2 3 4 5 7 10 9 14 13 16 15 17 18 21 19 20 22 23 25 26 27 29 35 36 39 40 43 47 48 50 54 60 61 64 68 67 71 73 72"
+
+
+at_bt_reload() {
+	if [ -e "/etc/init.d/bt" ]; then
+		echo "/etc/init.d/bt start"  | at now + 5 minutes
+	fi
+}
+
+at_reload() {
+	#clean all at job because time is changed. Need to reschedule
+	for i in `atq | awk '{print $1}'`;do atrm $i;done
+    
+	at_bt_reload
+}
+
+sync_time_with_ipcam() {
+	local is_boot=$1
+	local zone_num=$(uci get system.@system[0].zonenumber)
+	local zone=$(expr $zone_num + 2)
+	local index=$(echo $ipcam_timezone | awk '{print $'${zone}'}')
+
+	echo "[sync_time_with_ipcam]($is_boot)" >> /tmp/sync_ipcam_time.txt
+
+	# login first
+	local login=$(app_client -i 192.168.99.99 -m POST -a Login -e 1 -p '{"AdminUsername":"senao_mesh_ipcam","AdminPassword":"ipcam"}')
+
+	if [ -z "$login" ]; then
+		sleep 2
+		app_client -i 192.168.99.99 -m POST -a Login -e 1 -p '{"AdminUsername":"senao_mesh_ipcam","AdminPassword":"ipcam"}'
+	fi
+
+	if [ ${is_boot} -eq 0 ]; then
+		local sync_year=$(date +%Y)
+		local sync_mouth=$(date +%m)
+		local sync_day=$(date +%d)
+		local sync_hour=$(date +%H)
+		local sync_min=$(date +%M)
+		local sync_second=$(date +%S)
+
+		echo "set IPcam time : $date $time($sync_year,$sync_mouth,$sync_day,$sync_hour,$sync_min)" >> /tmp/sync_ipcam_time.txt
+
+		# app_client -i 192.168.99.99 -m POST -a SetSysTimeSetting -e 1 -p
+		#	'{"NtpUsedIndex":1,"TimeZoneID":0,"NtpServer":"","Year":2015,"Month":08,"Day":2
+		#       0,"Hour":00,"Minute":00,"Second":00,"DayLightSavingEn":0}'
+		local result=$(app_client -i 192.168.99.99 -m POST -a SetSysTimeSetting -e 1 -p '{"NtpUsedIndex":1,"TimeZoneID":'${index}',"NtpServer":"","Year":'${sync_year}',"Month":'${sync_mouth}',"Day":'${sync_day}',"Hour":'${sync_hour}',"Minute":'${sync_min}',"Second":'${sync_second}',"DayLightSavingEn":0}')
+		echo "set IPcam time result=$result" >> /tmp/sync_ipcam_time.txt
+
+		local set_time_ok=$(echo ${result} | awk '{print $3}')
+
+		if [ "${set_time_ok}" != "\"OK\"" ]; then
+			echo "[ Retry ] sync time with IPcam again." >> /tmp/sync_ipcam_time.txt
+			sleep 1
+			local sync_again_year=$(date +%Y)
+			local sync_again_mouth=$(date +%m)
+			local sync_again_day=$(date +%d)
+			local sync_again_hour=$(date +%H)
+			local sync_again_min=$(date +%M)
+			local sync_again_second=$(date +%S)
+
+			local sync_again=$(app_client -i 192.168.99.99 -m POST -a SetSysTimeSetting -e 1 -p '{"NtpUsedIndex":1,"TimeZoneID":'${index}',"NtpServer":"","Year":'${sync_again_year}',"Month":'${sync_again_mouth}',"Day":'${sync_again_day}',"Hour":'${sync_again_hour}',"Minute":'${sync_again_min}',"Second":'${sync_again_second}',"DayLightSavingEn":0}')
+			echo "sync_again=$sync_again" >> /tmp/sync_ipcam_time.txt
+		fi
+	else
+		# IPcam have hw clock, APP borad doesn't so APP borad sync with IPcam
+		local get_ipcam_time=$(app_client -i 192.168.99.99 -m GET -a GetSysTimeSetting -e 1) 
+		local get_ipcam_time_ok=$(echo ${get_ipcam_time} | awk '{print $3}')
+
+		if [ "${get_ipcam_time_ok}" = "\"OK\"," ]; then
+			local get_date=$(echo $get_ipcam_time| awk '{print $25}' | sed 's/\\//g')
+			local get_time=$(echo $get_ipcam_time| awk '{print $26}')
+			local get_year=$(echo $get_date | awk -F "/" '{print $1}' | sed 's/"//g')
+			local get_month=$(echo $get_date | awk -F "/" '{print $2}')
+			local get_day=$(echo $get_date | awk -F "/" '{print $3}')
+			local get_hour=$(echo $get_time | awk -F ":" '{print $1}')
+			local get_minute=$(echo $get_time | awk -F ":" '{print $2}')
+			local get_second=$(echo $get_time | awk -F ":" '{print $3}' | sed 's/",//g')
+
+			# set IPcam's time at AP board
+			date -s "${get_year}-${get_month}-${get_day} ${get_hour}:${get_minute}:${get_second}"
+			echo "get IPcam time : $get_date $get_time" >> /tmp/sync_ipcam_time.txt
+		else
+			echo "get IPcam time FAIL, call start()" >> /tmp/sync_ipcam_time.txt
+			start
+		fi
+	fi
+}
+
+ntp_success() {
+	echo "[ntp_success]" >> /tmp/sync_ipcam_time.txt
+	# set IPcam time when ntp_success
+	if [ "`uci get functionlist.functionlist.SUPPORT_IPCAM`" = "1" ] && [ "`uci get functionlist.functionlist.SUPPORT_USB_CAM`" = "0" ]; then
+		sync_time_with_ipcam 0
+	fi
+
+	# clear cron rules
+	crontab -l | grep -v "systime" | crontab -
+	crontab -l | grep -v "/sbin/httpsynctime.sh" | crontab -
+
+	local ntp_hour=$(date +%H)
+	local ntp_min=$(date +%M)
+
+	# add cron rule, call ntp after 24 hr
+	echo "${ntp_min} ${ntp_hour} * * * /etc/init.d/systime start call_ntpd" >> /etc/crontabs/root
+
+	luci-reload auto wifi_schedule
+	at_reload
+
+	zonename=$(uci get system.@system[0].zonename)
+	timezone=$(uci get system.@system[0].timezone)
+	auto_TZ=$(uci get system.@system[0].zone_auto_detect)
+
+	if [ "auto" == "$zonename" -a "1" = "${auto_TZ:-0}" ]; then
+		[ -x "/usr/shc/timezonecheck" ] && /usr/shc/timezonecheck || echo "Please install /usr/shc/timezonecheck script" > /dev/console
+	fi
+
+	# Set system time into RTC clock
+	if [ -x "$HWCLOCK" ]; then
+        $HWCLOCK -u -w
+	fi
+}
+
+ntp_failure() {
+    # echo "----------------------------------------------[ntp_failure]" >> /dev/console
+	if [ "`uci get functionlist.functionlist.SUPPORT_IPCAM`" = "1" ] && [ "`uci get functionlist.functionlist.SUPPORT_USB_CAM`" = "0" ]; then
+		sync_time_with_ipcam 0
+	fi
+
+	local check_cron=$(grep -rn "ntp_retry" /etc/crontabs/root)
+	if [ -z "${check_cron}" ]; then
+		echo "*/2 * * * * /etc/init.d/systime start ntp_retry" >> /etc/crontabs/root
+	fi
+
+	local check_httpsync_cron=$(grep -rn "httpsynctime.sh" /etc/crontabs/root)
+	if [ -z "$check_httpsync_cron" ]; then
+		httpsynctime.sh
+		local ntp_hour=$(date +%H)
+		local ntp_min=$(date +%M)
+		echo "${ntp_min} ${ntp_hour} * * * /sbin/httpsynctime.sh" >> /etc/crontabs/root
+	fi
+}
+
+call_ntpd() {
+	echo "[call_ntpd]" >> /tmp/sync_ipcam_time.txt
+
+	# cloud model get time from cloud server
+	[ -f /etc/config/ezmcloud ] && return;
+
+	if [ "`uci get system.ntp.enable_server`" = "1" ]; then
+		local ntp_server=$(uci get system.ntp.server)
+		local pid=$(ps | grep "/usr/sbin/ntpd" | grep -v "grep" | awk '{print $1}')
+		if [ -z "$pid" ]; then
+			local ntpd_server_alive=1
+			echo "[call_ntpd : sysntpd start]" >> /tmp/sync_ipcam_time.txt
+			which resolveip > /dev/null && {
+				resolveip ${ntp_server} > /dev/null || ntpd_server_alive=0
+			}
+			if [ "$ntpd_server_alive" = "1" ]; then
+				/usr/sbin/ntpd -n -q -p ${ntp_server} && ntp_success || ntp_failure
+			else
+				ntp_failure
+			fi
+		fi
+	fi
+}
+
+boot() {
+	echo "[boot]" >> /tmp/sync_ipcam_time.txt
+	# IPcam have hw clock, APP borad doesn't 
+	# so APP borad sync with IPcam
+	if [ "`uci get functionlist.functionlist.SUPPORT_IPCAM`" = "1" ] && [ "`uci get functionlist.functionlist.SUPPORT_USB_CAM`" = "0" ]; then
+		sync_time_with_ipcam 1
+		sleep 3
+		call_ntpd
+	else
+		start
+	fi
+}
+
+start() {
+	echo "[start]" > /tmp/sync_ipcam_time.txt
+	local command=$1
+	if [ "${command}" == "call_ntpd" -o "${command}" == "ntp_retry" ]; then
+		call_ntpd
+		return
+	fi
+
+	if [ "`uci get systime.systime.manual_enable`" = "1" ]; then
+		local date_year=$(uci get systime.systime.year)
+		local date_month=$(uci get systime.systime.month)
+		local date_day=$(uci get systime.systime.day)
+		local date_hour=$(uci get systime.systime.hour)
+		local date_minute=$(uci get systime.systime.minute)
+
+		# date -s '2015-08-20 16:00:00'
+		date "${date_year}-${date_month}-${date_day} ${date_hour}:${date_minute}:00"
+		if [ "$(uci get ntpclient.daylightsaving.DayLightEnable)" == "1" ]; then
+			local timezone=$(uci get system.@system[0].timezone)
+			local s_m=$(uci get ntpclient.daylightsaving.startMonth)
+			local s_w=$(uci get ntpclient.daylightsaving.startWeek)
+			local s_d=$(uci get ntpclient.daylightsaving.startDay)
+			local s_h=$(uci get ntpclient.daylightsaving.startHour)
+			local e_m=$(uci get ntpclient.daylightsaving.endMonth)
+			local e_w=$(uci get ntpclient.daylightsaving.endWeek)
+			local e_d=$(uci get ntpclient.daylightsaving.endDay)
+			local e_h=$(uci get ntpclient.daylightsaving.endHour)
+			local TZ_format=$timezone"DLS,M"$s_m"."$s_w"."$s_d"/"$s_h":00:00,M"$e_m"."$e_w"."$e_d"/"$e_h":00:00"
+
+			echo "$TZ_format" > /etc/TZ
+		else
+			echo "$(uci get system.@system[0].timezone)" > /etc/TZ
+		fi
+
+		uci set system.ntp.enable_server=0
+		uci commit system
+
+		# make sure no cron rule at manual mode
+		crontab -l | grep -v "systime" | crontab -
+
+		if [ "`uci get functionlist.functionlist.SUPPORT_IPCAM`" = "1" ] && [ "`uci get functionlist.functionlist.SUPPORT_USB_CAM`" = "0" ]; then
+			sync_time_with_ipcam 0
+		fi
+
+	else
+		if [ "$(uci get system.ntp.enable_server)" == "0" ]; then
+			uci set system.ntp.enable_server=1
+			uci commit system
+		fi
+
+		zonename=$(uci get system.@system[0].zonename)
+		timezone=$(uci get system.@system[0].timezone)
+		auto_TZ=$(uci get system.@system[0].zone_auto_detect)
+		use_location=$(uci get system.@system[0].use_location)
+		# use_location set by ezmcloud, if 1, use zonename to find timezone_list.
+
+		if [ "auto" == "$zonename" -a "1" = "${auto_TZ:-0}" ]; then
+			[ -x "/usr/shc/timezonecheck" ] && /usr/shc/timezonecheck || echo "Please install /usr/shc/timezonecheck script" > /dev/console
+		elif [ "1" == "${use_location}" -a "0" = "${auto_TZ:-0}" ]; then
+			[ -e "/usr/share/zoneinfo/timezone_list" ] && {
+				timezone=$(cat /usr/share/zoneinfo/timezone_list | grep $zonename | awk {'print $2'})
+				uci set system.@system[0].timezone="$timezone"
+				uci commit system
+				echo "$timezone" > /etc/TZ
+			} || {
+				echo "not exist in zoneinfo database" > /dev/console
+			}
+		else
+			echo "$timezone" > /etc/TZ
+		fi
+
+		if [ "$(uci get ntpclient.daylightsaving.DayLightEnable)" == "1" -a "0" = "${auto_TZ:-0}" -a "1" != "${use_location}" ]; then
+		    local timezone=$(uci get system.@system[0].timezone)
+			local s_m=$(uci get ntpclient.daylightsaving.startMonth)
+			local s_w=$(uci get ntpclient.daylightsaving.startWeek)
+			local s_d=$(uci get ntpclient.daylightsaving.startDay)
+			local s_h=$(uci get ntpclient.daylightsaving.startHour)
+			local e_m=$(uci get ntpclient.daylightsaving.endMonth)
+			local e_w=$(uci get ntpclient.daylightsaving.endWeek)
+			local e_d=$(uci get ntpclient.daylightsaving.endDay)
+			local e_h=$(uci get ntpclient.daylightsaving.endHour)
+			local TZ_format=$timezone"DLS,M"$s_m"."$s_w"."$s_d"/"$s_h":00:00,M"$e_m"."$e_w"."$e_d"/"$e_h":00:00"
+
+			echo "$TZ_format" > /etc/TZ
+		else
+			echo "$(uci get system.@system[0].timezone)" > /etc/TZ
+		fi
+		call_ntpd
+	fi
+}
+
+stop() {
+	rm -rf /tmp/sync_ipcam_time.txt
+	crontab -l | grep -v "systime" | crontab -
+}

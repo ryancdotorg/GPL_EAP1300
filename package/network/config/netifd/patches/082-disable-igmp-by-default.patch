@@ -1,0 +1,13 @@
+Index: netifd-2015-12-16/bridge.c
+===================================================================
+--- netifd-2015-12-16.orig/bridge.c
++++ netifd-2015-12-16/bridge.c
+@@ -554,8 +554,6 @@ bridge_apply_settings(struct bridge_stat
+ 	/* defaults */
+ 	cfg->stp = false;
+ 	cfg->forward_delay = 2;
+-	cfg->igmp_snoop = true;
+-	cfg->multicast_querier = true;
+ 	cfg->hash_max = 512;
+ 	cfg->bridge_empty = false;
+ 	cfg->priority = 0x7FFF;

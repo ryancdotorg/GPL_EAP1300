@@ -1,0 +1,9 @@
+Package: luci-i18n-english
+Version: 0.11-1
+Depends: libc
+Source: SENAO/package/senao-luci/luci-0.11svn9960_ECB_FANCY/contrib/package/luci
+Section: luci_ECB_FNACY
+Maintainer: LuCI Development Team <luci@lists.subsignal.org>
+Architecture: ipq40xx
+Installed-Size: 345
+Description:  English

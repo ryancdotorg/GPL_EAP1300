@@ -1,0 +1,412 @@
+# This file is interpreted as shell script.
+# Put your custom iptables rules here, they will
+# be executed with each firewall (re-)start and reload.
+
+# Internal uci firewall chains are flushed and recreated on reload, so
+# put custom rules into the root chains e.g. INPUT or FORWARD or into the
+# special user chains, e.g. input_wan_rule or postrouting_lan_rule.
+#
+# INPUT  {delegate_input
+#           {input_rule,
+#            zone_lan_input,
+#               {input_lan_rule,
+#                zone_lan_src_ACCEPT}
+#            zone_guest_input
+#               {input_guest_rule,
+#                zone_guest_src_DROP}
+#            }
+#        }
+# OUTPUT {delegate_output
+#           {output_rule,
+#            zone_lan_output,
+#               {output_lan_rule,
+#                zone_lan_dest_ACCEPT}
+#            zone_guest_output
+#               {output_guest_rule,
+#               zone_guest_dest_ACCEPT}
+#           }
+#        }
+# FORWARD {delegate_forward
+#           {forwarding_rule,
+#            zone_lan_forward
+#                {forwarding_lan_rule,
+#                 zone_lan_src_ACCEPT},
+#            zone_guest_forward
+#                {forwarding_guest_rule,
+#                 zone_lan_dest_ACCEPT,
+#                 zone_guest_src_DROP
+#                }
+#           }
+#         }
+# nat: POSTROUTING { delegate_postrouting { postrouting_rule, zone_lan_postrouting {postrouting_lan_rule}, zone_guest_postrouting{postrouting_guest_rule}} }
+#
+# :forwarding_guest_rule - [0:0]
+# :forwarding_lan_rule - [0:0]
+# :forwarding_rule - [0:0]
+# :input_guest_rule - [0:0]
+# :input_lan_rule - [0:0]
+# :input_rule - [0:0]
+# :output_guest_rule - [0:0]
+# :output_lan_rule - [0:0]
+# :output_rule - [0:0]
+#
+# Yolin NOTE: don't put random rule into xxx_xxx_rule!!
+
+
+is_mgmvlanEnable=$(uci get network.sys.WLANVLANEnable)
+mgmt_vlan_id=$(uci get network.sys.ManagementVLANID 2>/dev/null)
+
+support_ssid_profile=$(uci -q get functionlist.functionlist.SUPPORT_SSID_PROFILE || echo 0)
+
+strip_ethprofile_interface() {
+	# appends space to let strip correctly
+	local ifnames=$@" "
+
+	if [ "$support_ssid_profile" = "1" ]; then
+		for ethprofile_section in $(foreach ethprofile profile)
+		do
+			ethprofile_ifnames="$(uci -q get ethprofile.$ethprofile_section.ifname)"
+			ifnames=${ifnames//$ethprofile_ifnames /}
+		done
+	fi
+
+	# echo without " will ignore the last space
+	echo $ifnames
+}
+
+lan_ifnames=$(uci -q get /rom/etc/config/network.lan.ifname)
+
+if [ "$support_ssid_profile" = "1" ]; then
+	lan_ifnames=$(strip_ethprofile_interface $lan_ifnames)
+fi
+
+ipcalc() {
+	opt=$1
+	shift
+	ipcalc.sh $* | awk  -F"=" '/^'$opt'=/{print $2}'
+}
+
+ifget() {
+    opt=$1
+    ifname=$2
+
+    # Do not get the information if the interface does not exist.
+    if [ -z "`ifconfig $ifname 2>/dev/null`" ]; then
+        return
+    fi
+
+    case "$opt" in
+        ip)
+            ifconfig $ifname | awk '/inet addr/{print substr($2,6)}' 2>/dev/null
+            ;;
+        mask)
+            ifconfig $ifname | awk '/Mask:/{print substr($4,6)}' 2>/dev/null
+            ;;
+        mac|macnc)
+            local mac=$(ifconfig $ifname | awk '/HWaddr/{print $5}' 2>/dev/null)
+            if [ $opt = "macnc" ]; then
+                echo $mac |tr -d ":"
+            else
+                echo $mac
+            fi
+            ;;
+    esac
+}
+
+wifi_en_iface=`foreach wireless wifi-iface disabled 0`
+get_wireless_option() {
+	local ssid_name=$1
+	local option_name=$2
+	local equalvalue=$3
+	local section_name
+
+	for section_name in `echo "$wifi_en_iface"|grep $ssid_name`
+	do
+		ret=`uci get wireless.$section_name.$option_name`
+		if [ "$ret" = "$equalvalue" ]
+		then
+			ret=$equalvalue
+		fi
+		# Just got the fist one.
+		break
+	done
+	echo $ret
+}
+
+get_vlan_wan_ifname() {
+	local vlantag=$1
+
+	if [ ${vlantag:-0} -eq 0 ];then
+		local eth_vlanif=`echo $lan_ifnames | awk '{print $1}'`
+	else
+		local eth_vlanif=`echo $lan_ifnames | awk '{print $1}'`.${vlantag}
+	fi
+
+	echo $eth_vlanif
+}
+
+# 0: mvlan disabled, no vlan
+# 1: mvlan disabled, vlan enabled
+# 2: mvlan enabled, and no vlan
+# 3: mvlan enabled, vlan enabled, and the same
+# 4: mvlan enabled, vlan enabled, and different
+get_vlan_mode() {
+    local vlantag=${1:-0}
+
+    if [ "$is_mgmvlanEnable" = "1" ]
+    then
+        if [ "${mgmt_vlan_id:-0}" = "$vlantag" ]
+        then
+            echo 3
+        else
+            if [ $vlantag -ne 0 ]
+            then
+                echo 4
+            else
+                echo 2
+            fi
+        fi
+    elif [ $vlantag -ne 0 ]
+    then
+        echo 1
+    else
+        echo 0
+    fi
+}
+
+get_vlan_wan_bridge() {
+    local vlantag=$1
+    local vlanmode=$(get_vlan_mode $vlantag)
+    local bridge_name=""
+
+    case "$vlanmode" in
+        0)
+            bridge_name="br-lan"
+            ;;
+        1)
+            #vlan
+            bridge_name="br-vlan$vlantag"
+            ;;
+        2)
+            bridge_name="br-99"
+            ;;
+        3)
+            #vlan
+            bridge_name="br-lan"
+            ;;
+        4)
+            #vlan
+            bridge_name="br-vlan$vlantag"
+            ;;
+    esac
+    echo $bridge_name
+
+    # protect check
+    if [ ! -d "/sys/class/net/$bridge_name/" ]
+    then
+        echo "FIXME: $bridge_name not exised!" > /dev/console
+    fi
+    local vlan_ifnames=$(get_vlan_wan_ifname $vlantag)
+    for vlanif in $vlan_ifnames
+    do
+        if [ ! -d "/sys/class/net/$bridge_name/brif/$vlanif" ]
+        then
+            echo "FIXME: $vlanif not in $bridge_name!" > /dev/console
+        fi
+    done
+}
+
+
+FIREWALL_RE_UNDO_FILE=/tmp/firewall-re-undo.sh
+ipt() {
+    opt=$1; shift
+    echo "iptables -D $*" >> $FIREWALL_RE_UNDO_FILE
+    iptables $opt $*
+}
+
+test -f $FIREWALL_RE_UNDO_FILE && sh $FIREWALL_RE_UNDO_FILE 2>/dev/null
+rm -f $FIREWALL_RE_UNDO_FILE 2>/dev/null
+
+#if rule 'iptables -t nat -I delegate_postrouting -s /0 -o br-lan -j SNAT --to-source $brlaIP' <-- this rule will cause all NAT!
+brguestIP=$(ifget ip br-guest)
+brguestMask=$(ifget mask br-guest)
+brguestPREFIX=$(ipcalc PREFIX $brguestIP $brguestMask)
+brguestNETWORK=$(ipcalc NETWORK $brguestIP $brguestMask)
+if [ -n "$brguestIP" ];then
+    is_guestvlan_en=$(uci -q get network.sys.GuestVLANEnable)
+    if [ "${is_guestvlan_en:-0}" = "1" ]
+    then
+        guestvlantag=$(uci -q get network.sys.GuestVLANID)
+    else
+        guestvlantag=0
+    fi
+    guest_wan_brname=$(get_vlan_wan_bridge ${guestvlantag:-0})
+    guest_wan_ip=$(ifget ip $guest_wan_brname)
+    guest_wan_mask=$(ifget mask $guest_wan_brname)
+    guest_wan_prefix=$(ipcalc PREFIX $guest_wan_ip $guest_wan_mask)
+    guest_wan_network=$(ipcalc NETWORK $guest_wan_ip $guest_wan_mask)
+    iptables -I delegate_postrouting -t nat -s ${brguestNETWORK}/${brguestPREFIX} -o $guest_wan_brname -j SNAT --to-source $guest_wan_ip
+fi
+
+if [ -n "$guest_wan_ip" ];then
+    iptables -I zone_guest_forward -d${guest_wan_network}/${guest_wan_prefix} -j DROP
+    iptables -I zone_lan_dest_ACCEPT -i br-guest -o $guest_wan_brname -j ACCEPT
+fi
+
+iptables -t nat -N ssid_nat_rule
+iptables -t nat -F ssid_nat_rule
+iptables -I delegate_postrouting -t nat -j ssid_nat_rule
+
+iptables -t filter -N vlan_isolation_rule
+iptables -t filter -F vlan_isolation_rule
+iptables -I delegate_input -t filter -j vlan_isolation_rule
+
+brlanIP=$(ifget ip br-lan)
+
+for ssid_num in `seq 1 8`
+do
+    wireless_isolation=$(get_wireless_option _ssid_$ssid_num isolation 1)
+    if [ "$wireless_isolation" = "1" ]
+    then
+        wireless_vlan_id=$(get_wireless_option _ssid_$ssid_num vlan_id 0)
+    else
+        wireless_vlan_id=0
+    fi
+    guest_network=$(get_wireless_option _ssid_$ssid_num guest_network)
+
+    if [ "${guest_network:-Disable}" = "NAT_only" ]
+    then
+        natIf=br-nat$ssid_num
+        natIP=$(uci -q get network.nat${ssid_num}.ipaddr)
+        natMask=$(uci -q get network.nat${ssid_num}.netmask)
+        if [ -n "$natIP" -a -n "$natMask" ]
+        then
+            :
+        else
+            natIP=172.$((15 + $ssid_num)).1.1
+            natMask=255.255.0.0
+        fi
+        natPREFIX=$(ipcalc PREFIX $natIP $natMask)
+        natNETWORK=$(ipcalc NETWORK $natIP $natMask)
+        natChain=ssid_${ssid_num}_nat_rule
+
+        iptables -t nat -N $natChain
+        iptables -t nat -F $natChain
+
+        nat_wan_brname=$(get_vlan_wan_bridge ${wireless_vlan_id:-0})
+        iptables -I ssid_nat_rule -t nat -s ${natNETWORK}/${natPREFIX} -o $nat_wan_brname -j $natChain
+
+        nat_wan_ip=$(ifget ip $nat_wan_brname)
+        nat_wan_mask=$(ifget mask $nat_wan_brname)
+
+        if [ -n "$nat_wan_ip" -a -n "$nat_wan_mask" ]
+        then
+            iptables -I $natChain -t nat -j SNAT --to-source $nat_wan_ip
+        else
+            :
+            # if vlan enabled, /etc/sn-udhcpc.sh will add SNAT rule
+        fi
+
+        if [ "$nat_wan_brname" != "br-lan" ] ; then
+            iptables -I vlan_isolation_rule -i $natIf -d $brlanIP -j DROP
+        fi
+	iptables -I delegate_forward -i $natIf ! -o $nat_wan_brname -j DROP
+    fi
+done
+
+if [ "$support_ssid_profile" = "1" ]; then
+    iptables -t nat -N port_nat_rule
+    iptables -t nat -F port_nat_rule
+    iptables -I delegate_postrouting -t nat -j port_nat_rule
+
+    for ethprofile_config in $(foreach ethprofile profile); do
+        eth_isolation=$(uci -q get ethprofile.$ethprofile_config.vlan_enable)
+        if [ "$eth_isolation" = "1" ]; then
+            eth_vlan_id=$(uci -q get ethprofile.$ethprofile_config.vlan_id)
+        else
+            eth_vlan_id=0
+        fi
+
+        if [ "$(uci -q get ethprofile.$ethprofile_config.client_ip_assignment)" = "1" ]; then
+            port_num=${ethprofile_config#port_}
+
+            natIf=br-nat${port_num}p
+            natIP=$(uci -q get network.nat${port_num}p.ipaddr)
+            natMask=$(uci -q get network.nat${port_num}p.netmask)
+            if [ -n "$natIP" -a -n "$natMask" ]; then
+                :
+            else
+                natIP=172.$((23 + $port_num)).1.1
+                natMask=255.255.0.0
+            fi
+            natPREFIX=$(ipcalc PREFIX $natIP $natMask)
+            natNETWORK=$(ipcalc NETWORK $natIP $natMask)
+            natChain=${ethprofile_config}_nat_rule
+
+            iptables -t nat -N $natChain
+            iptables -t nat -F $natChain
+
+            nat_wan_brname=$(get_vlan_wan_bridge ${eth_vlan_id:-0})
+            iptables -I port_nat_rule -t nat -s ${natNETWORK}/${natPREFIX} -o $nat_wan_brname -j $natChain
+
+            nat_wan_ip=$(ifget ip $nat_wan_brname)
+            nat_wan_mask=$(ifget mask $nat_wan_brname)
+
+            if [ -n "$nat_wan_ip" -a -n "$nat_wan_mask" ]; then
+                iptables -I $natChain -t nat -j SNAT --to-source $nat_wan_ip
+            else
+                :
+                # if vlan enabled, /etc/chilli/sn-udhcpc.sh will add SNAT rule
+            fi
+
+            if [ "$nat_wan_brname" != "br-lan" ] ; then
+                iptables -I vlan_isolation_rule -i $natIf -d $brlanIP -j DROP
+            fi
+            iptables -I delegate_forward -i $natIf ! -o $nat_wan_brname -j DROP
+        fi
+    done
+fi
+
+brlspIP=$(ifget ip br-lsp)
+if [ -n "$brlspIP" ];then
+    iptables -t nat -A zone_lsp_prerouting -i br-lsp -p tcp --sport 1024:65535 ! -d $brlspIP --dport 80 -j DNAT --to-destination $brlspIP:80
+    iptables -t nat -A zone_lsp_prerouting -i br-lsp -p tcp --sport 1024:65535 ! -d $brlspIP --dport 443 -j DNAT --to-destination $brlspIP:443
+fi
+
+# Support traffic log
+remotelog_enable=$(uci -q get system.@system[0].remotelog_enable)
+trafficlog_enable=$(uci -q get system.@system[0].trafficlog_enable)
+if [ "$remotelog_enable" = "1" -a "$trafficlog_enable" = "1" ]; then
+# raw table
+ipt -I PREROUTING -t raw -j SN_LOGGING
+# flush before add
+iptables -t raw --flush SN_LOGGING
+
+# return tunnel interface
+for i in `ls /sys/class/net/ |grep ^tun`
+do
+iptables -A SN_LOGGING -t raw -i $i -j RETURN
+done
+
+## TODO: not filter vlan interface ip...
+filterIP="127.0.0.1 $brlanIP"
+# filter br-lan ip
+for ip_addr in $filterIP
+do
+if [ -n "$ip_addr" ];then
+iptables -A SN_LOGGING -d $ip_addr -t raw -j RETURN
+iptables -A SN_LOGGING -s $ip_addr -t raw -j RETURN
+fi
+done
+
+## tcp sync
+iptables -A SN_LOGGING -t raw -p tcp --tcp-flags SYN,ACK,FIN,RST SYN -m limit --limit 10/s -j LOG --log-level 6 --log-prefix "session open: "
+## tcp ack
+iptables -A SN_LOGGING -t raw -p tcp --tcp-flags SYN,ACK,FIN,RST SYN,ACK -m limit --limit 10/s -j LOG --log-level 6 --log-prefix "session accept: "
+## tcp rst
+iptables -A SN_LOGGING -t raw -p tcp --tcp-flags SYN,ACK,FIN,RST RST,ACK -m limit --limit 10/s -j LOG --log-level 6 --log-prefix "session reset: "
+## tcp fin
+iptables -A SN_LOGGING -t raw -p tcp --tcp-flags SYN,ACK,FIN,RST FIN,ACK -j LOG -m limit --limit 10/s --log-level 6 --log-prefix "session close: "
+
+fi
+

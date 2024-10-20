@@ -1,0 +1,9 @@
+Package: senao-wifi-schedule
+Version: 1.1-2
+Depends: libc, libuci, liblua
+Source: SENAO/package/senao-wifi-schedule
+Section: utils
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 30774
+Description:  Senao WiFi Schedule

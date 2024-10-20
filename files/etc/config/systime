@@ -1,0 +1,7 @@
+config 'systime' 'systime'
+	option manual_enable	'0'
+	option year	'2015'
+	option month	'08'
+	option day	'20'
+	option hour	'00'
+	option minute	'00'

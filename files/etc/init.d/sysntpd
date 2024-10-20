@@ -1,0 +1,50 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2011 OpenWrt.org
+
+START=98
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+SERVICE_PID_FILE=/var/run/sysntpd.pid
+
+start() {
+	local peers
+	local args="-n"
+	local enable_server
+	local time
+	local keep
+
+	config_load system
+	config_get peers ntp server
+	config_get_bool enable_server ntp enable_server 0
+	config_get time ntp date
+	config_get_bool keep ntp keep 0
+
+	if [ $enable_server -ne 0 ]; then
+		append args "-l"
+	else
+		if [ -n "$time" -a $keep -ne 0 ]; then
+			uci set system.ntp.keep=0
+			uci commit
+			date "$time"
+		fi
+	fi
+
+	if [ -n "$peers" ]; then
+		local peer
+		for peer in $peers; do
+			append args "-p $peer"
+		done
+	fi
+
+	# for senao-systime package, when date is set then quit 
+	append args "-q"
+
+	if [ "$args" != "-n" ] && [ "$enable_server" == "1" ]; then
+		service_start /usr/sbin/ntpd $args
+	fi
+}
+
+stop() {
+	service_stop /usr/sbin/ntpd
+}

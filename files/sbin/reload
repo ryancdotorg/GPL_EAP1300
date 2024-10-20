@@ -1,0 +1,105 @@
+#!/bin/sh
+. /lib/functions.sh
+
+module_file="/var/run/module"
+
+#module define
+network=0
+wireless=1
+vlan_isolation=2
+led=3
+lan_port=4
+eccaptive=5
+fast_roaming=6
+traffic_shapping=7
+system=8
+dhcp=9
+wireless_schedule=10
+poratl=11
+
+get_reload_flag() {
+
+	local flag=$(uci changes | (
+	while read line
+	do
+	config=${line%%.*}
+	b=${line#*.}
+	section=${b%%.*}
+	c=${b#*.}
+	option=${c%%=*}
+	[ "$config" == "network" ] && flag=$((flag|1<<$network));
+	[ "$config" == "wireless" ] && flag=$((flag|1<<$wireless));
+	[ "$config" == "system" ] && flag=$((flag|1<<$system));
+	[ "$config" == "dhcp" ] && flag=$((flag|1<<$dhcp));
+	[ "$config" == "wireless_schedule" ] && flag=$((flag|1<<$wireless_schedule));
+	[ -n "${option%%Portal*}" ] || flag=$((flag|1<<$poratl));
+	[ -n "${option%%@led*}" ] || flag=$((flag|1<<$led));
+	done && echo "$flag" || echo "0"))
+	echo "$flag"
+}
+
+update_reload_module() {
+
+	local config=$1
+	local init=$(uci get ucitrack.@${config}[0].init)
+	local affects=$(uci get ucitrack.@${config}[0].affects)
+	local find=0
+
+	[ -n "$init" ] && {
+	    [ -e "$module_file" ] || echo "$init" >> "$module_file"
+
+	    [ -e "$module_file" ] && {
+		find=$(cat "$module_file" | grep -w "$init" | wc -l)
+		[ "$find" == "0" ] && echo "$init" >> "$module_file"
+	    }
+	}
+
+	[ -n "$affects" ] && {
+	    for module in $affects
+	    do
+		[ -n "$module" ] && {
+		    [ -e "$module_file" ] || echo "$module" >> "$module_file"
+
+		    [ -e "$module_file" ] && {
+			find=$(cat "$module_file" | grep -w "$module" | wc -l)
+			[ "$find" == "0" ] && echo "$module" >> "$module_file"
+		    }
+		}
+	    done
+	}
+}
+
+get_reload_module() {
+
+	local flag=$(get_reload_flag)
+
+	[ "$flag" == "0" ] && exit
+
+	[ -e "$module_file" ] && rm $module_file
+
+	[ $((flag&1<<$network)) -eq 0 ] || update_reload_module "network";
+	[ $((flag&1<<$wireless)) -eq 0 ] || update_reload_module "wireless";
+	[ $((flag&1<<$vlan_isolation)) -eq 0 ] || update_reload_module "vlan_isolation";
+	[ $((flag&1<<$led)) -eq 0 ] || update_reload_module "led";
+	[ $((flag&1<<$lan_port)) -eq 0 ] || update_reload_module "lan_port";
+	[ $((flag&1<<$eccaptive)) -eq 0 ] || update_reload_module "eccaptive";
+	[ $((flag&1<<$fast_roaming)) -eq 0 ] || update_reload_module "fast_roaming";
+	[ $((flag&1<<$traffic_shapping)) -eq 0 ] || update_reload_module "traffic_shapping";
+	[ $((flag&1<<$system)) -eq 0 ] || update_reload_module "system";
+	[ $((flag&1<<$dhcp)) -eq 0 ] || update_reload_module "dhcp";
+	[ $((flag&1<<$wireless_schedule)) -eq 0 ] || update_reload_module "wireless_schedule";
+
+	echo $(cat "$module_file" | sed ':a;N;$!ba;s/\n/ /g')
+}
+
+start_reload_module() {
+
+    local modules=$(get_reload_module)
+
+    [ -n "$modules" ] && {
+	uci commit
+	/sbin/luci-reload $modules
+    }
+}
+
+start_reload_module

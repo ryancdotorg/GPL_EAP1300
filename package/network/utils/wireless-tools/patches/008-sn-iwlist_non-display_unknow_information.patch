@@ -1,0 +1,22 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c
++++ wireless_tools.29/iwlist.c
+@@ -281,7 +281,7 @@ iw_print_ie_wpa(unsigned char *	iebuf,
+       /* Check if we have enough data */
+       if(ielen < 4)
+ 	{
+-	  iw_print_ie_unknown(iebuf, buflen);
++	  //iw_print_ie_unknown(iebuf, buflen);
+  	  return;
+ 	}
+ 
+@@ -297,7 +297,7 @@ iw_print_ie_wpa(unsigned char *	iebuf,
+ 	 || (memcmp(&iebuf[offset], wpa_oui, 3) != 0)
+ 	 || (iebuf[offset + 3] != 0x01))
+  	{
+-	  iw_print_ie_unknown(iebuf, buflen);
++	  //iw_print_ie_unknown(iebuf, buflen);
+  	  return;
+  	}
+ 

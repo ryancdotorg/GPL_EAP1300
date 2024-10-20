@@ -1,0 +1,12 @@
+/etc/senao-openapi-server/senao-openapi-server.dav
+/usr/sbin/senao-openapi-server
+/usr/lib/senao-openapi-server/mod_dirlisting.so
+/etc/uci-defaults/senao-openapi-server
+/usr/lib/senao-openapi-server/mod_openssl.so
+/etc/init.d/senao-openapi-server
+/usr/lib/senao-openapi-server/mod_authn_file.so
+/etc/config/senao-openapi-server
+/lib/upgrade/keep.d/senao-openapi-server
+/usr/lib/senao-openapi-server/mod_staticfile.so
+/usr/lib/senao-openapi-server/mod_indexfile.so
+/etc/senao-openapi-server/senao-openapi-server.pem

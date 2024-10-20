@@ -1,0 +1,28 @@
+#!/bin/sh /etc/rc.common
+
+TP=30
+
+cpu_irq_setup(){
+	
+	local wifi0_irq=$(cat /proc/interrupts | grep wifi0 | awk 'gsub(":","",$1) {print $1}')
+	local wifi1_irq=$(cat /proc/interrupts | grep wifi1 | awk 'gsub(":","",$1) {print $1}')
+	
+	if [ -n "$wifi0_irq" ]; then
+		if [ -f /proc/irq/${wifi0_irq}/smp_affinity ]; then
+			echo 2 > /proc/irq/${wifi0_irq}/smp_affinity
+		fi
+	fi
+
+	if [ -n "$wifi1_irq" ]; then
+		if [ -f /proc/irq/${wifi1_irq}/smp_affinity ]; then
+			echo 4 > /proc/irq/${wifi1_irq}/smp_affinity
+		fi
+	fi
+}
+
+start(){
+
+	[ -w /proc/connection_limit ] && echo 127 > /proc/connection_limit
+	[ -w /proc/connection_limit_5g ] && echo 127 > /proc/connection_limit_5g
+	cpu_irq_setup
+}

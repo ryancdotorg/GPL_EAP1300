@@ -1,0 +1,6 @@
+#!/bin/sh
+uci batch <<-EOF
+	set luci.themes.web_ECB_FANCY=/luci-static/web_ECB_FANCY
+	commit luci
+EOF
+exit 0

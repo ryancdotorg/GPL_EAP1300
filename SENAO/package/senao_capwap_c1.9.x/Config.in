@@ -1,0 +1,16 @@
+menu "CAPWAP related setting"
+	depends on PACKAGE_senao_capwap_c1.9.x
+
+config SUPPORT_CAPTIVE_PORTAL_SETTING
+	bool "Support Captive Portal in CAPWAP"
+	default y
+	help
+	  Support Captive Portal in CAPWAP.
+
+config SUPPORT_CAPWAP_NO_BACKGROUND_SCAN
+	bool "Not Support Background Scan in CAPWAP"
+	default n
+	help
+	  Not Support Background Scan in CAPWAP.
+
+endmenu

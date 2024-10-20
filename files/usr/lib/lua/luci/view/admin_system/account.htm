@@ -1,0 +1,113 @@
+<% local uci = luci.model.uci.cursor() %>
+<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+	<%+myid%>
+<% end %>
+<%+header%>
+<% local olduser = luci.util.exec("/lib/auth.sh get_username"):sub(1,-2) %>
+<script type="text/javascript">
+/**
+ * \brief	check	The current password.
+ * \param	curpw	The password string.
+ * \return	Return 0 if OK.
+ */
+function checkCurrentPW(curpw)
+{
+	//if ("<%=olduser%>" == $("input[name='usr_name']").val()){
+	var url,data,fail=0;
+	url='<%=luci.dispatcher.build_url("admin/system/ajax_checkcurpasswd")%>';
+	data =  {curpass: curpw};
+	$.ajax(
+	{
+		async: false,
+        type : "GET",
+        url:url,
+        data:data,
+        error:function(){},
+        success:function(result)
+        {
+			if (result.ret == "0"){
+				alert("<%:Invalid current password!%>");
+				fail=1;
+			}
+        }
+	});
+	//}
+	if (fail==1)
+		return CHECK_FAILED;
+	else
+		return CHECK_PASS;
+}
+function changeInputType(field)
+{
+	var pw_value = document.getElementById(field).value;
+	if(document.getElementById(field).type == 'password')
+	  	$("#"+field+"").replaceWith("<input type=text maxlength='12' name="+field+" id="+field+" style='width:170px;'>");
+	else
+		$("#"+field+"").replaceWith("<input type=password maxlength='12' name="+field+" id="+field+" style='width:170px;'>");
+	document.getElementById(field).value = pw_value;
+}
+function savechanges(){
+	var szRet = "";
+	var usr_name = document.getElementById("usr_name").value;
+	var curpw = document.getElementById("cur_pw").value;
+	var pw1 = document.getElementsByName("pw1")[0].value;
+	var pw2 = document.getElementsByName("pw2")[0].value;
+//console.info("variable ", usr_name, curpw, pw1, pw2);
+	if ((checkUserName(usr_name)) ||
+		(validateUsr(usr_name, 1, 12)) ||
+		(validatePW(pw1)) ||
+		(checkPW1PW2(pw1, pw2, szRet)) ||
+		(checkCurrentPW(curpw)))
+	{
+		return false;
+	}
+	ajax_setCsrf();
+
+	return true;
+//console.info("END ", usr_name, curpw, pw1, pw2);
+}
+//]]>
+$(function() {
+	<% if uci:get('functionlist','functionlist','SUPPORT_MYID') == '1' then %>
+    AddMyid("form","account_idchange");
+    <% end %>
+});
+</script>
+<form name="form" action="<%=REQUEST_URI%>" method="post">
+<fieldset class="cbi-section">
+<table>
+	<tr>
+		<td colspan="2" class="title"><%:Account Settings%></td>
+	</tr>
+	<tr class="title-option">
+		<td><%:Administrator Username%></td>
+		<td><input type="text"  maxlength="12" name="usr_name" id="usr_name" style="width:170px;" value="<%=olduser%>">
+		</td>
+	</tr>
+		<tr class="title-option">
+		<td style="width:50%;"><%:Current Password%></td>
+		<td><input type="password" maxlength="12" name="cur_pw" id="cur_pw" style="width:170px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('cur_pw')" />
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:50%;"><%:New Password%></td>
+		<td><input type="password" maxlength="12" name="pw1" id="pw1" style="width:170px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('pw1')" />
+		</td>
+	</tr>
+	<tr class="title-option">
+		<td style="width:50%;"><%:Verify Password%></td>
+		<td><input type="password" maxlength="12" name="pw2" id="pw2" style="width:170px;">
+		<img src="/luci-static/resources/cbi/reload.gif" style="vertical-align:middle" title="<%:Reveal/hide password%>" onclick="changeInputType('pw2')" />
+		</td>
+	</tr>
+</table>
+</fieldset>
+<div class="cbi-page-actions">
+	<input type="hidden" id="submitType" value="1" name="submitType"/>
+	<input class="cbi-button cbi-button-apply" onclick="return savechanges()" myid="button_save" type="submit" name="cbi.apply" value="<%:Apply%>">
+</div>
+</form>
+<%+footer%>
+

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+all_config=`uci show |grep dtim_period | awk 'BEGIN{FS="="} {print $1}'`
+for config in $all_config; do
+	eval uci set $config='3'
+done
+uci commit wireless
+
+exit 0

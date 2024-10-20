@@ -1,0 +1,5 @@
+/usr/shc/locator
+/etc/uci-defaults/locator
+/etc/init.d/locator
+/usr/sbin/discover
+/usr/sbin/locator

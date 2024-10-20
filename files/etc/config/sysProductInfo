@@ -1,0 +1,30 @@
+config 'model' 0101009D
+    option 'HWID'   '0101009D'
+    option 'modelName' 'EAP1300'
+    option 'description' 'AC1300 Dual Concurrent Indoor Ceiling Mount AP'
+    option 'venderName' 'EnGenius'
+    option 'fccDfsCertified' '0'
+    option 'outdoor' '0'
+    option 'etsiDfsCertified' '0'
+
+config 'model' 0101009E
+    option 'HWID'   '0101009E'
+    option 'modelName' 'EAP1300EXT'
+    option 'description' 'AC1300 Dual Concurrent Indoor Ceiling Mount AP'
+    option 'venderName' 'EnGenius'
+    option 'fccDfsCertified' '0'
+    option 'outdoor' '0'
+    option 'etsiDfsCertified' '0'
+
+config 'model' 0101008A
+    option 'HWID'   '0101008A'
+    option 'modelName' 'EWS355AP'
+    option 'description' 'AC1300 Dual Concurrent Indoor Ceiling Mount AP'
+    option 'venderName' 'EnGenius'
+    option 'fccDfsCertified' '0'
+    option 'outdoor' '0'
+    option 'etsiDfsCertified' '0'
+
+config 'vesrion' 'version'
+	option 'kernel' '3.14.43'
+	option 'application' '1.0.0.0'

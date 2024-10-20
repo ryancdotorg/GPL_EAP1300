@@ -1,0 +1,20 @@
+### pack.py
+
+from qca_spf_8.0_CSU1_r00005.1/qca/src/uboot-1.0/tools/pack.py
+
+### genimg.py
+
+1. In spf8.0, the boardconfig will be overwritten by standard_configfile/premium_configfile.
+
+We remove the releated process.
+
+```
+standard_configfile = 'boardconfig_standard'
+premium_configfile = 'boardconfig_premium'
+
+```
+
+2. call cdt_mod.py with arguments error
+
+genimg.py 482~486
+

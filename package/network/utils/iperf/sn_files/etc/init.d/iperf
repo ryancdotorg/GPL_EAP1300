@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+
+   . /etc/functions.sh
+
+   START=99
+
+   start() {
+       iperf -s &
+       iperf -V -s -p 5002 &
+   }
+
+   stop() {
+       killall iperf
+   }

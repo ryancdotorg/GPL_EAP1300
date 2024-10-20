@@ -1,0 +1,7 @@
+/etc/config/rstp
+/sbin/rstpd
+/etc/uci-defaults/rstp
+/sbin/rstpctl
+/sbin/bridge-stp
+/lib/functions/rstp.sh
+/etc/init.d/rstp

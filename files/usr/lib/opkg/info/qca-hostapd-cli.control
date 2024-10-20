@@ -1,0 +1,11 @@
+Package: qca-hostapd-cli
+Version: 1
+Depends: libc, librt, libnl, libopenssl
+Source: qca/feeds/qca/net/qca-hostap
+Section: QCA
+Maintainer: Qualcomm Atheros
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 25162
+Description:  This package contains a command line utility to control the
+ IEEE 802.1x/WPA/EAP/RADIUS Authenticator.

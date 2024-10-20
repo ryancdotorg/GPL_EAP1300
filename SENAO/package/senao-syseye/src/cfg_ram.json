@@ -1,0 +1,19 @@
+{
+    "wireless": {
+        "clients": [],
+        "num_psscan": 0,
+        "psscan":[]
+    },
+    "EZMCloud": {
+        "wireless": {
+            "clients": []
+        }
+    },
+    "WebScoket": {
+        "wireless": {
+            "clients": []
+        }
+    },
+    "Action": []
+}
+

@@ -1,0 +1,9 @@
+Package: senao-linkmon
+Version: 1.0-2-g54cdedc
+Depends: libc, libjson-c
+Source: SENAO/package/senao-linkmon
+Section: libs
+Proprietary: y
+Architecture: ipq40xx
+Installed-Size: 25651
+Description:  link status monitor.

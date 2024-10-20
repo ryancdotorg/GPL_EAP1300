@@ -1,0 +1,56 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/service.sh
+
+config_load wireless
+
+check_ssid_vlan_isolation()
+{
+    local isolation_flag=0
+
+    for device in wifi0 wifi1
+    do
+	local vifs=$(eval "/usr/sbin/foreach wireless wifi-iface device $device")
+	for vif in $vifs; do
+	    config_get ifname "$vif" ifname
+	    config_get disabled "$vif" disabled
+	    config_get opmode "$device" opmode
+	    config_get mode_display "$vif" mode_display
+	    config_get isolation "$vif" isolation
+
+	    if [ "$opmode"  == "$mode_display" ]; then
+		if [ "$disabled" == 0 ]; then
+		    if [ "$isolation" == 1 ]; then
+			    isolation_flag=1
+			    break
+		    fi
+		fi
+	    fi
+	done
+    done
+    echo "$isolation_flag"
+}
+
+check_stp()
+{
+    local stp=$(uci get network.lan.stp)
+    echo "$stp"
+}
+
+check_management_vlan()
+{
+    local wlanVlanEnable=$(uci get network.sys.WLANVLANEnable)
+    echo "$wlanVlanEnable"
+}
+
+local ssid_isolation_vlan_status=$(check_ssid_vlan_isolation)
+local stp_status=$(check_stp)
+local management_vlan_status=$(check_management_vlan)
+
+# if [ "$ssid_isolation_vlan_status" = "1" ] ||  [ "$stp_status" = "1" ] || [ "$management_vlan_status" = "1" ]; then
+if [ "$stp_status" = "1" ]; then
+    echo 1
+else
+    echo 0
+fi

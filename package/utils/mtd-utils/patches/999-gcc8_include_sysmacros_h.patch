@@ -1,0 +1,13 @@
+--- a/include/common.h
++++ b/include/common.h
+@@ -26,6 +26,10 @@
+ #include <fcntl.h>
+ #include <errno.h>
+ 
++#if __GNUC__ >= 8
++#include <sys/sysmacros.h>
++#endif
++
+ #ifndef PROGRAM_NAME
+ # error "You must define PROGRAM_NAME before including this header"
+ #endif

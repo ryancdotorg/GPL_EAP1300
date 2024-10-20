@@ -1,0 +1,5 @@
+/etc/modelname
+/etc/functions_custom.sh
+/bin/cli.sh
+/etc/functions.sh
+/usr/sbin/cli

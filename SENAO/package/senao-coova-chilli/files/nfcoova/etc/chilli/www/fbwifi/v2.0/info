@@ -1,0 +1,37 @@
+<? # -*- mode: shell-script -*-
+
+. /etc/chilli/fbwifi-libs.sh
+
+gateway_id=$(fbwifi_get_gateway_id $CONFIG_NAME)
+fbwifi_tokens_dir=$fbwifi_tmp_dir/$CONFIG_NAME/$fbwifi_tokens_path
+token_file=$fbwifi_tokens_dir/${REMOTE_MAC}
+
+if [ "$REQUEST_METHOD" = "POST" ]
+then
+is_post=1
+token="null"
+else
+is_post=0
+token=$(cat $token_file 2>/dev/null || echo "null")
+fi
+
+printf "HTTP/1.1 200 OK\r\n"
+printf 'Content-Type: application/json\r\n'
+
+fbwifi_header_add_allow_origin $CONFIG_NAME $HTTP_ORIGIN
+
+printf 'Connection: close\r\n'
+printf "\r\n"
+
+echo '{'
+echo '	"api_version": "2.0",'
+if [ "$token" = "null" ]
+then
+    echo "	\"token\": null,"
+else
+    echo "	\"token\": \"$token\","
+fi
+echo "	\"gateway_id\": \"$gateway_id\""
+echo '}'
+
+?>

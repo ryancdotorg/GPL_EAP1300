@@ -1,0 +1,43 @@
+#*****************************************************************************
+#
+#   (C) Unpublished Work of Senao Networks, Inc.  All Rights Reserved.
+#
+#       THIS WORK IS AN UNPUBLISHED WORK AND CONTAINS CONFIDENTIAL,
+#       PROPRIETARY AND TRADESECRET INFORMATION OF SENAO INCORPORATED.
+#       ACCESS TO THIS WORK IS RESTRICTED TO (I) SENAO EMPLOYEES WHO HAVE A
+#       NEED TO KNOW TO PERFORM TASKS WITHIN THE SCOPE OF THEIR ASSIGNMENTS
+#       AND (II) ENTITIES OTHER THAN SENAO WHO HAVE ENTERED INTO APPROPRIATE
+#       LICENSE AGREEMENTS.  NO PART OF THIS WORK MAY BE USED, PRACTICED,
+#       PERFORMED, COPIED, DISTRIBUTED, REVISED, MODIFIED, TRANSLATED,
+#       ABBRIDGED, CONDENSED, EXPANDED, COLLECTED, COMPILED, LINKED, RECAST,
+#       TRANSFORMED OR ADAPTED WITHOUT THE PRIOR WRITTEN CONSENT OF SENAO.
+#       ANY USE OR EXPLOITATION OF THIS WORK WITHOUT AUTHORIZATION COULD
+#       SUBJECT THE PERPERTRATOR TO CRIMINAL AND CIVIL LIABILITY.
+#
+#
+#*****************************************************************************/
+# Author: Ryan Hsu
+
+This folder is use to hook the notification from qca wifi driver.
+To use this script, define the flag in
+vendor_configs/qca_wifi_profile/config.wlan.unified.profile:
+
+SENAO_SUPPORT_AP_ASSOC_NOTIFY=1
+SENAO_SUPPORT_AP_ASSOC_NOTIFY_SCRIPT="/sbin/assoc_notify.sh"
+
+And, make sure product_config.make file has the definition to enable senao-nlh:
+CONFIG_PACKAGE_kmod-senao-nlh=y
+
+Put the script in this folder, every time one client associated or disassociated,
+this script will be called.
+
+Naming format: XXX_notify.sh, script check the file name with "_notify.sh" postfix.
+Parameter:
+$1: device name
+$2: client mac address
+$3: join or left
+$4: interface id, 2.4G is 0, 5G is 1
+$5: rxbytes
+$6: txbytes
+
+This script helps to pass client association information to customized application.

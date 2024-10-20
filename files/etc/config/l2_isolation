@@ -1,0 +1,20 @@
+config dhtest_timer dhtest_timer
+    option enable '1'
+
+config white_list wifi_ssid_1
+
+config white_list wifi_ssid_2
+
+config white_list wifi_ssid_3
+
+config white_list wifi_ssid_4
+
+config white_list wifi_ssid_5
+
+config white_list wifi_ssid_6
+
+config white_list wifi_ssid_7
+
+config white_list wifi_ssid_8
+
+config white_list port_3
